@@ -1,21 +1,54 @@
-%% Use \input{...} to include a standard preamble
 \documentclass[12pt]{article}
 
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{amsthm}
-
+%% bibliography stuff -- this needs come before the preamble inclusion
 \usepackage[backend=bibtex,sorting=none]{biblatex}
+\bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
 \usepackage{hyperref}
+
+\input{\string~/Documents/academics/global_academics/latex_preamble}
+
+\graphicspath{{./figures/}}
 
 \title{Structure Learning for $VAR(p)$ Models}
 \author{R. J. Kinnear, R. R. Mazumdar}
 
 \begin{document}
 \maketitle
-\abstract{We study Granger Causality and propose an heuristic for uncovering a parsimonious representation of large $VAR(p)$ models.}
+\abstract{We study Granger Causality and propose a structure learning
+  heuristic for uncovering a parsimonious representation of large
+  $\mathsf{VAR}(p)$ models.}
 
 \section{Introduction and Review}
+Consider a collection of stochastic processes producing observations
+at discrete time intervals.  Are the underlying processes dependent?
+Can we quantify any of the underlying relationships?  Can the arrow of
+time help us to distinguish a directionality or flow of dependence
+among our observed series?  In this paper we contribute to the
+understanding of the notion of Granger-Causality
+\cite{granger1969investigating} as a tool for answering these questions.
+
+Though the notion of causality is a philosophically slippery concept,
+it is fundamental to the way we understand the world and to the
+progress of science in general.  Indeed, without faith in the
+consistency of causal interactions the results of experimental science
+could not be generalized or applied in any meaningful way.  In the
+case of Granger-Causality, we state that if an event '$A$' provides us
+with unique (that is, not available anywhere else) information about a
+later event $B$, then $A$ must have a causal impact on $B$.  As
+opposed to the notion of Causation promoted by Pearl
+\cite{pearl2000art}, this is an entirely model-free notion of cause,
+and instead leverages the intuition that a cause must precede it's
+effect.
+
+In practice, Granger's notion of causation it not a convincing test
+for \textit{true} causation, since our statements about causation are
+highly dependent upon the data that we are able to observe.  We prefer
+instead to interpret Granger causality as a means of uncovering a flow
+of ``information'' or ``energy'' through some underlying graph of
+interactions.  Though this graph cannot be observed directly, we will
+infer it's presence as a latent structure among our observed time
+series data.
+
 \section{Theory}
 \section{Structure Learning} 
 \section{Application}

@@ -1,0 +1,14 @@
+*.log
+*.out
+*~
+*.#
+*.xml
+*.aux
+*.prv
+auto/
+*_region_*
+*.bbl
+*.bcf
+*.blg
+*.pdf
+*.fmt
