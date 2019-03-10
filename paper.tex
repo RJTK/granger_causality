@@ -15,6 +15,7 @@
 \newcommand{\linEerr}[2]{\xi[#1\ |\ #2]}  % Error of linear projection
 \newcommand{\pa}[1]{P(#1)}  % Parents of a node
 \newcommand{\anc}[1]{\mathcal{A}(#1)}  % Ancestors of a node
+\newcommand{\gcgpath}[4]{#1 \rightarrow #2_1 \rightarrow \cdots \rightarrow #2_{#3} \rightarrow #4}
 
 \input{\string~/Documents/academics/global_academics/latex_preamble}
 
@@ -194,7 +195,7 @@ where $v(t)$ is an uncorrelated sequence with covariance $\Sigma_v$.
 
 The equivalence $(1) \iff (3)$ is essentially a restatement of the
 definition, but is in line with the seminal work of Geweke
-\cite{geweke1982}, \cite{geweke1984}.  Statement (4) means that
+\cite{geweke1982measurement}, \cite{geweke1984}.  Statement (4) means that
 $(y - \linE{y}{\mathcal{H}_{t - 1}^{-j}}) \perp (z -
 \linE{z}{\mathcal{H}_{t - 1}^{-j}})\ \forall y \in \mathcal{H}_t^i,\ z \in
 \mathcal{H}_{t - 1}^j$, which is an appealing geometric statement that
@@ -249,8 +250,8 @@ standard tools.
 \subsection{Pairwise Granger Causality}
 Recall that Granger-causality in general must be understood with
 respect to a particular universe of observations.  If $x_j \gc x_i$
-with respect to $x_{-k}$, it may not hold with respect to $x$.  That
-is, $x_k$ may be a common ancestor that when observed completely
+with respect to $x_{-k}$, it may not hold with respect to $x$.  For
+example, $x_k$ may be a common ancestor which when observed completely
 explains the connection from $x_j$ to $x_i$.  In particular, we will
 study \textit{pairwise} Granger-causality, where $x_i \pwgc x_j$ if
 $x_i$ Granger-causes $x_j$ with respect only to $(x_i, x_j)$.
@@ -274,27 +275,39 @@ associating an edge $(j, i)$ with an LTI filter
 $\{B_{ij}(\tau)\}_{\tau = 1}^\infty$ from the $\VAR$ representation of equation
 \ref{eqn:ar_representation}.
 
+% What if we take this as the definition of PWGC?  then, in a simply causal graph
+% the "normal" definition becomes a theorem.  Or, if lem:pwgc_anc is true then
+% maybe that is good enough?
+
+\begin{lemma}
+  \label{lem:pwgc_anc}
+  If $j \in \anc{i}$ then $j \pwgc i$.
+\end{lemma}
+\begin{proof}
+  This is actually not true.  e.g.  $x_j(t) = v_i(t) + x_k(t - 1) + x_{k'}(t - 1)$ with $x_k(t) = v_k(t) + ax_j(t - 1)$ and $x_{k'}(t) = v_{k'}(t) - ax_j(t - 1)$.
+\end{proof}
+
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 % I'm actually not sure this is true, I think that if there is a common ancestor it is
 % ambiguous.  This may be true for transfer entropy, but for Granger-causality even if
 % the information arriving at i is later than to j, it may be less corrupt and hence
 % still facilitate better predictions about k's future.
 
-Finally, the \textit{propagation delay} from $j$ to $i$, denoted $d(j, i)$, will be defined as 
+% Finally, the \textit{propagation delay} from $j$ to $i$, denoted $d(j, i)$, will be defined as 
 
-\[
-  d(j, i) = \text{min}\big\{\sum_{k = 0}^{K - 1} d(p_k, p_{k + 1}})\ |\ i = p_0 \rightarrow p_1 \rightarrow \cdots \rightarrow p_K = j \text{ is a path in } \gcg \big\}
-\]
+% \[
+%   d(j, i) = \text{min}\big\{\sum_{k = 0}^{K - 1} d(p_k, p_{k + 1}})\ |\ i = p_0 \rightarrow p_1 \rightarrow \cdots \rightarrow p_K = j \text{ is a path in } \gcg \big\}
+% \]
 
-and $d(j, i) \defeq \text{min}\{B_{i, j}(\tau) \ne 0\}$ if $j \in \pa{i}$.
+% and $d(j, i) \defeq \text{min}\{B_{i, j}(\tau) \ne 0\}$ if $j \in \pa{i}$.
 
 \begin{lemma}
   \label{lem:pwgc_anc}
-  $x_j \pwgc x_i$ if and only if at least one of the following hold
+  If $x_j \pwgc x_i$ then one or more of the following hold
 
   \begin{enumerate}
     \item{$j \in \anc{i}$}
-    \item{$\anc{i}\cap\anc{j} \ne \emptyset$.} %and $d(k, j) < d(k, i)$}
+    \item{$\anc{i}\cap\anc{j} \ne \emptyset$.}
   \end{enumerate}
 \end{lemma}
 
@@ -303,16 +316,68 @@ and $d(j, i) \defeq \text{min}\{B_{i, j}(\tau) \ne 0\}$ if $j \in \pa{i}$.
 % \end{remark}
 
 \begin{proof}
+  Is this true if we take \ref{lem:pwgc_anc} as an axiom?
 \end{proof}
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-\begin{theorem}[Tree Recovery]
+We are interested in understanding under what conditions a causality
+graph can be correctly recovered by pairwise testing alone.  It is not
+enough that the graph simply be sparse, as the following example shows.
+
+\begin{example}
+  If the causality graph $\gcg$ of the vector process $x(t)$ is
+  strongly connected\footnote{there is a directed path from each node
+    to every other node}, then the causality graph recovered via
+  pairwise causality tests is the complete graph.
+
+  This follows immediately from the fact (lemma \ref{lem:pwgc_anc})
+  that $j \in \anc{i} \implies j \pwgc i$.
+\end{example}
+
+\begin{definition}[Simply Causal]
+  If the Granger-Causality graph $\gcg$ for $x(t)$ is as a directed
+  acyclic graph such that there is at most one non-overlapping
+  directed path between any two nodes (excluding self-loops) then we
+  will refer to $\gcg$ as being \textit{simply causal}.
+\end{definition}
+
+\begin{example}
+  A directed tree (more generally directed forest) is a simply causal
+  graph.
+\end{example}
+
+\begin{lemma}
+  If $\gcg$ is simply causal then $i \pwgc j$ and $j \in \anc{i}$ are
+  \textit{alternatives}, that is $i \pwgc j \implies j \notin \anc{i}$.
+\end{lemma}
+\begin{proof}
+  Suppose that $\gcg$ is simply causal and that we have both
+  $i \pwgc j$ and $j \in \anc{i}$.  We will show that $i \in \anc{j}$,
+  which produces a contradiction (since $\gcg$ being a DAG is part of
+  the requirements for being simply causal).
+
+  Since $j \in \anc{i}$ there is a path $\gcgpath{j}{a}{p}{i}$.
+  Moreover, since $i \pwgc j$ by lemma \ref{lem:pwgc_anc} there must
+  be a common ancestor $k \in \anc{i} \cap \anc{j}$ (otherwise, we would
+  have $i \in \anc{j}$, contradicting the acyclic property).  The node
+  $k$ has paths to both $j,\ \gcgpath{k}{b}{q}{j}$ and $i,\ \gcgpath{k}{c}{r}{i}$.
+
+\end{proof}
+
+\begin{theorem}[Pairwise Recovery]
   \label{thm:tree_recovery}
-  If the Granger-Causality graph $\gcg$ for $x(t)$ is a
-  directed forest, then $\gcg$ can be inferred from pairwise
-  causality tests alone.
+  If the Granger-Causality graph $\gcg$ for $x(t)$ is simply causal
+  then then $\gcg$ can be inferred from pairwise causality tests
+  alone.
 \end{theorem}
+\begin{proof}
+  
+\end{proof}
+
+\begin{example}
+  The condition of simple causality is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (e.g. $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$) contains a loop but is pairwise recoverable.
+\end{example}
 
 \section{Structure Learning}
 \subsection{Local Search Heuristics}
