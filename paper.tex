@@ -1,0 +1,709 @@
+\documentclass[12pt]{article}
+
+%% bibliography stuff -- this needs come before the preamble inclusion
+\usepackage[backend=bibtex,sorting=none]{biblatex}
+\bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
+\usepackage{hyperref}
+
+\def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
+\def\pwgc{\overset{\text{PW}}{\rightarrow}}  % Granger causality arrow
+\def\te{\overset{\mathcal{T}}{\rightarrow}}  % Transfer entropy arrow
+\def\gcg{\mathcal{G}}  % Granger-causality graph
+\def\VAR{\mathsf{VAR}}  % VAR(p) model
+\def\B{\mathsf{B}}  % Filter B
+\def\wtB{\widetilde{\B}}  % General filter B
+\def\A{\mathsf{A}}  % Filter A
+
+\newcommand{\linE}[2]{\hat{\E}[#1\ |\ #2]}  % Linear projection
+\newcommand{\linEerr}[2]{\xi[#1\ |\ #2]}  % Error of linear projection
+\newcommand{\pa}[1]{pa(#1)}  % Parents of a node
+\newcommand{\anc}[1]{\mathcal{A}(#1)}  % Ancestors of a node
+\newcommand{\ancn}[2]{\mathcal{A}_{#1}(#2)}  % nth ancestors of a node
+\newcommand{\gpn}[2]{gp_{#1}(#2)}  # nth generation grandparents
+\newcommand{\gcgpath}[4]{#1 \rightarrow #2_1 \rightarrow \cdots \rightarrow #2_{#3} \rightarrow #4}
+
+\input{\string~/Documents/academics/global_academics/latex_preamble}
+
+\graphicspath{{./figures/}}
+
+\title{Structure Learning for $VAR(p)$ Models}
+\author{R. J. Kinnear, R. R. Mazumdar}
+
+\begin{document}
+\maketitle
+\abstract{We study Granger Causality and propose a structure learning
+  heuristic for uncovering a parsimonious representation of large
+  $\mathsf{VAR}(p)$ models.}
+
+\section{Introduction and Review}
+\label{sec:introduction}
+Consider a collection of stochastic processes producing observations
+at discrete time intervals.  Are the underlying processes dependent?
+Can we quantify any of the underlying relationships?  Can the arrow of
+time help us to distinguish a directionality or flow of dependence
+among our observed series?  In this paper we contribute to the
+understanding of the notion of Granger-Causality
+\cite{granger1969investigating} as a tool for answering these questions.
+
+Though the notion of causality is a philosophically slippery concept,
+it is fundamental to the way we understand the world and to the
+progress of science in general.  Indeed, without faith in the
+consistency of causal interactions the results of experimental science
+could not be generalized or applied in any meaningful way.  In the
+case of Granger-Causality, we state that if an event '$A$' provides us
+with unique (that is, not available anywhere else) information about a
+later event $B$, then $A$ must have a causal impact on $B$.  As
+opposed to the notion of Causation promoted by Pearl
+\cite{pearl2000art}, this is an entirely model-free notion of cause,
+and instead leverages the intuition that a cause must precede it's
+effect.
+
+In practice, Granger's notion of causation it not a convincing test
+for \textit{true} causation, since our statements about causation are
+highly dependent upon the data that we are able to observe.  We prefer
+instead to interpret Granger causality as a means of uncovering a flow
+of ``information'' or ``energy'' through some underlying graph of
+interactions.  Though this graph cannot be observed directly, we will
+infer it's presence as a latent structure among our observed time
+series data.
+
+Finding the ``best'' graph structure consistent with observed data is
+generally an extremely challenging problem, though the comparison of
+quality between different structures, and hence the notion of
+``best'', needs to be quantified.  In applications where we are
+interested merely in minimizing the mean squared error of a linear
+one-step-ahead predictor, then we will naturally desire an entirely
+dense graph of connections, since each edge can only serve to reduce
+estimation error.  However, since the number of edges scales
+quadratically in $n$, it is imperative to infer a sparse causality
+graph for large systems, both to avoid overfitting observed data, as
+well as to aid the interpretability of the results.
+
+In \cite{bach2004learning} the authors apply a local search heuristic
+to an AIC penalized approximation of the likelihood where at each
+iteration an edge is either added, removed, or reversed.  This is a
+common approach to combinatorial optimization due to it's simplicity,
+but is liable to get stuck in shallow local minima.
+
+A second and wildly successful heuristic is the LASSO regularizer
+\cite{tibshirani1996regression}, which can be understood as a natural
+convex relaxation to penalizing the count of the non-zero edges.  The
+LASSO enjoys strong theoretical guarantees \cite{wainwright2009sharp},
+even in the case of time series data \cite{basu2015}
+\cite{wong2016lasso}.
+
+From a Bayesian perspective, spike-and-slab priors can be used to
+estimate the probability of an edge's inclusion, after which a graph
+can be chosen heuristically by thresholding or searching for the MAP
+graph structure.
+
+Our contribution is to provide an alternative heuristic based on
+minimum spanning trees, inspired by our result in section
+\ref{sec:theory} that the true causality graph can be recovered from
+pairwise information alone in the case that the underlying graph is a
+directed forest.  We compare this algorithm to a grouped LASSO
+\cite{yuan2006model}, local search, and a Bayesian posterior
+probability thresholding scheme.
+
+%% -Can we also formulate an SDP relaxation?
+%% -Fit trees jointly or via coordinate descent?
+
+\section{Theory}
+\label{sec:theory}
+Consider a zero mean wide sense stationary, vector valued and discrete
+time stochastic process $x(t) \in L^n_2(\Omega);\ t \in \Z$, having the matrix
+valued covariance sequence
+$R(\tau) \overset{\Delta}{=} \E x(t)x(t - \tau)^\T$, which we assume to be
+absolutely summable, and spectra $S(\omega)$:
+
+\begin{equation}
+  \label{eqn:fourier_pair}
+  \begin{aligned}
+    R(\tau) &= \frac{1}{2\pi}\int_{-\pi}^\pi S(\omega) e^{j\tau\omega}\d \omega,\\
+    S(\omega) &= \sum_{\tau=-\infty}^\infty R(\tau)e^{-j\tau\omega}.
+  \end{aligned}
+\end{equation}
+
+\begin{definition}[Granger Causality]
+  For the WSS series $x(t)$ we say that component $x_j$
+  \textit{Granger-Causes} (GC) component $x_i$ (with respect to $x$)
+  and write $x_j \gc x_i$ if given Hilbert spaces
+  $\mathcal{H}_{t - 1}$, $\mathcal{H}^{-j}_{t - 1}$
+  generated by $\{x_i(t - \tau)\}_{(\tau = 1, i = 1)}^{(\infty, n)}$ and
+  $\{x_i(t - \tau)\}_{(\tau = 1, i \ne j)}^{(\infty, n)}$ respectively we have
+
+\begin{equation}
+  \linEerr{x_i(t)}{\mathcal{H}_{t - 1}} < \linEerr{x_i(t)}{\mathcal{H}^{-j}_{t - 1}},
+\end{equation}
+
+where
+$\xi[x \ |\ \mathcal{H}] = \E (x - \linE{x}{\mathcal{H}})^2$ and
+$\linE{x}{\mathcal{H}} = \text{proj}_{\mathcal{H}}(x)$ denotes
+the (unique) projection onto the Hilbert space $\mathcal{H}$.
+\end{definition}
+
+This notion captures the idea that the process $x_j$ provides
+information about $x_i$ that is not available from elsewhere.  The
+caveat ``with respect to $x(t)$'' is important in that GC relations
+can change when components are added to or removed from $x(t)$,
+e.g. new GC relations can arise if we remove the observations of a
+common cause, and existing GC relations can disappear if we observe a
+new mediating series.
+
+The notion is closely related to the information theoretic measure of
+transfer entropy, indeed, if everything in Gaussian then they are
+equivalent \cite{barnett2009granger}.
+
+We continue to review some pertinent facts.
+
+As a consequence of the Wold decomposition theorem \cite{lindquist},
+every such sequence has the ``moving average'' $MA(\infty)$ representation
+
+\begin{equation}
+\label{eqn:wold}
+  x(t) = c(t) + \sum_{\tau = 0}^\infty A(\tau) z(t - \tau),
+\end{equation}
+
+where $c(t)$ is a perfectly predictable sequence\footnote{$c(t)$ is
+  perfectly predictable if any sample $c(t_0)$ is enough to determine
+  $c(t)$ for every $t$.  For example,
+  $c(t) = \text{sin}(2\pi t + \Theta);\; \Theta \sim \mathcal{U}[-\pi, \pi]$}, and
+$z(t)$ is an uncorrelated sequence having covariance $I$.  We will assume
+that $c(t)$ can be effectively estimated and removed and take
+$c(t) = 0$.  Furthermore, we assume that the spectra is uniformly
+bounded away from $0$:
+$\exists \delta:\ \delta I \preceq S(\omega) \preceq \frac{1}{\delta} I\ \forall \omega$ so that the Wold
+representation can be inverted to yield the $VAR(\infty)$ form
+
+\begin{equation}
+  \label{eqn:ar_representation}
+  x(t) = \sum_{\tau = 1}^\infty B(\tau) x(t - \tau) + v(t),
+\end{equation}
+
+where $v(t)$ is an uncorrelated sequence with covariance $\Sigma_v$.
+
+\begin{theorem}[Granger Causality Equivalences]
+  \label{thm:gcg}
+  Let $x(t)$ be a WSS process with absolutely summable covariance
+  sequence, and uniformly bounded spectral density.  Denote by
+  $\xi_{ij} \defeq \linEerr{x_i(t)}{\mathcal{H}^{-j}}$ and
+  $\xi_i \defeq \linEerr{x_i(t)}{\mathcal{H}_t}$.  Then, the following are equivalent:
+
+  \begin{enumerate}
+    \item{$x_j \not\gc x_i$}
+    \item{$\forall \tau \in \N_+\ B_{ij}(\tau) = 0$}
+    \item{$\mathcal{F}_{j \rightarrow i} \defeq \ln\frac{\xi_i}{\xi_{ij}} = 0$}
+    \item{$\mathcal{H}_t^{i} \perp \mathcal{H}_{t - 1}^{j}\ |\ \mathcal{H}_{t - 1}^{-j}$}
+    \item{\hl{Wold $A(\tau)$ condition}}
+    \item{Tie in the 0s of $S(\omega)^{-1}$, though this isn't immediately directed.}
+  \end{enumerate}
+\end{theorem}
+
+The equivalence $(1) \iff (3)$ is essentially a restatement of the
+definition, but is in line with the seminal work of Geweke
+\cite{geweke1982measurement}, \cite{geweke1984}.  Statement (4) means that
+$(y - \linE{y}{\mathcal{H}_{t - 1}^{-j}}) \perp (z -
+\linE{z}{\mathcal{H}_{t - 1}^{-j}})\ \forall y \in \mathcal{H}_t^i,\ z \in
+\mathcal{H}_{t - 1}^j$, which is an appealing geometric statement that
+there is no direct feedback from $x_j$ to $x_i$ \cite{lindquist}.
+
+\begin{proof}
+$(1) \implies (2)$: The projection for $x_i(t)$ onto $\mathcal{H}_{t - 1}$ is (by definition) given by a form similar to equation \ref{eqn:ar_representation}: 
+
+\[
+  \E|x_i(t) - \linE{x_i(t)}{\mathcal{H}_{t - 1}}|^2 = \E|v_i(t) + \sum_{\tau = 1}^\infty \sum_{k = 1}^n (B_{i, k}(\tau) - \hat{B}_{i, k}(\tau))x_k(t - \tau)|^2.
+\]
+
+ Since $v(t)$ in equation \ref{eqn:ar_representation} is temporally uncorrelated, it follows that the optimal projection is given by the model coefficients themselves.  This holds similarly for the projection onto $\mathcal{H}_{t - 1}^{-j}$.  Then by $(1)$ we have
+
+\[
+  \E|x_i(t) - \sum_{\tau = 1}^\infty \sum_{k = 1}^n B_{i, k}(\tau)x_k(t - \tau)|^2 = \E|x_i(t) - \sum_{\tau = 1}^\infty\sum_{k \ne j}B_{i, k}(\tau)x_k(t - \tau)|^2
+\]
+
+By the uniqueness of the projection we must have $\forall \tau\  B_{i, j}(\tau) = 0$.
+
+$(2) \implies (4)$: In computing $(y - \linE{y}{\mathcal{H}_{t = 1}^{-j}})$ for $y \in \mathcal{H}_t^i$ it is sufficient to consider $y = x_i(t)$ since $\mathcal{H}_{t - 1}^i \subseteq \mathcal{H}_{t - 1}^{-j}$, in which case $(x_i(t) - \linE{x_i(t)}{\mathcal{H}_{t = 1}^{-j}}) = v_i(t)$.  $(4)$ follows since $v_i(t) \perp \mathcal{H}_{t - 1}$ and $\forall z \in \mathcal{H}_{t - 1}^j\ (z - \linE{z}{\mathcal{H}_{t - 1}^{-j}}) \in \mathcal{H}_{t - 1}$
+  
+\end{proof}
+
+The following propositions justify various modifications of $x(t)$
+applied in practice to massage $x(t)$ into a form amenable to more
+standard tools.
+
+\begin{theorem}[General Invariance]
+  \hl{Under what conditions is this actually true?}
+
+  Let $\zeta(t)$ be a stationary discrete time stochastic process.  Let
+  $F, G$ be (possibly nonlinear and time varying) invertible filtering
+  operations and $f(t)$, $g(t)$ be perfectly predictable and such that
+  $x_j(t) \defeq F(\zeta_j - f)(t), x_i(t) \defeq G(\zeta_i - g)(t)$ are W.S.S.  Then,
+
+\begin{equation}
+    x_j \gc x_i \iff \zeta_j \te \zeta_i
+  \end{equation}
+\end{theorem}
+
+\begin{corollary}[Invariance Under Invertible and Deterministic Modifications]
+  Let $F(z), G(z)$ describe univariate and invertible
+  linear-time-invariant filters.  And, let $f(t), g(t)$ be perfectly
+  predictable processes.  Then,
+
+  \begin{equation}
+    x_j \gc x_i \iff F(x_j - f)(t) \gc G(x_i - g)(t)
+  \end{equation}
+\end{corollary}
+
+\subsection{Pairwise Granger Causality}
+Recall that Granger-causality in general must be understood with
+respect to a particular universe of observations.  If $x_j \gc x_i$
+with respect to $x_{-k}$, it may not hold with respect to $x$.  For
+example, $x_k$ may be a common ancestor which when observed completely
+explains the connection from $x_j$ to $x_i$.  In particular, we will
+study \textit{pairwise} Granger-causality.
+
+\begin{definition}[Pairwise Granger-causality]
+  We will say that $x_j$ pairwise Granger-causes $x_i$ and write
+  $x_j \pwgc x_i$ if $x_i$ Granger-causes $x_j$ with respect only to
+  $(x_i, x_j)$.
+\end{definition}
+
+
+We first need to establish some graph theoretic notation and
+terminology, collected formally in a definition for the reader's
+convenient reference.
+
+\begin{definition}[Causality graph, Parents, etc...]
+
+Remaining in the context of a collection of $n$ WSS processes
+$x(t) = \big(x_1(t), \ldots, x_n(t)\big)$, we define the Granger-causality
+graph $\gcg$ to be the directed graph formed on $n$ vertices where an
+edge $(j, i) \in \gcg$ if and only if $x_j \gc x_i$.
+
+We refer to the set of \textit{parents} of $x_i$ in $\gcg$ by
+$\pa{i}$, that is, $j \in \pa{i} \iff x_j \gc x_i$.
+
+Even though the definitions of Granger-causality naturally suggests
+that each node in the graph should have a self-loop (unless the node
+is simply independent noise) we will not include nodes in their own
+parent sets: $i \not\in \pa{i} \subseteq \anc{i}$.  However, we do not
+immediately assume that $\gcg$ is a DAG, and so we will allow for $i$
+to be it's own \textit{ancestor}.
+
+The set of level $\ell$ \textit{grandparents} of node $i$, denoted
+$\gpn{\ell}{i}$, is the set such that $j \in \gpn{\ell}{i}$ if and only if
+there is a \textit{directed and cycle-free path} of length $\ell$ in
+$\gcg$ from $j$ to $i$ \textit{or} if $j = i$ and there is a cycle of
+length $n$ starting at $i$ and ending back at $i$, that is, $i$ can be
+it's own grandparent.  Clearly, $\pa{i} = \gpn{1}{i}$.
+
+Finally, the set of \textit{level $\ell$ ancestors} of
+$i$: $\ancn{\ell}{i} = \bigcup_{\lambda \le \ell}\gpn{\lambda}{i}$ is the set such that
+$j \in \ancn{\ell}{i}$ if and only if there is a directed and cycle-free
+path of length $\ell$ \textit{or less} in $\gcg$ from $j$ to $i$
+\textit{or} if $j = i$ and there is a directed cycle of length $\ell$ or
+less from $i$ back to $i$ in $\gcg$.  The set of \textit{all
+  ancestors} of $i$ (e.g. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
+\end{definition}
+
+The edges of the Granger-causality graph $\gcg$ can be given a general
+notion of ``weight'' by associating an edge $(j, i)$ with a
+\textit{strictly causal} LTI filter
+$\B_{ij}(z) = \sum_{\tau = 1}^{\infty} B_{ij}(\tau)z^{-\tau}$ from the
+$\VAR$ representation of equation \ref{eqn:ar_representation}.  We
+will represent the action (convolution) of this filter compactly as
+
+\begin{equation}
+  \sum_{\tau = 1}^\infty B_{ij}(\tau)x_j(t - \tau) \defeq \B_{ij}(z)x_j(t).
+\end{equation}
+
+% What if we take this as the definition of PWGC?  then, in a simply causal graph
+% the "normal" definition becomes a theorem.  Or, if lem:pwgc_anc is true then
+% maybe that is good enough?
+
+From the $\VAR$ representation of $x(t)$ there is clearly a tight relationship between each node and it's parent nodes, indeed
+
+\begin{equation}
+  \label{eqn:parent_expanion}
+  x_i(t) = v_i(t) + \B_{ii}(z)x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t).
+\end{equation}
+
+% When is this guaranteed w.r.t. the full system?
+Furthermore, if the filter $\B_{ii}$ is invertible, we can write
+
+\begin{equation*}
+  \begin{aligned}
+    (1 - \B_{ii}(z))x_i(t) &= v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\\
+    \implies x_i(t) &= (1 - \B_{ii}(z))^{-1}\big[v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\big]\\
+    &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t)
+  \end{aligned}
+\end{equation*}
+
+In general, we will write $\wtB$ for arbitrary filters maintaining the
+convention that $\wtB_{ii}$ is a filter that modifies the future of
+$x_i$ from it's past and $\wtB_{ij}$ a filter modifying $x_i$ from the
+past of $x_j$.  We will use the convention that the filter
+$\widetilde{\B}$ will represent simply ``a filter'' and is not
+necessarily the same as the filters serving as edge weights in $\gcg$
+(indeed, $\wtB$ will often be $0$), and moreover, we will allow for
+$\widetilde{\B}$ to potentially change from place to place and even
+from line to line in the same sequence of calculations as it's exact
+properties or specification are not important.
+
+We continue to develop the relationship between $x_i$ and it's family tree.
+
+\begin{proposition}
+  \label{prop:parent_expanding}
+  The component $x_i(t)$ of $x(t)$ can be represented as a linear
+  combination of a linear filtering operation acting on the driving
+  noise $v_i$ of $x_i$ as well as the parents of $x_i$:
+
+  \begin{equation}
+    \label{eqn:parent_expansion}
+    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t).
+  \end{equation}
+
+  Moreover, $x_i$ can be expanded in terms of it's ancestors and
+  driving noise only:
+
+  \begin{equation}
+    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \anc{i} \setminus\{i\}}\wtB_{ik}(z)v_k(t).
+  \end{equation}
+\end{proposition}
+\begin{proof}
+  The formula \ref{eqn:parent_expansion} was established in the
+  preceding paragraph and serves as a starting point for the induction
+  hypothesis:
+
+  \begin{equation}
+    \label{eqn:induction}
+    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
+  \end{equation}
+
+  The base case follows by expanding \ref{eqn:parent_expansion}, but we skip the calculations since they are nearly identical to the following induction step:
+
+  \begin{align*}
+    x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)\\
+           &\overset{(a)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)\big[\wtB_{kk}v_k(t)\\
+    &\ \ \ \  + \wtB_{ki}(z)x_i(t) + \sum_{h \in \pa{k}\setminus \{i\}}\wtB_{kh}(z)x_h(t)\big]\\
+    &\overset{(b)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell + 1}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
+  \end{align*}
+
+  Where set $(a)$ follows by expanding each $x_k$ with equation \ref{eqn:parent_expansion} and $(b)$ requires the inversion of $\big(1 - \sum_{k \in \gpn{\ell}{i}\setminus\{i\}}\wtB_{ik}(z)\wtB_{ki}(z)\big)$ as well as using the fact that $\ancn{\ell}{i} = \ancn{\ell - 1}{i}\cup\gpn{\ell}{i}$.  We here remind the reader of our earlier established convention that $\wtB$ simply represents the existence of a filter (possibly 0) and can change from place to place.
+
+The induction terminates after $n$ steps since in a graph with $n$ nodes $\gpn{n + 1}{i} = \emptyset$
+
+% Where step $(a)$ requires the inversion of $1 - \sum_{k \in \pa{i}}\wtB_{ik}(z)\wtB_{ki}(z)$.
+
+%   \begin{align*}
+%     x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t)\\
+%            &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)\big[\wtB_{kk}v_{k}(t) + \wtB_{ki}(z)x_i(t) + \sum_{h \in \pa{k}\setminus \{i\}}\wtB_{kh}(z)x_h(t) \big]\\
+%            &\overset{(a)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)v_{k}(t) + \sum_{k \in \gpn{2}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)
+%   \end{align*}
+
+% Where step $(a)$ requires the inversion of $1 - \sum_{k \in \pa{i}}\wtB_{ik}(z)\wtB_{ki}(z)$.
+
+\end{proof}
+
+\begin{proposition}
+  \label{prop:ancestor_properties}
+  In a general Granger-causality graph $\gcg$, if $j \pwgc i$ then at
+  least one of the following must hold
+
+  \begin{enumerate}
+    \item{$j \in \anc{i}$}
+    \item{$\anc{i} \cap \anc{j} \ne \emptyset$}
+  \end{enumerate}
+\end{proposition}
+\begin{proof}
+\end{proof}
+
+It seems intuitive that a converse of \ref{prop:ancestor_properties}
+would hold, e.g. $j \in \anc{i} \implies j \pwgc i$.  Unfortunately,
+this is not the case in general, as different paths through $\gcg$ can
+lead to cancellation.
+
+\begin{example}
+  Firstly, on $n = 4$ nodes, ``diamond'' shapes can lead to cancellation on paths of length 2:
+
+\begin{equation*}
+  x(t) =
+  \left[
+    \begin{array}{cccc}
+      0 & 0 & 0 & 0\\
+      a & 0 & 0 & 0\\
+      -a & 0 & 0 & 0\\
+      0 & 1 & 1 & 0\\
+    \end{array}
+  \right] x(t - 1) + v(t),
+\end{equation*}
+
+with $\E v(t) = 0,\ \E v(t)v(t - \tau)^\T = \delta_\tau I$.
+
+The graph associated to this system is not strongly causal since there are two paths between $1$ and $4$, namely: $1 \rightarrow 2 \rightarrow 4$ and $1 \rightarrow 3 \rightarrow 4$.  However, by directly calculating
+
+\begin{align*}
+  x_4(t) &= x_2(t - 1) + x_3(t - 1) + v_4(t)\\
+         &= ax_1(t - 2) + av_2(t - 1) - ax_1(t - 2) -av_3(t - 1) + v_4(t)\\
+         &= a(v_2(t - 1) - v_3(t - 1)) + v_4(t),
+\end{align*}
+
+we see that, since $v(t)$ is spatially and temporally uncorrelated, $1 \not\pwgc 4$.
+\end{example}
+
+\begin{example}
+  A second example on $n = 3$ nodes is also worth examining, in this
+  cancellation is a result of differing time lags:
+
+\begin{equation*}
+  x(t) =
+  \left[
+    \begin{array}{ccc}
+      0 & 0 & 0\\
+      -a & 0 & 0\\
+      0 & 1 & 0\\
+    \end{array}
+  \right] x(t - 1) +
+  \left[
+    \begin{array}{ccc}
+      0 & 0 & 0\\
+      0 & 0 & 0\\
+      a & 0 & 0\\
+    \end{array}
+  \right] x(t - 2) + v(t)
+\end{equation*}
+
+Then
+
+\begin{align*}
+  x_2(t) &= v_2(t) - ax_1(t - 1)\\
+  x_3(t) &= v_3(t) + x_2(t - 1) + ax_1(t - 2)\\
+  \implies x_3(t) &= v_2(t - 1) + v_3(t),
+\end{align*}
+
+and again the graph is not strongly causal and $1 \not\pwgc 3$.
+\end{example}
+
+The previous examples seem rather pathological since we have simply
+constructed a case where different paths in the graph cancel exactly.
+It may be possible to rid ourselves of these pathologies for instance
+by defining a notion of ``robust'' pairwise causality where
+``$j \pwgc _R i$'' if $j \pwgc i$ for any ``small'' perturbation of
+the system matrix.  However, we do not believe such a modification of
+our theory can have useful practical implications since the difference
+between paths that ``nearly cancel'' rather than cancel exactly would
+in practice require inordinate amounts of data to resolve.
+
+Alternatively, we could restrict the coefficients of the system
+matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead, we will
+focus on the defining feature of time series networks, the topology of
+$\gcg$ and consider conditions thereon.
+
+\begin{definition}[Strongly Causal]
+  We will say that a Granger-causality graph $\gcg$ is \textit{strongly causal}
+if $\gcg$ is a DAG and there is at most 1 directed path between any two nodes.
+\end{definition}
+
+\begin{proposition}
+  \label{prop:sc_graph_common_anc}
+  In a strongly causal graph if $j \in \anc{i}$ and $k \in \anc{i} \cap \anc{j}$ then the unique path from $k$ to $i$ contains $j$.
+\end{proposition}
+\begin{proof}
+  Suppose that there is a path from $k$ to $i$ which does not contain $j$.  In this case, there are multiple paths from $k$ to $i$ (one of which \textit{does} go through $j$ since $j \in \anc{i}$) which contradicts the assumption of strong causality.
+\end{proof}
+
+% Is pwgc transitive?
+
+In light of proposition \ref{prop:sc_graph_common_anc}, the following provides a converse to proposition \ref{prop:ancestor_properties}.
+
+\begin{proposition}
+  \label{lem:pwgc_anc}
+  If $\gcg$ is strongly causal and each self-loop filter
+  $1 - \B_{ii}(z)$ is invertible, then $j \in \anc{i} \implies j \pwgc i$.
+\end{proposition}
+\begin{proof}
+  Since strongly causal graphs are acyclic, this allows us to
+  recursively expand the parents of $x_i$ in $\gcg$ in the
+  $\VAR(\infty)$ representation of $x(t)$ since we will eventually
+  terminate at nodes $d$ such that $\pa{d} = \emptyset$.  To this end,
+  examining $x_i$ in equation \ref{eqn:ar_representation}
+
+  \begin{align*}
+    x_i(t) &= v_i(t) + \sum_{\tau = 1}^\infty \big[ B_{ii}(\tau)x_i(t - \tau) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau)\big]\\
+    \implies x_i(t) &= (1 - \B_{ii}(z))^{-1} \big[v_i(t) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau) \big]\\
+    &= \sum_{\tau = 1}^\infty \big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \pa{i}} C_{ik}(\tau)x_k(t - \tau)\big].
+  \end{align*}
+
+  If $\pa{i} = \emptyset$ then we simply have
+  $x_i(t) = \sum_{\tau = 1}^\infty C_{ii}(\tau)v_i(t)$ and
+  $C_{ii} = A_{ii}$ from equation \ref{eqn:wold}.
+
+  Applying this relation recursively we can write
+
+  \begin{equation*}
+    x_i(t) = \sum_{\tau = 1}^\infty\big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \anc{i}}C_{ik}(\tau)v_k(t - \tau) \big].
+  \end{equation*}
+
+\end{proof}
+
+That strong conditions need to be placed on the topology of $\gcg$ in
+order for lemma \ref{lem:pwgc_anc} to be true can be seen through the
+earlier examples.
+
+\begin{lemma}
+  If $\gcg$ is strongly causal, then any $\VAR(p)$ system on $\gcg$ is stable if and only if
+  $B_{ii}(z)$ is stable for every $i = 1, \ldots, n$.
+\end{lemma}
+\begin{proof}
+\end{proof}
+
+% $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+% I'm actually not sure this is true, I think that if there is a common ancestor it is
+% ambiguous.  This may be true for transfer entropy, but for Granger-causality even if
+% the information arriving at i is later than to j, it may be less corrupt and hence
+% still facilitate better predictions about k's future.
+
+% Finally, the \textit{propagation delay} from $j$ to $i$, denoted $d(j, i)$, will be defined as 
+
+% \[
+%   d(j, i) = \text{min}\big\{\sum_{k = 0}^{K - 1} d(p_k, p_{k + 1}})\ |\ i = p_0 \rightarrow p_1 \rightarrow \cdots \rightarrow p_K = j \text{ is a path in } \gcg \big\}
+% \]
+
+% and $d(j, i) \defeq \text{min}\{B_{i, j}(\tau) \ne 0\}$ if $j \in \pa{i}$.
+
+\begin{lemma}
+  \label{lem:pwgc_anc}
+  If $x_j \pwgc x_i$ then one or more of the following hold
+
+  \begin{enumerate}
+    \item{$j \in \anc{i}$}
+    \item{$\anc{i}\cap\anc{j} \ne \emptyset$.}
+  \end{enumerate}
+\end{lemma}
+
+% \begin{remark}
+%   This lemma formalizes the intuition of \textit{information flow} in $\gcg$.  We have $x_j \pwgc x_i$ whenever $i$ is descended from $j$, or if they have a common ancestor (call it $k$) and ``information'' from $k$ reaches $j$ before it reaches $i$.
+% \end{remark}
+
+\begin{proof}
+  Is this true if we take \ref{lem:pwgc_anc} as an axiom?
+\end{proof}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+We are interested in understanding under what conditions a causality
+graph can be correctly recovered by pairwise testing alone.  It is not
+enough that the graph simply be sparse, as the following example shows.
+
+\begin{example}
+  If the causality graph $\gcg$ of the vector process $x(t)$ is
+  strongly connected\footnote{there is a directed path from each node
+    to every other node}, then the causality graph recovered via
+  pairwise causality tests is the complete graph.
+
+  This follows immediately from the fact (lemma \ref{lem:pwgc_anc})
+  that $j \in \anc{i} \implies j \pwgc i$.
+\end{example}
+
+\begin{definition}[Simply Causal]
+  If the Granger-Causality graph $\gcg$ for $x(t)$ is as a directed
+  acyclic graph such that there is at most one non-overlapping
+  directed path between any two nodes (excluding self-loops) then we
+  will refer to $\gcg$ as being \textit{simply causal}.
+\end{definition}
+
+\begin{example}
+  A directed tree (more generally directed forest) is a simply causal
+  graph.
+\end{example}
+
+\begin{lemma}
+  If $\gcg$ is simply causal then $i \pwgc j$ and $j \in \anc{i}$ are
+  \textit{alternatives}, that is $i \pwgc j \implies j \notin \anc{i}$.
+\end{lemma}
+\begin{proof}
+  Suppose that $\gcg$ is simply causal and that we have both
+  $i \pwgc j$ and $j \in \anc{i}$.  We will show that $i \in \anc{j}$,
+  which produces a contradiction (since $\gcg$ being a DAG is part of
+  the requirements for being simply causal).
+
+  Since $j \in \anc{i}$ there is a path $\gcgpath{j}{a}{p}{i}$.
+  Moreover, since $i \pwgc j$ by lemma \ref{lem:pwgc_anc} there must
+  be a common ancestor $k \in \anc{i} \cap \anc{j}$ (otherwise, we would
+  have $i \in \anc{j}$, contradicting the acyclic property).  The node
+  $k$ has paths to both $j,\ \gcgpath{k}{b}{q}{j}$ and $i,\ \gcgpath{k}{c}{r}{i}$.
+
+\end{proof}
+
+\begin{theorem}[Pairwise Recovery]
+  \label{thm:tree_recovery}
+  If the Granger-Causality graph $\gcg$ for $x(t)$ is simply causal
+  then then $\gcg$ can be inferred from pairwise causality tests
+  alone.
+\end{theorem}
+\begin{proof}
+  
+\end{proof}
+
+\begin{example}
+  The condition of simple causality is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (e.g. $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$) contains a loop but is pairwise recoverable.
+\end{example}
+
+\section{Structure Learning}
+\subsection{Local Search Heuristics}
+
+
+\subsection{Edge-Wise Grouped LASSO}
+Minimize the sparsity promoting regularized least squares problem and choose the hyper-parameters against the Akaike information criteria.
+
+\begin{equation}
+  L(\lambda, p) \defeq \underset{B}{\text{minimize}}\ \frac{1}{T}\sum_{t = 1}^T||x(t) - \sum_{\tau = 1}^pB(\tau)x(t - \tau)||_2^2 + \lambda \sum_{i, j}\big[\alpha||B_{i, j}||_2 + (1 - \alpha)||B_{i, j}||_1\big]
+\end{equation}
+
+\begin{equation}
+  \underset{\lambda, p}{\text{minimize}}\ L(\lambda, p) + \mathsf{AIC}(B^{(\lambda, p)})
+\end{equation}
+
+\subsection{Bayesian Posterior Thresholding}
+Consider the Bayesian model
+
+\begin{equation}
+  \begin{aligned}
+    (x(t)\ |\ B, \sigma_v^2, \{x(t - \tau)\}_{\tau = 1}^p) &\sim \mathcal{N}(\sum_{\tau = 1}^pB(\tau)x(t - \tau), \sigma_v^2)\\
+    (B_{ij}(\tau)\ |\ G_{ij}(\tau)) &\sim G_{ij}(\tau)\mathcal{N}(0, \sigma_\beta^2) + (1 - G_{ij}(\tau))\delta_0(B_{ij}(\tau))\\
+    (G_{ij}(\tau)) &\sim \mathsf{BER}(p_{ij}(\tau))\\
+    \sigma_v^2 &\sim \Gamma(a_v, b_v)\\
+    \sigma_\beta^2 &\sim \Gamma(a_\beta, b_\beta)
+  \end{aligned}
+\end{equation}
+
+Similar models have been studied by various authors in the context of the linear regression model \hl{[(cite them)]} where it is referred to as \textit{stochastic variable selection}, or referred to as a model for Bayesian variable selection.
+
+Since we have in mind applications where $n$ is large, sampling posterior probabilities can be prohibitively burdensome, so we can instead fit the mean-field variational approximation $p(B, G, \sigma\ |\ X) \approx q_Gq_Bq_\sigma$ and subsequently apply a thresholding operation to the posterior edge inclusion probabilities under $q_G$.
+
+\subsection{Pairwise Minimum Error Spanning Trees}
+Inspired by theorem \ref{thm:tree_recovery}, we propose the following
+structure learning heuristic.
+
+%% This algorithm should perform coordinate descent or jointly refit all the trees.
+
+\begin{enumerate}
+  \item{Set $k = 0$ and $x^0(t) = x(t)$}
+  \item{Compute all pairwise causality measures $\Xi \defeq \big[\ln \frac{\xi_i}{\xi_{ij}} \big]_{i, j}$}
+  \item{Find the maximum spanning arborescence\footnote{An ``arborescence'' is a french word for a tree diagram, and refers to a \textit{directed} tree in graph theory} $\mathcal{T}_k$ of a graph having edge weights $\Xi_{ij}$.}
+  \item{Fit a vector LTI filter $F_k$ having graph defined by $\mathcal{T}_k$ to $x^{k - 1}(t)$ and set $x^k(t) = x^{k - 1}(t) - \hat{x}^{k - 1}(t)$}
+  \item{Repeat over $k$ until a stopping criteria is met}
+\end{enumerate}
+
+
+\section{Application}
+\section{Conclusion}
+
+\printbibliography
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
