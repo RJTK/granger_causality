@@ -19,14 +19,14 @@
 \newcommand{\pa}[1]{pa(#1)}  % Parents of a node
 \newcommand{\anc}[1]{\mathcal{A}(#1)}  % Ancestors of a node
 \newcommand{\ancn}[2]{\mathcal{A}_{#1}(#2)}  % nth ancestors of a node
-\newcommand{\gpn}[2]{gp_{#1}(#2)}  # nth generation grandparents
+\newcommand{\gpn}[2]{gp_{#1}(#2)}  % nth generation grandparents
 \newcommand{\gcgpath}[4]{#1 \rightarrow #2_1 \rightarrow \cdots \rightarrow #2_{#3} \rightarrow #4}
 
 \input{\string~/Documents/academics/global_academics/latex_preamble}
 
 \graphicspath{{./figures/}}
 
-\title{Structure Learning for $VAR(p)$ Models}
+\title{Structure Learning for $\VAR(p)$ Models}
 \author{R. J. Kinnear, R. R. Mazumdar}
 
 \begin{document}
@@ -379,7 +379,7 @@ We continue to develop the relationship between $x_i$ and it's family tree.
     x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
   \end{equation}
 
-  The base case follows by expanding \ref{eqn:parent_expansion}, but we skip the calculations since they are nearly identical to the following induction step:
+  The base case follows by expanding each $x_k$ in equation \ref{eqn:induction} via equation \ref{eqn:parent_expansion}, but we skip the calculations since they are nearly identical to the following induction step:
 
   \begin{align*}
     x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)\\
@@ -388,7 +388,7 @@ We continue to develop the relationship between $x_i$ and it's family tree.
     &\overset{(b)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell + 1}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
   \end{align*}
 
-  Where set $(a)$ follows by expanding each $x_k$ with equation \ref{eqn:parent_expansion} and $(b)$ requires the inversion of $\big(1 - \sum_{k \in \gpn{\ell}{i}\setminus\{i\}}\wtB_{ik}(z)\wtB_{ki}(z)\big)$ as well as using the fact that $\ancn{\ell}{i} = \ancn{\ell - 1}{i}\cup\gpn{\ell}{i}$.  We here remind the reader of our earlier established convention that $\wtB$ simply represents the existence of a filter (possibly 0) and can change from place to place.
+  Where equality $(a)$ follows by expanding each $x_k$ with equation \ref{eqn:parent_expansion} and $(b)$ requires the inversion of $\big(1 - \sum_{k \in \gpn{\ell}{i}\setminus\{i\}}\wtB_{ik}(z)\wtB_{ki}(z)\big)$ as well as using the fact that $\ancn{\ell}{i} = \ancn{\ell - 1}{i}\cup\gpn{\ell}{i}$.  We here remind the reader of our earlier established convention that $\wtB$ simply represents the existence of a filter (possibly 0) and can change from place to place.
 
 The induction terminates after $n$ steps since in a graph with $n$ nodes $\gpn{n + 1}{i} = \emptyset$
 
