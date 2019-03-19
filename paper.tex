@@ -183,7 +183,7 @@ representation can be inverted to yield the $VAR(\infty)$ form
 where $v(t)$ is an uncorrelated sequence with covariance $\Sigma_v$.
 
 \begin{theorem}[Granger Causality Equivalences]
-  \label{thm:gcg}
+  \label{thm:granger_causality_equivalences}
   Let $x(t)$ be a WSS process with absolutely summable covariance
   sequence, and uniformly bounded spectral density.  Denote by
   $\xi_{ij} \defeq \linEerr{x_i(t)}{\mathcal{H}^{-j}}$ and
@@ -452,9 +452,9 @@ We now prove the proposition.
     x(t) = (I - \B(z))^{-1} v(t),
   \end{equation*}
 
-  where clearly $(I - \B(z))^{-1} = \A(z)$.  Since $\B(z)$ is stable,
-  that is $|\lambda_{\text{max}}(B(z))| < 1$, for every $|z| \le 1$ we
-  have
+  where $(I - \B(z))^{-1} = \A(z)$ due to the uniqueness of
+  (\ref{eqn:wold}).  Since $\B(z)$ is stable, that is
+  $|\lambda_{\text{max}}(B(z))| < 1$, for every $|z| \le 1$ we have
 
   \begin{equation*}
     (I - \B(z))^{-1} = \sum_{k = 0}^\infty \B(z)^k.
@@ -464,7 +464,9 @@ We now prove the proposition.
   $\B(z)$.  Then from lemma (\ref{lem:adj_matrix}) $S$ is the
   transpose of the adjacency matrix for $\gcg$ and hence $(S^k)_{ij}$
   is non-zero if and only if $j \in \gpn{k}{i}$, and therefore
-  $\A(z)_{ij}$ is zero if $j \not\in \anc{i}$.
+  $\B(z)^k_{ij} = 0$ if $j \not \in \gpn{k}{i}$.
+  $\anc{i} = \cup_k\gpn{k}{i}$ we see that $\A(z)_{ij}$ is zero if
+  $j \not\in \anc{i}$.
 
   Thence
 
@@ -472,7 +474,65 @@ We now prove the proposition.
     x_i(t) &= \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
     &= \A_{ii}(z) v_i(t) + \sum_{j \in \anc{i} \setminus \{i\}} \A_{ij}(z) v_j(t)\\
   \end{align*}
+\end{proof}
 
+Before moving onto our next proposition, we need two lemmas formalizing
+some intuitively apparent facts.
+
+\begin{lemma}
+  \label{lem:subspace_sum_projection}
+  Let $x \in \mathcal{H}$ where $\mathcal{H}$ is a Hilbert space having inner product $\langle \cdot, \cdot \rangle$ and let $\{\mathcal{H}_n\}_{n = 0}^\infty$ be a collection of subspaces of $\mathcal{H}$ such that $x \perp \mathcal{H}_0$.  Then
+
+  \begin{equation*}
+    \linE{x}{\bigvee_{n = 0}^\infty\mathcal{H}_n} = \linE{x}{\bigvee_{n = 1}^\infty\mathcal{H}_n},
+  \end{equation*}
+
+  where $\mathcal{H}_2 \vee \mathcal{H}_2 = \cl \{\alpha + \beta\ |\ \alpha \in \mathcal{H}_1, \beta \in \mathcal{H}_2 \}$ is the closed sum of subspaces.
+\end{lemma}
+\begin{proof}
+  We can apply the Gram-schmidt process to the collection of subspaces to obtain a sequence of orthogonal subspaces $\widetilde{\mathcal{H}}_0, \widetilde{\mathcal{H}}_1, \ldots$ with $\widetilde{\mathcal{H}}_0 = \mathcal{H}_0$, $\widetilde{\mathcal{H}}_n \subseteq \mathcal{H}_n$, and $\bigvee_{n = 0}^\infty\mathcal{H}_n = \bigoplus_{n = 0}^\infty \widetilde{\mathcal{H}}_n$, where $\oplus$ indicates the orthogonal sum of subspaces (which is always closed).  Then, we have an explicit representation of the projection
+
+  \begin{align*}
+    \linE{x}{\bigvee_{n = 0}^\infty\mathcal{H}_n} &= \sum_{n = 0}^\infty \langle x, x_n \rangle x_n\\
+    &\overset{(a)}{=} \sum_{n = 1}^\infty \langle x, x_n \rangle x_n,
+  \end{align*}
+
+  where $x_n \in \widetilde{\mathcal{H}}_n \subseteq \mathcal{H}_n$ and $(a)$ follows because of our assumption that $x \perp \mathcal{H}_0$.  This establishes that the projection is infact a member of the smaller subspace $\bigvee_{n = 1}^\infty\mathcal{H}_n$, and since the error can only increase by projecting onto this smaller subspace, we have the conclusion.
+\end{proof}
+
+The following lemma is reproduced from \cite{lindquist} here for convenience.
+
+\begin{lemma}[\cite{lindquist}]
+  \label{lem:conditional_orthogonality_equivalence}
+  Consider three closed subspaces of a Hilbert space $\mathcal{A}$, $\mathcal{B}$, $\mathcal{X}$.  The following statements are equivalent
+
+  \begin{enumerate}
+    \item{$\mathcal{A} \perp \mathcal{B}\ |\ \mathcal{X}$}
+    \item{$\linE{\beta}{\mathcal{A} \vee \mathcal{X}} = \linE{\beta}{\mathcal{X}}\ \forall \beta \in \mathcal{B}$}
+    % \item{$\linE{\beta}{\mathcal{A}} = \linE{\linE{\beta}{\mathcal{X}}}{\mathcal{A}}\ \forall \beta \in \mathcal{B}}$}
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  Proceding from the definition of conditional orthogonality we have
+
+  \begin{align*}
+    &\langle \alpha - \linE{\alpha}{\mathcal{X}}, \beta - \linE{\beta}{\mathcal{X}} \rangle = 0 \ \forall \alpha \in \mathcal{A}\ \beta \in \mathcal{B}\\
+    &{\iff} \langle \alpha + x - \linE{\alpha + x}{\mathcal{X}}, \beta - \linE{\beta}{\mathcal{X}} \rangle = 0 \ \forall \alpha \in \mathcal{A}\ \beta \in \mathcal{B}, x \in \mathcal{X}\\
+    &\overset{(a)}{\iff} \langle \alpha + x, \beta - \linE{\beta}{\mathcal{X}} \rangle = 0 \ \forall \alpha \in \mathcal{A}\ \beta \in \mathcal{B}, x \in \mathcal{X}\\
+    &\overset{(b)}{\iff} \linE{\beta - \linE{\beta}{\mathcal{X}}}{\mathcal{A} \vee \mathcal{X}} = 0\ \forall \beta \in \mathcal{B}\\
+    &\overset{(c)}{\iff} \linE{\beta}{\mathcal{A} \vee \mathcal{X}} = \linE{\beta}{\mathcal{X}},
+  \end{align*}
+
+  where $(a)$ follows since $(\beta - \linE{\beta}{\mathcal{X}}) \perp \mathcal{X}$ and $\linE{\alpha + x}{\mathcal{X}} \in \mathcal{X}$, $(b)$ since $z \perp \mathcal{X} \vee \mathcal{A} \iff \linE{z}{\mathcal{X} \vee \mathcal{A}} = 0$, and $(d)$ since $\linE{z}{\mathcal{H}_2} = \linE{\linE{z}{\mathcal{H}_2}}{\mathcal{H}_1}$ for $\mathcal{H}_2 \subseteq \mathcal{H}_1$.
+  
+  % This is property (vi) in Lindquist
+  % \begin{align*}
+  %   \langle \alpha - \linE{\alpha}{\mathcal{X}}, \beta - \linE{\beta}{\mathcal{X}} \rangle &= 0 \ \forall \alpha \in \mathcal{A}\ \beta \in \mathcal{B}\\
+  %   \overset{(a)}{\iff} \langle \alpha, \beta - \linE{\beta}{\mathcal{X}} \rangle &= 0\ \forall \alpha \in \mathcal{A}\ \beta \in \mathcal{B}\\
+  %   \overset{(b)}{\iff} \linE{\beta - \linE{\beta}{\mathcal{X}}}{\mathcal{A}} &= 0\ \forall \beta \in \mathcal{B}
+  % \end{align*}
+
+  % where $(a)$ follows because $\linE{\alpha}{\mathcal{X}} \in \mathcal{X}$ and $\beta - \linE{\beta}{\mathcal{X}} \in \mathcal{X}$, and $(b)$ follows since $\beta \perp \mathcal{A} \iff \linE{\beta}{\mathcal{A}} = 0$.
 \end{proof}
 
 \begin{proposition}
@@ -486,19 +546,44 @@ We now prove the proposition.
   \end{enumerate}
 \end{proposition}
 \begin{proof}
-  We will show the contrapositive.  Assume that $j \not \in \anc{i}$ and $\anc{i} \cap \anc{j} = \emptyset$, then $\forall \tau \in \N,\ \E x_i(t)x_j(t - \tau) = 0$ since from the representation (\ref{eqn:parent_expansion}) we have
+  We will show the contrapositive.  Assume that $j \not \in \anc{i}$ and $\anc{i} \cap \anc{j} = \emptyset$, then $\forall \tau \in \Z_+,\ \E x_i(t)x_j(t - \tau) = 0$ since from the representation (\ref{eqn:parent_expansion}) we have
 
   \begin{align*}
-    \E x_i(t)x_j(t - \tau) &= \E \big(A_{ii}(z)v_i(t)\big)\big(A_{jj}(z)v_j(t - \tau)\big)\\
-    &+ \sum_{k \in \anc{i}}\E[\big(a_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{k \in \anc{j}}\E[v_i(t) \big(a_{jk}(z) v_k(t - \tau)\big)]\\
-    &+ \sum_{k \in \anc{i}}\sum_{\ell \in \anc{j}}\E[\big(a_{ik}(z)v_k(t)\big)\big(a_{j\ell}(z)v_\ell(t - \tau)\big)].
+    \E x_i(t)x_j(t - \tau) &= \E \big(\A_{ii}(z)v_i(t)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
+    &+ \sum_{k \in \anc{i}}\E[\big(\A_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{k \in \anc{j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
+    &+ \sum_{k \in \anc{i}}\sum_{\ell \in \anc{j}}\E[\big(\A_{ik}(z)v_k(t)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)]\\
   \end{align*}
 
-  Keeping in mind that $v(t)$ is an isotropic and uncorrelated sequence (i.e. $\forall \tau \in \Z,\ k \ne \ell \implies \E v_k(t)v_\ell(t - \tau) = 0$ and $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$), we see that each of these four terms is 0.  The first term since $i \pwgc i$ is not possible and hence the case $j = i$ is vacuous.  The second term is 0 since $j \not\in \anc{i}$.  For the third term, it is possible that $i \in \anc{j}$, however, since $\A_{jk}(z)$ is causal and $\tau \ge 1$, $v_i(t)$ is later in time than $\A_{jk}(z)v_k(t - \tau)$, hence the third term is 0.  The fourth term is 0 since $\anc{i}\cap\anc{j} = \emptyset$.
+  Keeping in mind that $v(t)$ is an isotropic and uncorrelated sequence (i.e. $\forall \tau \in \Z,\ k \ne \ell \implies \E v_k(t)v_\ell(t - \tau) = 0$ and $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$), we will see that each of these above four terms are 0.  The first term since $i \pwgc i$ is not possible and hence the case $j = i$ is vacuous.  The second term is 0 since $j \not\in \anc{i}$.  The fourth term above is 0 since $\anc{i} \cap \anc{j} = \emptyset$.  For the third term, it is possible that (due to cycles) $i \in \anc{j}$ which requires more care, however similarly as before we can at least see that
 
-The implication $\tau \ge 1 \implies \E x_i(t)x_j(t - \tau) = 0$ is sufficient for 
+  \begin{equation*}
+    \sum_{k \in \anc{j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)] = \E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)].
+  \end{equation*}
 
+  However, $k \ne \ell \implies \A_{k\ell}(z) = 0$ (i.e. $\A(z) = I + A(1)z^{-1} + \cdots$) so $\A_{ji}(z)v_i(t - \tau)$ is strictly earlier in time, for $\tau \ge 0$, than $v_i(t)$ and hence $\E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)] = 0$.  This establishes the fact that $H_t^{(i)} \perp \mathcal{H}_t^{(j)}$ where $H_t^{(i)} = \{\alpha x_i(t)\ |\ \alpha \in \R\}$ is the Hilbert space generated by the current sample of $x_i$.  It is clear that $\mathcal{H}_t^{(i)} = \bigvee_{\tau = 0}^\infty H_{t - \tau}^{(i)}$.
+
+  Then for every $s \ge 0$
+
+  \begin{align*}
+    \linE{x_j(t - s)}{\mathcal{H}_t^{(i)}} &= \linE{x_j(t - s)}{\bigvee_{\tau = 0}^\infty H_{t - \tau}^{(i)}}\\
+    &\overset{(a)}{=} \linE{x_j(t - s)}{\bigvee_{\tau = 1}^\infty H_{t - \tau}^{(i)}}\\
+    &= \linE{x_j(t - s)}{\mathcal{H}_{t - 1}^{(i)}},
+  \end{align*}
+
+  where $(a)$ follows from lemma (\ref{lem:subspace_sum_projection}).  Lemma (\ref{lem:conditional_orthogonality_equivalence}) tells us that this is equivalent to
+
+  \begin{equation*}
+    \mathcal{H}_t^{(i)} \perp \mathcal{H}_{t - 1}^{(j)}\ |\ \mathcal{H}_{t - 1}^{(i)},
+  \end{equation*}
+
+  so by theorem (\ref{thm:granger_causality_equivalences}) we conclude $j \not\pwgc i$.
 \end{proof}
+
+We can state some interesting corollaries of this result.
+
+\begin{corollary}
+  If the graph $\gcg$ is acyclic and if $j \pwgc i$ and $i \pwgc j$ then $\anc{i} \cap \anc{j} \ne \emptyset$.
+\end{corollary}
 
 It seems intuitive that a converse of \ref{prop:ancestor_properties}
 would hold, i.e. $j \in \anc{i} \implies j \pwgc i$.  Unfortunately,
@@ -522,7 +607,7 @@ lead to cancellation.
 
 with $\E v(t) = 0,\ \E v(t)v(t - \tau)^\T = \delta_\tau I$.
 
-The graph associated to this system is not strongly causal since there are two paths between $1$ and $4$, namely: $1 \rightarrow 2 \rightarrow 4$ and $1 \rightarrow 3 \rightarrow 4$.  However, by directly calculating
+By directly calculating
 
 \begin{align*}
   x_4(t) &= x_2(t - 1) + x_3(t - 1) + v_4(t)\\
@@ -530,7 +615,7 @@ The graph associated to this system is not strongly causal since there are two p
          &= a(v_2(t - 1) - v_3(t - 1)) + v_4(t),
 \end{align*}
 
-we see that, since $v(t)$ is spatially and temporally uncorrelated, $1 \not\pwgc 4$.
+we see that, since $v(t)$ is isotropic white noise, $1 \not\pwgc 4$.  The problem here is that there are multiple paths from $x_1$ to $x_4$.
 \end{example}
 
 \begin{example}
@@ -563,28 +648,32 @@ Then
   \implies x_3(t) &= v_2(t - 1) + v_3(t),
 \end{align*}
 
-and again the graph is not strongly causal and $1 \not\pwgc 3$.
+and again $1 \not\pwgc 3$.
 \end{example}
 
 The previous examples seem rather pathological since we have simply
 constructed a case where different paths in the graph cancel exactly.
 It may be possible to rid ourselves of these pathologies for instance
 by defining a notion of ``robust'' pairwise causality where
-``$j \pwgc _R i$'' if $j \pwgc i$ for any ``small'' perturbation of
-the system matrix.  However, we do not believe such a modification of
-our theory can have useful practical implications since the difference
-between paths that ``nearly cancel'' rather than cancel exactly would
-in practice require inordinate amounts of data to resolve.
+``$j \pwgc _R i$'' if $j \pwgc i$ almost surely for a ``small'' random
+perturbation of the system matrix.  However, we do not believe such a
+modification of our theory can have useful practical implications
+since the difference between paths that ``nearly cancel'' rather than
+cancel exactly would in practice require inordinate amounts of data to
+resolve.
 
 Alternatively, we could restrict the coefficients of the system
-matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead, we will
-focus on the defining feature of time series networks, the topology of
-$\gcg$ and consider conditions thereon.
+matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead, we
+think it is more meaningful to focus on the defining feature of time
+series networks, that is, the topology of $\gcg$.
 
 \begin{definition}[Strongly Causal]
   We will say that a Granger-causality graph $\gcg$ is \textit{strongly causal}
 if $\gcg$ is a DAG and there is at most 1 directed path between any two nodes.
 \end{definition}
+
+Examples of strongly causal graphs include directed trees (or
+forests), and DAGs where each node has at most one parent.
 
 \begin{proposition}
   \label{prop:sc_graph_common_anc}
@@ -596,12 +685,12 @@ if $\gcg$ is a DAG and there is at most 1 directed path between any two nodes.
 
 % Is pwgc transitive?
 
-In light of proposition \ref{prop:sc_graph_common_anc}, the following provides a converse to proposition \ref{prop:ancestor_properties}.
+In light of proposition \ref{prop:sc_graph_common_anc}, the following
+provides a converse to proposition \ref{prop:ancestor_properties}.
 
 \begin{proposition}
   \label{lem:pwgc_anc}
-  If $\gcg$ is strongly causal and each self-loop filter
-  $1 - \B_{ii}(z)$ is invertible, then $j \in \anc{i} \implies j \pwgc i$.
+  If $\gcg$ is strongly causal then $j \in \anc{i} \implies j \pwgc i$.
 \end{proposition}
 \begin{proof}
   Since strongly causal graphs are acyclic, this allows us to

@@ -8,6 +8,17 @@ from sympy import (Matrix, Symbol, MatrixSymbol, pprint, eye, tensorproduct,
 # is it possible that the pairwise error from x_2 to x_1 is lower than from x_1 to x_2
 # even though there is no direct connection?  What about the GCG likelihood ratio?
 
+def mar19():
+    a, b, c, d = symbols("a, b, c, d")
+    z = Symbol("z")
+    B = Matrix([[0, a, 0],
+                [0, 0, b],
+                [d, c, 0]])
+
+    Bz = B * z
+    A = simplify((eye(3) - Bz).inv())
+    return
+
 def mar18():
     a, b, c = symbols("a, b, c")
     B = Matrix([[0, 0, c], [a, 0, 0], [0, b, 0]])
