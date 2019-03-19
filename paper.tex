@@ -302,15 +302,22 @@ $j \in \ancn{\ell}{i}$ if and only if there is a directed and cycle-free
 path of length $\ell$ \textit{or less} in $\gcg$ from $j$ to $i$
 \textit{or} if $j = i$ and there is a directed cycle of length $\ell$ or
 less from $i$ back to $i$ in $\gcg$.  The set of \textit{all
-  ancestors} of $i$ (e.g. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
+  ancestors} of $i$ (i.e. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
 \end{definition}
 
 The edges of the Granger-causality graph $\gcg$ can be given a general
 notion of ``weight'' by associating an edge $(j, i)$ with a
 \textit{strictly causal} LTI filter
-$\B_{ij}(z) = \sum_{\tau = 1}^{\infty} B_{ij}(\tau)z^{-\tau}$ from the
-$\VAR$ representation of equation \ref{eqn:ar_representation}.  We
-will represent the action (convolution) of this filter compactly as
+
+\begin{equation}
+  \label{eqn:filter}
+  \B_{ij}(z) = \sum_{\tau = 1}^{\infty} B_{ij}(\tau)z^{-\tau}
+\end{equation}
+
+from the $\VAR$ representation of equation
+\ref{eqn:ar_representation}.  We will represent the action
+(convolution) of this filter compactly by taking $z^{-1}$ as the
+backshift operator when convenient
 
 \begin{equation}
   \sum_{\tau = 1}^\infty B_{ij}(\tau)x_j(t - \tau) \defeq \B_{ij}(z)x_j(t).
@@ -320,7 +327,8 @@ will represent the action (convolution) of this filter compactly as
 % the "normal" definition becomes a theorem.  Or, if lem:pwgc_anc is true then
 % maybe that is good enough?
 
-From the $\VAR$ representation of $x(t)$ there is clearly a tight relationship between each node and it's parent nodes, indeed
+From the $\VAR$ representation of $x(t)$ there is clearly a tight
+relationship between each node and it's parent nodes, indeed
 
 \begin{equation}
   \label{eqn:parent_expanion}
@@ -338,24 +346,24 @@ Furthermore, if the filter $\B_{ii}$ is invertible, we can write
   \end{aligned}
 \end{equation*}
 
-In general, we will write $\wtB$ for arbitrary filters maintaining the
-convention that $\wtB_{ii}$ is a filter that modifies the future of
-$x_i$ from it's past and $\wtB_{ij}$ a filter modifying $x_i$ from the
-past of $x_j$.  We will use the convention that the filter
-$\widetilde{\B}$ will represent simply ``a filter'' and is not
-necessarily the same as the filters serving as edge weights in $\gcg$
-(indeed, $\wtB$ will often be $0$), and moreover, we will allow for
-$\widetilde{\B}$ to potentially change from place to place and even
-from line to line in the same sequence of calculations as it's exact
-properties or specification are not important.
+% In general, we will write $\wtB$ for arbitrary filters maintaining the
+% convention that $\wtB_{ii}$ is a filter that modifies the future of
+% $x_i$ from it's past and $\wtB_{ij}$ a filter modifying $x_i$ from the
+% past of $x_j$.  We will use the convention that the filter
+% $\widetilde{\B}$ will represent simply ``a filter'' and is not
+% necessarily the same as the filters serving as edge weights in $\gcg$
+% (indeed, $\wtB$ will often be $0$), and moreover, we will allow for
+% $\widetilde{\B}$ to potentially change from place to place and even
+% from line to line in the same sequence of calculations as it's exact
+% properties or specification are not important.
 
 We continue to develop the relationship between $x_i$ and it's family tree.
 
-\begin{proposition}
+\begin{proposition}[Ancestor Expansion]
   \label{prop:parent_expanding}
-  The component $x_i(t)$ of $x(t)$ can be represented as a linear
-  combination of a linear filtering operation acting on the driving
-  noise $v_i$ of $x_i$ as well as the parents of $x_i$:
+  The component $x_i(t)$ of $x(t)$ can be represented as a sum of
+  linear filtering operations acting on the driving noise $v_i$ of
+  $x_i$ as well as the parents of $x_i$:
 
   \begin{equation}
     \label{eqn:parent_expansion}
@@ -366,48 +374,111 @@ We continue to develop the relationship between $x_i$ and it's family tree.
   driving noise only:
 
   \begin{equation}
-    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \anc{i} \setminus\{i\}}\wtB_{ik}(z)v_k(t).
+    x_i(t) = \A_{ii}(z)v_i(t) + \sum_{k \in \anc{i} \setminus\{i\}}\A_{ik}(z)v_k(t),
   \end{equation}
+
+  where $\A(z) = \sum_{\tau = 0}^\infty A(\tau)$ is the filter from
+  the Wold decomposition representation of $x(t)$, equation
+  (\ref{eqn:wold}).
 \end{proposition}
-\begin{proof}
-  The formula \ref{eqn:parent_expansion} was established in the
-  preceding paragraph and serves as a starting point for the induction
-  hypothesis:
 
-  \begin{equation}
-    \label{eqn:induction}
-    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
-  \end{equation}
+This statement is ultimately about the sparsity pattern in the Wold
+decomposition matrices $A(\tau)$ since
+$x_i(t) = \sum_{\tau = 0}^\infty \sum_{j = 1}^n a_{ij}(\tau)v_j(t -
+\tau)$.  The proposition states that $a_{ij}(\tau) = 0$ unless
+$j \in \anc{i}$.
 
-  The base case follows by expanding each $x_k$ in equation \ref{eqn:induction} via equation \ref{eqn:parent_expansion}, but we skip the calculations since they are nearly identical to the following induction step:
+% \begin{proof}
+%   The formula (\ref{eqn:parent_expansion}) was established in the
+%   preceding paragraph and serves as a starting point for the induction
+%   hypothesis:
 
-  \begin{align*}
-    x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)\\
-           &\overset{(a)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)\big[\wtB_{kk}v_k(t)\\
-    &\ \ \ \  + \wtB_{ki}(z)x_i(t) + \sum_{h \in \pa{k}\setminus \{i\}}\wtB_{kh}(z)x_h(t)\big]\\
-    &\overset{(b)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell + 1}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
-  \end{align*}
+%   \begin{equation}
+%     \label{eqn:induction}
+%     x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
+%   \end{equation}
 
-  Where equality $(a)$ follows by expanding each $x_k$ with equation \ref{eqn:parent_expansion} and $(b)$ requires the inversion of $\big(1 - \sum_{k \in \gpn{\ell}{i}\setminus\{i\}}\wtB_{ik}(z)\wtB_{ki}(z)\big)$ as well as using the fact that $\ancn{\ell}{i} = \ancn{\ell - 1}{i}\cup\gpn{\ell}{i}$.  We here remind the reader of our earlier established convention that $\wtB$ simply represents the existence of a filter (possibly 0) and can change from place to place.
-
-The induction terminates after $n$ steps since in a graph with $n$ nodes $\gpn{n + 1}{i} = \emptyset$
-
-% Where step $(a)$ requires the inversion of $1 - \sum_{k \in \pa{i}}\wtB_{ik}(z)\wtB_{ki}(z)$.
+%   The base case follows by expanding each $x_k$ in equation \ref{eqn:induction} via equation \ref{eqn:parent_expansion}, but we skip the calculations since they are nearly identical to the following induction step:
 
 %   \begin{align*}
-%     x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t)\\
-%            &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)\big[\wtB_{kk}v_{k}(t) + \wtB_{ki}(z)x_i(t) + \sum_{h \in \pa{k}\setminus \{i\}}\wtB_{kh}(z)x_h(t) \big]\\
-%            &\overset{(a)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)v_{k}(t) + \sum_{k \in \gpn{2}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)
+%     x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)\\
+%            &\overset{(a)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell - 1}{i}\setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)\big[\wtB_{kk}v_k(t)\\
+%     &\ \ \ \  + \wtB_{ki}(z)x_i(t) + \sum_{h \in \pa{k}\setminus \{i\}}\wtB_{kh}(z)x_h(t)\big]\\
+%     &\overset{(b)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \ancn{\ell}{i} \setminus \{i\}}\wtB_{ik}(z)v_k(t) + \sum_{k \in \gpn{\ell + 1}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t).
 %   \end{align*}
 
-% Where step $(a)$ requires the inversion of $1 - \sum_{k \in \pa{i}}\wtB_{ik}(z)\wtB_{ki}(z)$.
+%   Where equality $(a)$ follows by expanding each $x_k$ with equation \ref{eqn:parent_expansion} and $(b)$ requires the inversion of $\big(1 - \sum_{k \in \gpn{\ell}{i}\setminus\{i\}}\wtB_{ik}(z)\wtB_{ki}(z)\big)$ as well as using the fact that $\ancn{\ell}{i} = \ancn{\ell - 1}{i}\cup\gpn{\ell}{i}$.  We here remind the reader of our earlier established convention that $\wtB$ simply represents the existence of a filter (possibly 0) and can change from place to place.
+
+% The induction terminates after $n$ steps since in a graph with $n$ nodes $\gpn{n + 1}{i} = \emptyset$
+
+% % Where step $(a)$ requires the inversion of $1 - \sum_{k \in \pa{i}}\wtB_{ik}(z)\wtB_{ki}(z)$.
+
+% %   \begin{align*}
+% %     x_i(t) &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t)\\
+% %            &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)\big[\wtB_{kk}v_{k}(t) + \wtB_{ki}(z)x_i(t) + \sum_{h \in \pa{k}\setminus \{i\}}\wtB_{kh}(z)x_h(t) \big]\\
+% %            &\overset{(a)}{=} \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)v_{k}(t) + \sum_{k \in \gpn{2}{i} \setminus \{i\}}\wtB_{ik}(z)x_k(t)
+% %   \end{align*}
+
+% % Where step $(a)$ requires the inversion of $1 - \sum_{k \in \pa{i}}\wtB_{ik}(z)\wtB_{ki}(z)$.
+
+% \end{proof}
+% \textbf{this is an alternative proof, I think superior to the one above}.
+
+The matrix $\B(z)$ is analagous to a \textit{weighted adjacency
+  matrix} for the graph $\gcg$.  And, in the same way that the
+$k^{\text{th}}$ power of an adjacency matrix counts the number of
+paths of length $k$ between nodes, $(\B(z)^k)_{ij}$ is a filter
+isolating the ``action'' of $j$ on $i$ at a time lag of $k$ steps.
+Though we only need the sparsity pattern of $\B(z)^k$ for the proof.
+
+We state the following well known theorem as a lemma, proof follows
+easily by induction.
+
+\begin{lemma}
+  \label{lem:adj_matrix}
+  Let $S$ be the transposed adjacency matrix of the Granger-causality
+  graph $\gcg$.  Then, $(S^k)_{ij}$ is the number of paths of length
+  $k$ from node $j$ to node $i$.  Evidently, if
+  $\forall k \in \N,\ (S^k)_{ij} = 0$ then $j \not\in \anc{i}$.
+\end{lemma}
+
+We now prove the proposition.
+
+\begin{proof}
+  From equation (\ref{eqn:ar_representation}), which we are assuming
+  throughout the paper to be invertible, we can write
+
+  \begin{equation*}
+    x(t) = (I - \B(z))^{-1} v(t),
+  \end{equation*}
+
+  where clearly $(I - \B(z))^{-1} = \A(z)$.  Since $\B(z)$ is stable,
+  that is $|\lambda_{\text{max}}(B(z))| < 1$, for every $|z| \le 1$ we
+  have
+
+  \begin{equation*}
+    (I - \B(z))^{-1} = \sum_{k = 0}^\infty \B(z)^k.
+  \end{equation*}
+
+  Now, let $S$ be a $0-1$ matrix containing the sparsity pattern of
+  $\B(z)$.  Then from lemma (\ref{lem:adj_matrix}) $S$ is the
+  transpose of the adjacency matrix for $\gcg$ and hence $(S^k)_{ij}$
+  is non-zero if and only if $j \in \gpn{k}{i}$, and therefore
+  $\A(z)_{ij}$ is zero if $j \not\in \anc{i}$.
+
+  Thence
+
+  \begin{align*}
+    x_i(t) &= \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
+    &= \A_{ii}(z) v_i(t) + \sum_{j \in \anc{i} \setminus \{i\}} \A_{ij}(z) v_j(t)\\
+  \end{align*}
 
 \end{proof}
 
 \begin{proposition}
   \label{prop:ancestor_properties}
-  In a general Granger-causality graph $\gcg$, if $j \pwgc i$ then at
-  least one of the following must hold
+  In a Granger-causality graph $\gcg$, if $j \pwgc i$ then at least
+  one of the following must hold
 
   \begin{enumerate}
     \item{$j \in \anc{i}$}
@@ -415,10 +486,22 @@ The induction terminates after $n$ steps since in a graph with $n$ nodes $\gpn{n
   \end{enumerate}
 \end{proposition}
 \begin{proof}
+  We will show the contrapositive.  Assume that $j \not \in \anc{i}$ and $\anc{i} \cap \anc{j} = \emptyset$, then $\forall \tau \in \N,\ \E x_i(t)x_j(t - \tau) = 0$ since from the representation (\ref{eqn:parent_expansion}) we have
+
+  \begin{align*}
+    \E x_i(t)x_j(t - \tau) &= \E \big(A_{ii}(z)v_i(t)\big)\big(A_{jj}(z)v_j(t - \tau)\big)\\
+    &+ \sum_{k \in \anc{i}}\E[\big(a_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{k \in \anc{j}}\E[v_i(t) \big(a_{jk}(z) v_k(t - \tau)\big)]\\
+    &+ \sum_{k \in \anc{i}}\sum_{\ell \in \anc{j}}\E[\big(a_{ik}(z)v_k(t)\big)\big(a_{j\ell}(z)v_\ell(t - \tau)\big)].
+  \end{align*}
+
+  Keeping in mind that $v(t)$ is an isotropic and uncorrelated sequence (i.e. $\forall \tau \in \Z,\ k \ne \ell \implies \E v_k(t)v_\ell(t - \tau) = 0$ and $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$), we see that each of these four terms is 0.  The first term since $i \pwgc i$ is not possible and hence the case $j = i$ is vacuous.  The second term is 0 since $j \not\in \anc{i}$.  For the third term, it is possible that $i \in \anc{j}$, however, since $\A_{jk}(z)$ is causal and $\tau \ge 1$, $v_i(t)$ is later in time than $\A_{jk}(z)v_k(t - \tau)$, hence the third term is 0.  The fourth term is 0 since $\anc{i}\cap\anc{j} = \emptyset$.
+
+The implication $\tau \ge 1 \implies \E x_i(t)x_j(t - \tau) = 0$ is sufficient for 
+
 \end{proof}
 
 It seems intuitive that a converse of \ref{prop:ancestor_properties}
-would hold, e.g. $j \in \anc{i} \implies j \pwgc i$.  Unfortunately,
+would hold, i.e. $j \in \anc{i} \implies j \pwgc i$.  Unfortunately,
 this is not the case in general, as different paths through $\gcg$ can
 lead to cancellation.
 
@@ -647,7 +730,7 @@ enough that the graph simply be sparse, as the following example shows.
 \end{proof}
 
 \begin{example}
-  The condition of simple causality is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (e.g. $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$) contains a loop but is pairwise recoverable.
+  The condition of simple causality is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (i.e. $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$) contains a loop but is pairwise recoverable.
 \end{example}
 
 \section{Structure Learning}
