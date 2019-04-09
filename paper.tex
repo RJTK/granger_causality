@@ -750,7 +750,7 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
 
 \begin{proposition}
   \label{lem:pwgc_anc}
-  If $\gcg$ is strongly causal then $j \in \anc{i} \implies j \pwgc i$.
+  If $\gcg$ is a strongly causal DAG then $j \in \anc{i} \implies j \pwgc i$.
 \end{proposition}
 \begin{proof}
   Since strongly causal graphs are acyclic, this allows us to
@@ -875,16 +875,49 @@ enough that the graph simply be sparse, as the following example shows.
 
 \begin{theorem}[Pairwise Recovery]
   \label{thm:tree_recovery}
-  If the Granger-Causality graph $\gcg$ for $x(t)$ is simply causal
-  then then $\gcg$ can be inferred from pairwise causality tests
-  alone.
+  If the Granger-Causality graph $\gcg$ for $x(t)$ is a strongly
+  causal DAG then $\gcg$ can be inferred from pairwise causality
+  tests alone.  The procedure can be carried out, assuming we have an
+  oracle for pairwise causality, via algorithm (\ref{alg:pwgr}).
+
+  \begin{algorithm}
+    \SetKwInOut{Input}{input}
+    \SetKwInOut{Output}{output}
+    \SetKwInOut{Initialize}{initialize}
+
+    \BlankLine
+    \caption{Pairwise Graph Recovery}
+    \label{alg:pwgr}
+    % \TitleOfAlgo{Pairwise Graph Recovery}
+    \Input{Pairwise Granger-causality relations between $n$ processes whose joint Granger-causality relations are known to form a strongly causal DAG $\gcg$.}
+    \Output{Edges $E = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of the graph $\gcg = ([n], E)$.}
+    \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
+      $E = \emptyset$  \texttt{\# Edges of }$\gcg$\\
+      $k = 0$ \texttt{\# A counter used only for notation}}
+    \BlankLine
+    \While{$S \ne \emptyset$}{
+      $P_k \leftarrow \{i \in S_{k - 1}\ |\ \forall s \in S_{k - 1}\ s \not\pwgc i\}$  \texttt{\# first layer driving nodes}\\
+      $S_k \leftarrow S_{k - 1} \setminus P_k$ \texttt{\# remove drivers from} $S$\\
+      $\widehat{P}_{k + 1} \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ s \not\pwgc i\}$   \texttt{\# second layer driving nodes}\\
+      $D_k \leftarrow \{(i, j) \in P_k \times \widehat{P}_{k + 1}\ |\ i \pwgc j \}$  \texttt{\# first to second layer edges}\\
+      $E_k \leftarrow E_{k - 1} \cup D_k$ \texttt{\# add edges to }$E$\\
+      $k \leftarrow k + 1$
+    }
+    \Return{$E$}
+  \end{algorithm}
 \end{theorem}
+
+We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that all of the direct descendents of nodes in $P_k$ are in $\widehat{P}_{k + 1}$.
 \begin{proof}
-  
+  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction.
+
+  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $P_0$ (``driving nodes'') is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $P_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $P_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  If $P_0 \ne [n]$ then $\widehat{P}_1$ must also be non-empty, otherwise there would be driving nodes not included in $P_0$.  We also see that since nodes in $P_0$ have no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$, and therefore by proposition \ref{prop:ancestor_properties} $i \in \anc{j}$;  moreover, the construction of $\widehat{P}_1$ implies that in fact $i \in \pa{j}$, so $(i, j)$ is an edge of $\gcg$.  Finally, by similar reasoning, there cannot be an edge $(i, j) \in D_0$ which is not in $\gcg$, since $\anc{i} \cap \anc{j} = \emptyset$.
+
+\hl{WIP}
 \end{proof}
 
 \begin{example}
-  The condition of simple causality is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (i.e. $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$) contains a loop but is pairwise recoverable.
+  Being a strongly causal DAG is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (e.g. $B(1) = \left[ \begin{array}{cc} 1/2 & 1 \\ 1 & 1/2 \end{array} \right]$) contains a loop but is pairwise recoverable, though not by algorithm (\ref{alg:pwgr}).  Clearly, this example is somewhat artificial since when $n = 2$ there is no difference between pairwise Granger-causality and joint Granger-causality amongst all series -- however, one can take any strongly causal DAG, and then add two additional nodes having such a loop without impacting the pairwise recoverability.
 \end{example}
 
 \section{Structure Learning}
