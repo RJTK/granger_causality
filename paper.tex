@@ -735,6 +735,17 @@ if $\gcg$ is a DAG and there is at most 1 directed path between any two nodes.
 Examples of strongly causal graphs include directed trees (or
 forests), and DAGs where each node has at most one parent.
 
+\begin{lemma}
+  \label{lem:still_strongly_causal}
+  If $\gcg$ is a strongly causal graph, any subgraph formed by eliminating nodes
+  and all of the in and out edges of the eliminated node is still strongly causal.
+\end{lemma}
+\begin{proof}
+  If $\gcg$ has at most one path between any two nodes, there can only
+  be fewer paths after removing nodes from $\gcg$.
+\end{proof}
+
+
 \begin{proposition}
   \label{prop:sc_graph_common_anc}
   In a strongly causal graph if $j \in \anc{i}$ and $k \in \anc{i} \cap \anc{j}$ then the unique path from $k$ to $i$ contains $j$.
@@ -909,9 +920,20 @@ enough that the graph simply be sparse, as the following example shows.
 
 We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that all of the direct descendents of nodes in $P_k$ are in $\widehat{P}_{k + 1}$.
 \begin{proof}
+% 1. Dispense with trivialities
+% 2. Show that P_k is nonempty
+% 3. Show that P^_{k + 1} is non-empty
+% 4. Show that all edges in D_k are legit in G
+% 5. Show that all outgoing edges of P_k are in D_k
+% 6. Induction
+
   Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction.
 
-  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $P_0$ (``driving nodes'') is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $P_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $P_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  If $P_0 \ne [n]$ then $\widehat{P}_1$ must also be non-empty, otherwise there would be driving nodes not included in $P_0$.  We also see that since nodes in $P_0$ have no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$, and therefore by proposition \ref{prop:ancestor_properties} $i \in \anc{j}$;  moreover, the construction of $\widehat{P}_1$ implies that in fact $i \in \pa{j}$, so $(i, j)$ is an edge of $\gcg$.  Finally, by similar reasoning, there cannot be an edge $(i, j) \in D_0$ which is not in $\gcg$, since $\anc{i} \cap \anc{j} = \emptyset$.
+  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $P_0$ (``driving nodes'') is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $P_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $P_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  If $P_0 \ne [n]$ then $\widehat{P}_1$ must also be non-empty, otherwise there would be driving nodes not included in $P_0$.  We also see that since nodes in $P_0$ have no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$, and therefore by proposition \ref{prop:ancestor_properties} $i \in \anc{j}$;  moreover, the construction of $\widehat{P}_1$ implies that in fact $i \in \pa{j}$, so $(i, j)$ is an edge of $\gcg$.
+
+%Finally, by similar reasoning, there cannot be an edge $(i, j) \in D_0$ which is not in $\gcg$, since $\anc{i} \cap \anc{j} = \emptyset$.
+
+Consider now step $K < n$ of algorithm \ref{alg:pwgr}.  By lemma \ref{lem:still_strongly_causal} the graph remains strongly causal after having removed nodes $\bigcup_{k = 0}^K P_k$ from $S$, and we assume for induction that $\bigcup_{k = 1}^K D_k$ are all edges of $\gcg$.
 
 \hl{WIP}
 \end{proof}
