@@ -895,6 +895,7 @@ enough that the graph simply be sparse, as the following example shows.
     \SetKwInOut{Input}{input}
     \SetKwInOut{Output}{output}
     \SetKwInOut{Initialize}{initialize}
+    \DontPrintSemicolon
 
     \BlankLine
     \caption{Pairwise Graph Recovery}
@@ -902,29 +903,35 @@ enough that the graph simply be sparse, as the following example shows.
     % \TitleOfAlgo{Pairwise Graph Recovery}
     \Input{Pairwise Granger-causality relations between $n$ processes whose joint Granger-causality relations are known to form a strongly causal DAG $\gcg$.}
     \Output{Edges $E = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of the graph $\gcg = ([n], E)$.}
-    \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
-      $E = \emptyset$  \texttt{\# Edges of }$\gcg$\\
-      $k = 0$ \texttt{\# A counter used only for notation}}
+    \Initialize{$S_0 = [n]$  \texttt{\# unprocessed nodes}\\
+      $E_0 = \emptyset$  \texttt{\# edges of }$\gcg$\\
+      $P_0 = \emptyset$  \texttt{\# layer by layer driving nodes}\\
+      $k = 0$ \texttt{\# a counter used only for notation}}
     \BlankLine
-    \While{$S \ne \emptyset$}{
-      $P_k \leftarrow \{i \in S_{k - 1}\ |\ \forall s \in S_{k - 1}\ s \not\pwgc i\}$  \texttt{\# first layer driving nodes}\\
-      $S_k \leftarrow S_{k - 1} \setminus P_k$ \texttt{\# remove drivers from} $S$\\
-      $\widehat{P}_{k + 1} \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ s \not\pwgc i\}$   \texttt{\# second layer driving nodes}\\
-      $D_k \leftarrow \{(i, j) \in P_k \times \widehat{P}_{k + 1}\ |\ i \pwgc j \}$  \texttt{\# first to second layer edges}\\
+    \While{$S_k \ne \emptyset$}{
+      $\widehat{P}_k \leftarrow \{i \in S_{k - 1}\ |\ \forall s \in S_{k - 1}\ s \not\pwgc i\}$  \texttt{\# parents of current layer}\\
+      $P_k \leftarrow P_{k - 1} \cup \widehat{P}_k$ \texttt{\# Expand parent set}\\
+      $S_k \leftarrow S_{k - 1} \setminus \widehat{P}_k$ \texttt{\# remove from } $S$\\
+
+      \;
+      $C_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ s \not\pwgc i\}$   \texttt{\# potential children of }$P_k$\\
+      $D_k \leftarrow \{(i, j) \in P_k \times C_k\ |\ i \pwgc j \}$  \texttt{\# edges incident on }$C_k$\\
       $E_k \leftarrow E_{k - 1} \cup D_k$ \texttt{\# add edges to }$E$\\
+
+      \;
       $k \leftarrow k + 1$
     }
     \Return{$E$}
   \end{algorithm}
 \end{theorem}
 
-We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that all of the direct descendents of nodes in $P_k$ are in $\widehat{P}_{k + 1}$.
+We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $P_k$ and can be determined by a pairwise test..
 \begin{proof}
 % 1. Dispense with trivialities
-% 2. Show that P_k is nonempty
-% 3. Show that P^_{k + 1} is non-empty
-% 4. Show that all edges in D_k are legit in G
-% 5. Show that all outgoing edges of P_k are in D_k
+% 2. Show that hat{P}_k is nonempty
+% 3. Show that C_k is nonempty
+% 4. Show that edges in D_k are actual edges in G
+% 5. show that each edge incident on C_k is in D_k
 % 6. Induction
 
   Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction.
