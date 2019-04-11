@@ -925,7 +925,7 @@ enough that the graph simply be sparse, as the following example shows.
   \end{algorithm}
 \end{theorem}
 
-We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $P_k$ and can be determined by a pairwise test..
+We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $P_k$ and can be determined by a pairwise test.
 \begin{proof}
 % 1. Dispense with trivialities
 % 2. Show that hat{P}_k is nonempty
@@ -934,9 +934,15 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
 % 5. show that each edge incident on C_k is in D_k
 % 6. Induction
 
-  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction.
+  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction and show that on each step, every edge incident upon a node in $C_k$ is contained in $D_k$, that every edge in $D_k$ is an edge in $\gcg$, and finally that $\bigcup_{k = 1}^n C_k = [n] \setminus \widehat{P}_0$ and that this implies $\big([n], \bigcup_{k = 1}^n D_k\big) = \gcg$.
 
-  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $P_0$ (``driving nodes'') is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $P_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $P_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  If $P_0 \ne [n]$ then $\widehat{P}_1$ must also be non-empty, otherwise there would be driving nodes not included in $P_0$.  We also see that since nodes in $P_0$ have no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$, and therefore by proposition \ref{prop:ancestor_properties} $i \in \anc{j}$;  moreover, the construction of $\widehat{P}_1$ implies that in fact $i \in \pa{j}$, so $(i, j)$ is an edge of $\gcg$.
+  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_0$ (again $D_0$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$ and therefore $i \in \anc{j}$, and due to the construction of $C_0$ we in fact have $i \in \pa{j}$, which establishes that every edge in $D_0$ is also an edge in $\gcg$.  Finally consider $j \in C_0$, by proposition \ref{prop:pwgc_anc} and since the parents of $C_0$ must be in $P_0$, we see that every edge incident on $j$ must be present in $D_0$.
+
+
+
+% We also see that since nodes in $\widehat{P}_0$ have no parents,
+
+% we must have $\anc{i}\cap\anc{j} = \emptyset$, and therefore by proposition \ref{prop:ancestor_properties} $i \in \anc{j}$;  moreover, the construction of $\widehat{P}_1$ implies that in fact $i \in \pa{j}$, so $(i, j)$ is an edge of $\gcg$.
 
 %Finally, by similar reasoning, there cannot be an edge $(i, j) \in D_0$ which is not in $\gcg$, since $\anc{i} \cap \anc{j} = \emptyset$.
 
