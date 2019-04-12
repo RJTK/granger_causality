@@ -236,64 +236,91 @@ equivalent \cite{barnett2009granger}.
     \item{$\forall \tau \in \N_+\ B_{ij}(\tau) = 0$}
     \item{$\mathcal{F}_{j \rightarrow i} \defeq \ln\frac{\xi_i}{\xi_{ij}} = 0$}
     \item{$\H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j}$}
-    \item{\hl{Wold $A(\tau)$ condition}}
-    \item{Tie in the 0s of $S(\omega)^{-1}$, though this isn't immediately directed.}
+    \item{$\linE{x_i(t)}{\H_{t - 1}^{-j}} = \linE{x_i(t)}{\H_{t - 1}}$}
+    % \item{\hl{Wold $A(\tau)$ condition}}
+    % \item{Tie in the 0s of $S(\omega)^{-1}$, though this isn't immediately directed.}
   \end{enumerate}
 \end{theorem}
 
-The equivalence $(1) \iff (3)$ is essentially a restatement of the
-definition, but is in line with the seminal work of Geweke
-\cite{geweke1982measurement}, \cite{geweke1984}.  Statement (4) means that
-$(y - \linE{y}{\H_{t - 1}^{-j}}) \perp (z -
-\linE{z}{\H_{t - 1}^{-j}})\ \forall y \in \H_t^i,\ z \in
-\H_{t - 1}^j$, which is an appealing geometric statement that
-there is no direct feedback from $x_j$ to $x_i$ \cite{lindquist}.
+Statement (4) means that
+$(y - \linE{y}{\H_{t - 1}^{-j}}) \perp (z - \linE{z}{\H_{t -
+    1}^{-j}})\ \forall y \in \H_t^i,\ z \in \H_{t - 1}^j$, which is an
+appealing geometric statement that there is no direct feedback from
+$x_j$ to $x_i$ \cite{lindquist}.
 
 \begin{proof}
-$(1) \implies (2)$: The projection for $x_i(t)$ onto $\H_{t - 1}$ is (by definition) given by a form similar to equation \ref{eqn:ar_representation}: 
+  The equivalence $(1) \iff (3)$ is essentially a restatement of the
+  definition, but is in line with the seminal work of Geweke
+  \cite{geweke1982measurement}, \cite{geweke1984}.
+
+  The equivalence $(3) \iff (5)$ is also immediate from the
+  definitions i.e. the projections are equal if and only if the errors
+  are equal.
+
+  $(1) \implies (2)$: The projection for $x_i(t)$ onto $\H_{t - 1}$ is
+  (by definition) given by a form similar to equation
+  \ref{eqn:ar_representation}:
 
 \[
   \E|x_i(t) - \linE{x_i(t)}{\H_{t - 1}}|^2 = \E|v_i(t) + \sum_{\tau = 1}^\infty \sum_{k = 1}^n (B_{i, k}(\tau) - \hat{B}_{i, k}(\tau))x_k(t - \tau)|^2.
 \]
 
- Since $v(t)$ in equation \ref{eqn:ar_representation} is temporally uncorrelated, it follows that the optimal projection is given by the model coefficients themselves.  This holds similarly for the projection onto $\H_{t - 1}^{-j}$.  Then by $(1)$ we have
+Since $v(t)$ in equation \ref{eqn:ar_representation} is temporally
+uncorrelated, it follows that the optimal projection is given by the
+model coefficients themselves.  This holds similarly for the
+projection onto $\H_{t - 1}^{-j}$.  Then by $(1)$ we have
 
 \[
   \E|x_i(t) - \sum_{\tau = 1}^\infty \sum_{k = 1}^n B_{i, k}(\tau)x_k(t - \tau)|^2 = \E|x_i(t) - \sum_{\tau = 1}^\infty\sum_{k \ne j}B_{i, k}(\tau)x_k(t - \tau)|^2
 \]
 
-By the uniqueness of the projection we must have $\forall \tau\  B_{i, j}(\tau) = 0$.
+By the uniqueness of the projection we must have
+$\forall \tau\ B_{i, j}(\tau) = 0$.
 
-$(2) \implies (4)$: In computing $(y - \linE{y}{\H_{t = 1}^{-j}})$ for $y \in \H_t^i$ it is sufficient to consider $y = x_i(t)$ since $\H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$, in which case $(x_i(t) - \linE{x_i(t)}{\H_{t = 1}^{-j}}) = v_i(t)$.  $(4)$ follows since $v_i(t) \perp \H_{t - 1}$ and $\forall z \in \H_{t - 1}^j\ (z - \linE{z}{\H_{t - 1}^{-j}}) \in \H_{t - 1}$
+$(2) \implies (4)$: In computing $(y - \linE{y}{\H_{t = 1}^{-j}})$ for
+$y \in \H_t^i$ it is sufficient to consider $y = x_i(t)$ since
+$\H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$, in which case
+$(x_i(t) - \linE{x_i(t)}{\H_{t = 1}^{-j}}) = v_i(t)$.  $(4)$ follows
+since $v_i(t) \perp \H_{t - 1}$ and
+$\forall z \in \H_{t - 1}^j\ (z - \linE{z}{\H_{t - 1}^{-j}}) \in \H_{t
+  - 1}$
+
+\hl{TODO: $(4) \implies (1)$}
   
 \end{proof}
 
-The following propositions justify various modifications of $x(t)$
-applied in practice to massage $x(t)$ into a form amenable to more
-standard tools.
+% The following propositions justify various modifications of $x(t)$
+% applied in practice to massage $x(t)$ into a form amenable to more
+% standard tools.
 
-\begin{theorem}[General Invariance]
-  \hl{Under what conditions is this actually true?}
+% \begin{theorem}[General Invariance]
+%   \hl{Under what conditions is this actually true?}
 
-  Let $\zeta(t)$ be a stationary discrete time stochastic process.  Let
-  $F, G$ be (possibly nonlinear and time varying) invertible filtering
-  operations and $f(t)$, $g(t)$ be perfectly predictable and such that
-  $x_j(t) \defeq F(\zeta_j - f)(t), x_i(t) \defeq G(\zeta_i - g)(t)$ are W.S.S.  Then,
+%   Let $\zeta(t)$ be a stationary discrete time stochastic process.  Let
+%   $F, G$ be (possibly nonlinear and time varying) invertible filtering
+%   operations and $f(t)$, $g(t)$ be perfectly predictable and such that
+%   $x_j(t) \defeq F(\zeta_j - f)(t), x_i(t) \defeq G(\zeta_i - g)(t)$ are W.S.S.  Then,
 
-\begin{equation}
-    x_j \gc x_i \iff \zeta_j \te \zeta_i
-  \end{equation}
-\end{theorem}
+% \begin{equation}
+%     x_j \gc x_i \iff \zeta_j \te \zeta_i
+%   \end{equation}
+% \end{theorem}
 
-\begin{corollary}[Invariance Under Invertible and Deterministic Modifications]
-  Let $F(z), G(z)$ describe univariate and invertible
+\begin{proposition}[Invariance Under Invertible and Deterministic Modifications]
+  Let $x(t)$ be a WSS process with absolutely summable covariance
+  sequence, and spectral density uniformly bounded above and below.  Let
+  $F(z), G$ represent univariate and invertible
   linear-time-invariant filters.  And, let $f(t), g(t)$ be perfectly
   predictable processes.  Then,
 
   \begin{equation}
     x_j \gc x_i \iff F(x_j - f)(t) \gc G(x_i - g)(t)
   \end{equation}
-\end{corollary}
+
+\begin{proof}
+  \hl{TODO}
+\end{proof}
+\end{proposition}
 
 \subsection{Pairwise Granger Causality}
 \label{sec:pwgc}
@@ -386,7 +413,7 @@ From the $\VAR$ representation of $x(t)$ there is clearly a tight
 relationship between each node and it's parent nodes, indeed
 
 \begin{equation}
-  \label{eqn:parent_expanion}
+  \label{eqn:parent_expansion}
   x_i(t) = v_i(t) + \B_{ii}(z)x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t).
 \end{equation}
 
@@ -421,7 +448,6 @@ We continue to develop the relationship between $x_i$ and it's family tree.
   $x_i$ as well as the parents of $x_i$:
 
   \begin{equation}
-    \label{eqn:parent_expansion}
     x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t).
   \end{equation}
 
@@ -429,6 +455,7 @@ We continue to develop the relationship between $x_i$ and it's family tree.
   driving noise only:
 
   \begin{equation}
+    \label{eqn:ancestor_expansion}
     x_i(t) = \A_{ii}(z)v_i(t) + \sum_{k \in \anc{i} \setminus\{i\}}\A_{ik}(z)v_k(t),
   \end{equation}
 
@@ -597,6 +624,8 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 
 \begin{proposition}
   \label{prop:ancestor_properties}
+\hl{Need to refine this to exclude $k \rightarrow i \rightarrow j$ from 2.}
+
   In a Granger-causality graph $\gcg$, if $j \pwgc i$ then at least
   one of the following must hold
 
@@ -621,6 +650,8 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
   \end{equation*}
 
   However, $k \ne \ell \implies \A_{k\ell}(z) = 0$ (i.e. $\A(z) = I + A(1)z^{-1} + \cdots$) so $\A_{ji}(z)v_i(t - \tau)$ is strictly earlier in time, for $\tau \ge 0$, than $v_i(t)$ and hence $\E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)] = 0$.  This establishes the fact that $H_t^{(i)} \perp \H_t^{(j)}$ where $H_t^{(i)} = \{\alpha x_i(t)\ |\ \alpha \in \R\}$ is the Hilbert space generated by the current sample of $x_i$.  It is clear that $\H_t^{(i)} = \bigvee_{\tau = 0}^\infty H_{t - \tau}^{(i)}$.
+
+  \hl{TODO: Separate $H_t^i \perp \H_t^j \implies \H_t^i \perp \H_{t - 1}^j\ |\ \H_{t - 1}^i$ into a lemma and consolidate it with lemma 2, 3.}
 
   Then for every $s \ge 0$
 
@@ -651,6 +682,7 @@ this is not the case in general, as different paths through $\gcg$ can
 lead to cancellation.
 
 \begin{example}
+  \label{ex:diamond_cancellation}
   Firstly, on $n = 4$ nodes, ``diamond'' shapes can lead to cancellation on paths of length 2:
 
 \begin{equation*}
@@ -678,8 +710,23 @@ By directly calculating
 we see that, since $v(t)$ is isotropic white noise, $1 \not\pwgc 4$.  The problem here is that there are multiple paths from $x_1$ to $x_4$.
 \end{example}
 
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Graph Corresponding to Example \ref{ex:diamond_cancellation}}
+    \label{fig:diamond_cancellation}
+    \includegraphics[width=\linewidth]{hand_drawn_example1.jpg}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Graph Corresponding to Example \ref{ex:lag_cancellation}}
+    \label{fig:lag_cancellation}
+    \includegraphics[width=\linewidth]{hand_drawn_example2.jpg}
+  \end{subfigure}
+\end{figure}
+
 \begin{example}
-  A second example on $n = 3$ nodes is also worth examining, in this
+  \label{ex:lag_cancellation}
+  A second example on $n = 3$ nodes is also worth examining, in this case
   cancellation is a result of differing time lags:
 
 \begin{equation*}
@@ -729,7 +776,10 @@ series networks, that is, the topology of $\gcg$.
 
 \begin{definition}[Strongly Causal]
   We will say that a Granger-causality graph $\gcg$ is \textit{strongly causal}
-if $\gcg$ is a DAG and there is at most 1 directed path between any two nodes.
+if there is at most 1 directed path between any two nodes.
+
+\hl{TODO: Should DAG be included in this definition?  I think it is
+  not necessary for some theorems.}
 \end{definition}
 
 Examples of strongly causal graphs include directed trees (or
@@ -746,10 +796,10 @@ forests), and DAGs where each node has at most one parent.
 \end{proof}
 
 
-\begin{proposition}
+\begin{lemma}
   \label{prop:sc_graph_common_anc}
   In a strongly causal graph if $j \in \anc{i}$ and $k \in \anc{i} \cap \anc{j}$ then the unique path from $k$ to $i$ contains $j$.
-\end{proposition}
+\end{lemma}
 \begin{proof}
   Suppose that there is a path from $k$ to $i$ which does not contain $j$.  In this case, there are multiple paths from $k$ to $i$ (one of which \textit{does} go through $j$ since $j \in \anc{i}$) which contradicts the assumption of strong causality.
 \end{proof}
@@ -764,32 +814,46 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
   If $\gcg$ is a strongly causal DAG then $j \in \anc{i} \implies j \pwgc i$.
 \end{proposition}
 \begin{proof}
-  Since strongly causal graphs are acyclic, this allows us to
-  recursively expand the parents of $x_i$ in $\gcg$ in the
-  $\VAR(\infty)$ representation of $x(t)$ since we will eventually
-  terminate at nodes $d$ such that $\pa{d} = \emptyset$.  To this end,
-  examining $x_i$ in equation \ref{eqn:ar_representation}
-
-  \begin{align*}
-    x_i(t) &= v_i(t) + \sum_{\tau = 1}^\infty \big[ B_{ii}(\tau)x_i(t - \tau) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau)\big]\\
-    \implies x_i(t) &= (1 - \B_{ii}(z))^{-1} \big[v_i(t) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau) \big]\\
-    &= \sum_{\tau = 1}^\infty \big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \pa{i}} C_{ik}(\tau)x_k(t - \tau)\big].
-  \end{align*}
-
-  If $\pa{i} = \emptyset$ then we simply have
-  $x_i(t) = \sum_{\tau = 1}^\infty C_{ii}(\tau)v_i(t)$ and
-  $C_{ii} = A_{ii}$ from equation \ref{eqn:wold}.
-
-  Applying this relation recursively we can write
+  Using the representation of equation (\ref{eqn:parent_expansion}) we can represent $x_i(t)$ as
 
   \begin{equation*}
-    x_i(t) = \sum_{\tau = 1}^\infty\big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \anc{i}}C_{ik}(\tau)v_k(t - \tau) \big].
+    x_i(t) = v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t).
   \end{equation*}
+
+  In order to show that $j \pwgc i$ we can show (due to theorem (\ref{thm:granger_causality_equivalences})) that
+
+  \begin{equation*}
+    \linE{x_i(t)}{\H_{t - 1}^{(i)}} = \linE{x_i(t)}{\H_{t - 1}^{(i, j)}},
+  \end{equation*}
+
+\hl{WIP}
+
+% this allows us to recursively expand the
+%   parents of $x_i$ in $\gcg$ in the $\VAR(\infty)$ representation of
+%   $x(t)$ since we will eventually terminate at nodes $d$ such that
+%   $\pa{d} = \emptyset$.  To this end, examining $x_i$ in equation
+%   \ref{eqn:ar_representation}
+
+%   \begin{align*}
+%     x_i(t) &= v_i(t) + \sum_{\tau = 1}^\infty \big[ B_{ii}(\tau)x_i(t - \tau) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau)\big]\\
+%     \implies x_i(t) &= (1 - \B_{ii}(z))^{-1} \big[v_i(t) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau) \big]\\
+%     &= \sum_{\tau = 1}^\infty \big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \pa{i}} C_{ik}(\tau)x_k(t - \tau)\big].
+%   \end{align*}
+
+%   If $\pa{i} = \emptyset$ then we simply have
+%   $x_i(t) = \sum_{\tau = 1}^\infty C_{ii}(\tau)v_i(t)$ and
+%   $C_{ii} = A_{ii}$ from equation \ref{eqn:wold}.
+
+%   Applying this relation recursively we can write
+
+%   \begin{equation*}
+%     x_i(t) = \sum_{\tau = 1}^\infty\big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \anc{i}}C_{ik}(\tau)v_k(t - \tau) \big].
+%   \end{equation*}
 
 \end{proof}
 
 That strong conditions need to be placed on the topology of $\gcg$ in
-order for lemma \ref{lem:pwgc_anc} to be true can be seen through the
+order for proposition \ref{lem:pwgc_anc} to be true can be seen through the
 earlier examples.
 
 \begin{lemma}
@@ -797,6 +861,7 @@ earlier examples.
   $B_{ii}(z)$ is stable for every $i = 1, \ldots, n$.
 \end{lemma}
 \begin{proof}
+  \hl{This is certainly true, but I don't think I need to use it anywhere.}
 \end{proof}
 
 % $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$
@@ -814,24 +879,6 @@ earlier examples.
 % \]
 
 % and $d(j, i) \defeq \text{min}\{B_{i, j}(\tau) \ne 0\}$ if $j \in \pa{i}$.
-
-\begin{lemma}
-  \label{lem:pwgc_anc}
-  If $x_j \pwgc x_i$ then one or more of the following hold
-
-  \begin{enumerate}
-    \item{$j \in \anc{i}$}
-    \item{$\anc{i}\cap\anc{j} \ne \emptyset$.}
-  \end{enumerate}
-\end{lemma}
-
-% \begin{remark}
-%   This lemma formalizes the intuition of \textit{information flow} in $\gcg$.  We have $x_j \pwgc x_i$ whenever $i$ is descended from $j$, or if they have a common ancestor (call it $k$) and ``information'' from $k$ reaches $j$ before it reaches $i$.
-% \end{remark}
-
-\begin{proof}
-  Is this true if we take \ref{lem:pwgc_anc} as an axiom?
-\end{proof}
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -880,9 +927,15 @@ enough that the graph simply be sparse, as the following example shows.
   path $a$ from $j$ to $i$ otherwise there would be multiple paths
   from $k$ to $i$.  By the same reasoning with paths from $k$ to $j$,
   the path $c$ must also overlap with path $b$ from $k$ to $j$, so in
-  fact 
+  fact path $c$ from $k$ to $i$ is
+  $c = b \rightarrow j \rightarrow a$.
+
+  \hl{TODO: We need the strengthening of prop }(\ref{prop:ancestor_properties})\hl{in order to conclude.}
 
 \end{proof}
+
+\subsection{Recovering $\gcg$ via Pairwise Tests}
+In this section we will show that if $\gcg$ is a strongly causal DAG, then it is possible to recover $\gcg$ via pairwise tests alone.  This is an interesting fact in and of itself, but also has some implications for applications since pairwise testing is trivially parallelizable.  In section \ref{sec:structure_learning} we will also analyze the use of pairwise testing as a heuristic for general graphs.
 
 \begin{theorem}[Pairwise Recovery]
   \label{thm:tree_recovery}
@@ -904,19 +957,23 @@ enough that the graph simply be sparse, as the following example shows.
     \Input{Pairwise Granger-causality relations between $n$ processes whose joint Granger-causality relations are known to form a strongly causal DAG $\gcg$.}
     \Output{Edges $E = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of the graph $\gcg = ([n], E)$.}
     \Initialize{$S_0 = [n]$  \texttt{\# unprocessed nodes}\\
-      $E_0 = \emptyset$  \texttt{\# edges of }$\gcg$\\
-      $P_0 = \emptyset$  \texttt{\# layer by layer driving nodes}\\
+      $E = \emptyset$  \texttt{\# edges of }$\gcg$\\
+      % $P_0 = \emptyset$  \texttt{\# layer by layer driving nodes}\\
       $k = 0$ \texttt{\# a counter used only for notation}}
     \BlankLine
     \While{$S_k \ne \emptyset$}{
       $\widehat{P}_k \leftarrow \{i \in S_{k - 1}\ |\ \forall s \in S_{k - 1}\ s \not\pwgc i\}$  \texttt{\# parents of current layer}\\
-      $P_k \leftarrow P_{k - 1} \cup \widehat{P}_k$ \texttt{\# Expand parent set}\\
-      $S_k \leftarrow S_{k - 1} \setminus \widehat{P}_k$ \texttt{\# remove from } $S$\\
+      % $P_k \leftarrow P_{k - 1} \cup \widehat{P}_k$ \texttt{\# Expand parent set}\\
+      $S_{k + 1} \leftarrow S_k \setminus \widehat{P}_k$ \texttt{\# remove from } $S$\\
 
       \;
-      $C_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ s \not\pwgc i\}$   \texttt{\# potential children of }$P_k$\\
-      $D_k \leftarrow \{(i, j) \in P_k \times C_k\ |\ i \pwgc j \}$  \texttt{\# edges incident on }$C_k$\\
-      $E_k \leftarrow E_{k - 1} \cup D_k$ \texttt{\# add edges to }$E$\\
+      $C_k \leftarrow \{i \in S_{k + 1}\ |\ \forall s \in S_{k + 1}\ s \not\pwgc i\}$   \texttt{\# potential children of }$P_k$\\
+
+      \For{$r = 0, \ldots, k$}
+      {
+        $D_{kr} \leftarrow \{(i, j) \in \widehat{P}_{k - r} \times C_k\ |\ i \pwgc j,\ \text{no } i \rightarrow j \text{ path in } E \}$\\%  \texttt{\# edges incident on }$C_k$\\
+        $E \leftarrow E \cup D_{kr}$ \texttt{\# add edges to }$E$\\
+      }
 
       \;
       $k \leftarrow k + 1$
@@ -925,7 +982,21 @@ enough that the graph simply be sparse, as the following example shows.
   \end{algorithm}
 \end{theorem}
 
-We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $P_k$ and can be determined by a pairwise test.
+We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $\bigcup_{r = 0}^k\widehat{P}_{k - r}$ and can be determined by a pairwise test.
+
+\begin{example}
+  That we need to proceed backwards through $\widehat{P}_{k - r}$ can be seen from the example of figure \ref{fig:example_fig3}, where if $D_k = \{(i, j) \in \Big(\bigcup_{r = 0}^k \widehat{P}_{k - r}\Big) \times C_k\ |\ i \pwgc j \}$ above we would infer the false positive edge $2 \rightarrow 3$.  Moreover, the same example shows that if simply $D_k = \{(i, j) \in \widehat{P}_k \times C_k\ |\ i \pwgc j \}$, then the edge $1 \rightarrow 3$ would be missed.
+
+\hl{TODO: Inkscape figure}
+
+  \begin{figure}
+    \centering
+    \label{fig:example_fig3}
+    \caption{Example graph for Algorithm \ref{alg:pwgr}}
+    \includegraphics[width=0.5\linewidth]{hand_drawn_example3.jpg}
+  \end{figure}
+\end{example}
+
 \begin{proof}
 % 1. Dispense with trivialities
 % 2. Show that hat{P}_k is nonempty
@@ -934,11 +1005,14 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
 % 5. show that each edge incident on C_k is in D_k
 % 6. Induction
 
-  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction and show that on each step, every edge incident upon a node in $C_k$ is contained in $D_k$, that every edge in $D_k$ is an edge in $\gcg$, and finally that $\bigcup_{k = 1}^n C_k = [n] \setminus \widehat{P}_0$ and that this implies $\big([n], \bigcup_{k = 1}^n D_k\big) = \gcg$.
+  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction.
 
-  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_0$ (again $D_0$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$ and therefore $i \in \anc{j}$, and due to the construction of $C_0$ we in fact have $i \in \pa{j}$, which establishes that every edge in $D_0$ is also an edge in $\gcg$.  Finally consider $j \in C_0$, by proposition \ref{prop:pwgc_anc} and since the parents of $C_0$ must be in $P_0$, we see that every edge incident on $j$ must be present in $D_0$.
+On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E = \emptyset$.  The set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_0$ ($D_0$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, $\anc{i} \cap \anc{j} = \emptyset$ and therefore $i \in \anc{j}$ (proposition \ref{prop:ancestor_properties}).  Furthermore, the construction of $C_k$ implies that $i \in \pa{j}$ since otherwise, there would be some $u \in \anc{j}$ with $i \in \anc{u}$, but then by proposition \ref{lem:pwgc_anc} $i \pwgc u$ and $u \pwgc j$ so that $u \not \in \widehat{P}_0 \implies u \in S_0 \implies j \not\in C_0$, a contradiction.
+
+% and show that on each step, every edge incident upon a node in $C_k$ is contained in $D_k$, that every edge in $D_k$ is an edge in $\gcg$, and finally that $\bigcup_{k = 1}^n C_k = [n] \setminus \widehat{P}_0$ and that this implies $\big([n], \bigcup_{k = 1}^n D_k\big) = \gcg$.
 
 
+%  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_0$ (again $D_0$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$ and therefore $i \in \anc{j}$, and due to the construction of $C_0$ we in fact have $i \in \pa{j}$, which establishes that every edge in $D_0$ is also an edge in $\gcg$.  Finally consider $j \in C_0$, by proposition \ref{prop:pwgc_anc} and since the parents of $C_0$ must be in $P_0$, we see that every edge incident on $j$ must be present in $D_0$.
 
 % We also see that since nodes in $\widehat{P}_0$ have no parents,
 
@@ -946,7 +1020,7 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
 
 %Finally, by similar reasoning, there cannot be an edge $(i, j) \in D_0$ which is not in $\gcg$, since $\anc{i} \cap \anc{j} = \emptyset$.
 
-Consider now step $K < n$ of algorithm \ref{alg:pwgr}.  By lemma \ref{lem:still_strongly_causal} the graph remains strongly causal after having removed nodes $\bigcup_{k = 0}^K P_k$ from $S$, and we assume for induction that $\bigcup_{k = 1}^K D_k$ are all edges of $\gcg$.
+%Consider now step $K < n$ of algorithm \ref{alg:pwgr}.  By lemma \ref{lem:still_strongly_causal} the graph remains strongly causal after having removed nodes $\bigcup_{k = 0}^K P_k$ from $S$, and we assume for induction that $\bigcup_{k = 1}^K D_k$ are all edges of $\gcg$.
 
 \hl{WIP}
 \end{proof}
@@ -956,6 +1030,7 @@ Consider now step $K < n$ of algorithm \ref{alg:pwgr}.  By lemma \ref{lem:still_
 \end{example}
 
 \section{Structure Learning}
+\label{sec:structure_learning}
 \subsection{Local Search Heuristics}
 
 
