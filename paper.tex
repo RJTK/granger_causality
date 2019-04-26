@@ -22,6 +22,7 @@
 \newcommand{\ancn}[2]{\mathcal{A}_{#1}(#2)}  % nth ancestors of a node
 \newcommand{\gpn}[2]{gp_{#1}(#2)}  % nth generation grandparents
 \newcommand{\gcgpath}[4]{#1 \rightarrow #2_1 \rightarrow \cdots \rightarrow #2_{#3} \rightarrow #4}
+\newcommand{\wtalpha}[2]{\widetilde{\alpha}(#1, #2)}  % Some notation for lem:pwgc_anc
 
 \input{\string~/Documents/academics/global_academics/latex_preamble}
 
@@ -679,7 +680,9 @@ We can state some interesting corollaries of this result.
 It seems intuitive that a converse of \ref{prop:ancestor_properties}
 would hold, i.e. $j \in \anc{i} \implies j \pwgc i$.  Unfortunately,
 this is not the case in general, as different paths through $\gcg$ can
-lead to cancellation.
+lead to cancellation (see example \ref{ex:diamond_cancellation}).  In
+fact, we do not even have $j \in \pa{i} \implies j \pwgc i$ (see
+example \ref{ex:lag_cancellation}).
 
 \begin{example}
   \label{ex:diamond_cancellation}
@@ -727,7 +730,7 @@ we see that, since $v(t)$ is isotropic white noise, $1 \not\pwgc 4$.  The proble
 \begin{example}
   \label{ex:lag_cancellation}
   A second example on $n = 3$ nodes is also worth examining, in this case
-  cancellation is a result of differing time lags:
+  cancellation is a result of differing time lags.
 
 \begin{equation*}
   x(t) =
@@ -814,19 +817,38 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
   If $\gcg$ is a strongly causal DAG then $j \in \anc{i} \implies j \pwgc i$.
 \end{proposition}
 \begin{proof}
-  Using the representation of equation (\ref{eqn:parent_expansion}) we can represent $x_i(t)$ as
+  We will show that for some $\psi \in \H_{t - 1}^{(j)}$ we have $\inner{\psi}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0$ and therefore that $H_t^{(i)} \not\perp\ \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(i)}$, which by theorem (\ref{thm:granger_causality_equivalences}) and \hl{lemma [name this lemma]} is enough to establish that $j \pwgc i$.
 
-  \begin{equation*}
-    x_i(t) = v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t).
-  \end{equation*}
+    Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the unique $j \rightarrow i$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
 
-  In order to show that $j \pwgc i$ we can show (due to theorem (\ref{thm:granger_causality_equivalences})) that
+\begin{align*}
+  x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
+         &= \underbrace{v_i(t) + \B_{ii}(z) x_i(t) + \sum_{\substack{k \in \pa{i} \\ k \ne a_1}}\B_{ik}(z) x_k(t)}_{\defeq \wtalpha{a_0}{a_1}} + \B_{a_0a_1}(z)x_{a_1}(t)\\
+         &= \wtalpha{a_0}{a_1} + \B_{a_0a_1}(z)\big[\wtalpha{a_1}{a_2} + \B_{a_1a_2}(z)x_{a_2}(t) \big]\\
+         &= \cdots\\
+         &= \sum_{\ell = 0}^r \underbrace{\Big(\prod_{m = 0}^{\ell - 1} \B_{a_m a_{m + 1}}(z) \Big)}_{\defeq F_\ell(z)} \wtalpha{a_\ell}{a_{\ell + 1}} + \Big(\prod_{m = 0}^{r}\B_{a_m a_{m + 1}}(z)\Big)x_j(t)\\
+         &= \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} + F_r(z) x_j(t)
+\end{align*}
 
-  \begin{equation*}
-    \linE{x_i(t)}{\H_{t - 1}^{(i)}} = \linE{x_i(t)}{\H_{t - 1}^{(i, j)}},
-  \end{equation*}
+where we have defined $\prod_{m = 0}^{-1} \bullet \defeq 1$ for notational convenience.
 
-\hl{WIP}
+Then,
+
+\begin{align*}
+  \inner{\psi}{x_i(t) - \linE{x_i(t)}{&\H_{t - 1}^{(i)}}} = \inner{\psi}{F_r(z) x_j(t) - \linE{F_r(z) x_j(t)}{\H_{t - 1}^{(i)}}}\\ &+ \sum_{\ell = 0}^r \inner{\psi}{F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} - \linE{F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
+  &\overset{(a)}{=} \inner{\psi}{F_r(z) x_j(t) - \linE{F_r(z) x_j(t)}{\H_{t - 1}^{(i)}}}\\ &-\sum_{\ell = 0}^r \inner{\psi}{\linE{F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
+  &= \inner{\psi}{F_r(z)x_j(t)} - \inner{\psi}{\linE{F_r(z)x_j(t) + \sum_{\ell = 0}^r F_{\ell}(z)\wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}
+\end{align*}
+
+where $(a)$ follows since $\forall \psi \in \H_{t - 1}^{(j)}\ \inner{\psi}{\wtalpha{a_\ell}{a_{\ell + 1}}} = 0$ which follows since for every $\ell = 1, \ldots, r$ we have $a_{\ell} \not\in \anc{j}, j \not\in \anc{a_{\ell}}$ and \hl{an application of lemmas [name these]}.  Continuing from the above we will choose the particular value $\psi = F_r(z)x_j(t)$, then
+
+\begin{align*}
+  &\inner{F_r(z)x_j(t)}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} = 0\\
+  &\iff \E|F_r(z)x_j(t)|^2 = \inner{F_r(z)x_j(t)}{\linE{F_r(z)x_j(t) + \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
+  &\overset{(b)}{\iff} F_r(z)x_j(t) = \linE{F_r(z)x_j(t) + \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}},
+\end{align*}
+
+where $(b)$ follows by the condition for equality in the Cauchy-Schwarz inequality.  But since $F_r(z)x_j(t) \not \in \H_{t - 1}^{(i)}$, we must have $\inner{\psi}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0$ and therefore $j \pwgc i$.
 
 % this allows us to recursively expand the
 %   parents of $x_i$ in $\gcg$ in the $\VAR(\infty)$ representation of
