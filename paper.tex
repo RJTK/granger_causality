@@ -23,6 +23,7 @@
 \newcommand{\gpn}[2]{gp_{#1}(#2)}  % nth generation grandparents
 \newcommand{\gcgpath}[4]{#1 \rightarrow #2_1 \rightarrow \cdots \rightarrow #2_{#3} \rightarrow #4}
 \newcommand{\wtalpha}[2]{\widetilde{\alpha}(#1, #2)}  % Some notation for lem:pwgc_anc
+\newcommand{\dist}[2]{\mathsf{d}(#1, #2)}  % Distance between things
 
 \input{\string~/Documents/academics/global_academics/latex_preamble}
 
@@ -813,70 +814,80 @@ In light of proposition \ref{prop:sc_graph_common_anc}, the following
 provides a converse to proposition \ref{prop:ancestor_properties}.
 
 \begin{proposition}
-  \label{lem:pwgc_anc}
+  \label{prop:pwgc_anc}
   If $\gcg$ is a strongly causal DAG then $j \in \anc{i} \implies j \pwgc i$.
 \end{proposition}
 \begin{proof}
-  We will show that for some $\psi \in \H_{t - 1}^{(j)}$ we have $\inner{\psi}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0$ and therefore that $H_t^{(i)} \not\perp\ \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(i)}$, which by theorem (\ref{thm:granger_causality_equivalences}) and \hl{lemma [name this lemma]} is enough to establish that $j \pwgc i$.
+  We will show that for some $\psi \in \H_{t - 1}^{(j)}$ we have
 
-    Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the unique $j \rightarrow i$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
+  \begin{equation}
+    \label{eqn:cond_ortho_proof}
+    \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0
+  \end{equation}
 
-\begin{align*}
-  x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
-         &= \underbrace{v_i(t) + \B_{ii}(z) x_i(t) + \sum_{\substack{k \in \pa{i} \\ k \ne a_1}}\B_{ik}(z) x_k(t)}_{\defeq \wtalpha{a_0}{a_1}} + \B_{a_0a_1}(z)x_{a_1}(t)\\
-         &= \wtalpha{a_0}{a_1} + \B_{a_0a_1}(z)\big[\wtalpha{a_1}{a_2} + \B_{a_1a_2}(z)x_{a_2}(t) \big]\\
-         &= \cdots\\
-         &= \sum_{\ell = 0}^r \underbrace{\Big(\prod_{m = 0}^{\ell - 1} \B_{a_m a_{m + 1}}(z) \Big)}_{\defeq F_\ell(z)} \wtalpha{a_\ell}{a_{\ell + 1}} + \Big(\prod_{m = 0}^{r}\B_{a_m a_{m + 1}}(z)\Big)x_j(t)\\
-         &= \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} + F_r(z) x_j(t)
-\end{align*}
+  and therefore that $H_t^{(i)} \not\perp\ \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(i)}$, which by theorem (\ref{thm:granger_causality_equivalences}) and \hl{lemma [name the lemma]} is enough to establish that $j \pwgc i$.
 
-where we have defined $\prod_{m = 0}^{-1} \bullet \defeq 1$ for notational convenience.
+  Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $j \rightarrow i$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
 
-Then,
+  \begin{align*}
+    x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
+           &= \underbrace{v_{a_0}(t) + \B_{a_0a_0}(z) x_i(t) + \sum_{\substack{k \in \pa{a_0} \\ k \ne a_1}}\B_{a_0 k}(z) x_k(t)}_{\defeq \wtalpha{a_0}{a_1}} + \B_{a_0a_1}(z)x_{a_1}(t)\\
+           &= \wtalpha{a_0}{a_1} + \B_{a_0a_1}(z)\big[\wtalpha{a_1}{a_2} + \B_{a_1a_2}(z)x_{a_2}(t) \big]\\
+           &\overset{(a)}{=} \cdots\\
+           &= \sum_{\ell = 0}^r \underbrace{\Big(\prod_{m = 0}^{\ell - 1} \B_{a_m a_{m + 1}}(z) \Big)}_{\defeq F_\ell(z)} \wtalpha{a_\ell}{a_{\ell + 1}} + \Big(\prod_{m = 0}^{r}\B_{a_m a_{m + 1}}(z)\Big)x_{a_{r + 1}}(t)\\
+           &= \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} + F_{r + 1}(z) x_j(t)
+  \end{align*}
 
-\begin{align*}
-  \inner{\psi}{x_i(t) - \linE{x_i(t)}{&\H_{t - 1}^{(i)}}} = \inner{\psi}{F_r(z) x_j(t) - \linE{F_r(z) x_j(t)}{\H_{t - 1}^{(i)}}}\\ &+ \sum_{\ell = 0}^r \inner{\psi}{F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} - \linE{F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
-  &\overset{(a)}{=} \inner{\psi}{F_r(z) x_j(t) - \linE{F_r(z) x_j(t)}{\H_{t - 1}^{(i)}}}\\ &-\sum_{\ell = 0}^r \inner{\psi}{\linE{F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
-  &= \inner{\psi}{F_r(z)x_j(t)} - \inner{\psi}{\linE{F_r(z)x_j(t) + \sum_{\ell = 0}^r F_{\ell}(z)\wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}
-\end{align*}
+  where $(a)$ follows by a routine induction argument and where we define $\prod_{m = 0}^{-1} \bullet \defeq 1$ for notational convenience.
 
-where $(a)$ follows since $\forall \psi \in \H_{t - 1}^{(j)}\ \inner{\psi}{\wtalpha{a_\ell}{a_{\ell + 1}}} = 0$ which follows since for every $\ell = 1, \ldots, r$ we have $a_{\ell} \not\in \anc{j}, j \not\in \anc{a_{\ell}}$ and \hl{an application of lemmas [name these]}.  Continuing from the above we will choose the particular value $\psi = F_r(z)x_j(t)$, then
+  Using this representation to expand equation (\ref{eqn:cond_ortho_proof}), we obtain the following cumbersome expression:
 
-\begin{align*}
-  &\inner{F_r(z)x_j(t)}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} = 0\\
-  &\iff \E|F_r(z)x_j(t)|^2 = \inner{F_r(z)x_j(t)}{\linE{F_r(z)x_j(t) + \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
-  &\overset{(b)}{\iff} F_r(z)x_j(t) = \linE{F_r(z)x_j(t) + \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}},
-\end{align*}
+  \begin{align*}
+    &\inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{F_{r + 1}(z)x_j(t) - \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}}}\\
+    &- \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{\linE{\sum_{\ell = 0}^r F_\ell(z)\wtalpha{a_\ell}{a_{\ell + 1}}}{\H_{t - 1}^{(i)}}}\\
+    &+ \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{\sum_{\ell = 0}^r F_\ell(z)\wtalpha{a_\ell}{a_{\ell + 1}}}.
+  \end{align*}
 
-where $(b)$ follows by the condition for equality in the Cauchy-Schwarz inequality.  But since $F_r(z)x_j(t) \not \in \H_{t - 1}^{(i)}$, we must have $\inner{\psi}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0$ and therefore $j \pwgc i$.
+  Note that by the orthogonality principle, $\psi - \linE{\psi}{\H_{t - 1}^{(i)}} \perp \H_{t - 1}^{(i)}$, the middle term above is $0$.  Choosing now the particular value $\psi = F_{r + 1}(z)x_j(t) \in \H_{t - 1}^{(j)}$ we arrive at
 
-% this allows us to recursively expand the
-%   parents of $x_i$ in $\gcg$ in the $\VAR(\infty)$ representation of
-%   $x(t)$ since we will eventually terminate at nodes $d$ such that
-%   $\pa{d} = \emptyset$.  To this end, examining $x_i$ in equation
-%   \ref{eqn:ar_representation}
+  \begin{align*}
+    &\inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}\\
+    &= \E|F_{r + 1}(z)x_j(t) - \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}}|^2\\
+    &+ \inner{F_{r + 1}(z)x_j(t) - \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}}}{\sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}}},
+  \end{align*}
 
-%   \begin{align*}
-%     x_i(t) &= v_i(t) + \sum_{\tau = 1}^\infty \big[ B_{ii}(\tau)x_i(t - \tau) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau)\big]\\
-%     \implies x_i(t) &= (1 - \B_{ii}(z))^{-1} \big[v_i(t) + \sum_{k \in \pa{i}} B_{ik}(\tau)x_k(t - \tau) \big]\\
-%     &= \sum_{\tau = 1}^\infty \big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \pa{i}} C_{ik}(\tau)x_k(t - \tau)\big].
-%   \end{align*}
+  which by the Cauchy-Schwarz inequality is $0$ if and only if
 
-%   If $\pa{i} = \emptyset$ then we simply have
-%   $x_i(t) = \sum_{\tau = 1}^\infty C_{ii}(\tau)v_i(t)$ and
-%   $C_{ii} = A_{ii}$ from equation \ref{eqn:wold}.
+  \begin{equation*}
+    \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}} - F_{r + 1}(z)x_j(t),
+  \end{equation*}
 
-%   Applying this relation recursively we can write
+  or by rearranging and applying the representation obtained earlier, if and only if
 
-%   \begin{equation*}
-%     x_i(t) = \sum_{\tau = 1}^\infty\big[C_{ii}(\tau)v_i(t - \tau) + \sum_{k \in \anc{i}}C_{ik}(\tau)v_k(t - \tau) \big].
-%   \end{equation*}
+  \begin{equation*}
+    x_i(t) \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}},
+  \end{equation*}
 
+  but this is impossible since with probability one $v_i(t) \not \in \H_{t - 1}^{(i)}$.
 \end{proof}
 
-That strong conditions need to be placed on the topology of $\gcg$ in
-order for proposition \ref{lem:pwgc_anc} to be true can be seen through the
-earlier examples.
+\begin{corollary}
+  \label{cor:gc_implies_pwgc}
+  If $\gcg$ is a strongly causal DAG then $j \gc i \implies j \pwgc i$.
+
+  \hl{This must be true in general, should include this shortly after the definition ow PWGC}
+\end{corollary}
+
+\begin{remark}
+  It can be seen from the conclusion of the proof that simple facts
+  about Granger causality are indeed reliant on our assumptions about
+  the nature of $x(t)$ laid out in the section \ref{sec:theory}, in
+  particular, the innovations process $v(t)$ must be full rank.
+  
+  Moreover, that strong conditions need to be placed on the topology
+  of $\gcg$ in order for proposition \ref{prop:pwgc_anc} to hold can
+  be seen through the earlier examples.
+\end{remark}
 
 \begin{lemma}
   If $\gcg$ is strongly causal, then any $\VAR(p)$ system on $\gcg$ is stable if and only if
@@ -913,8 +924,8 @@ enough that the graph simply be sparse, as the following example shows.
   strongly connected\footnote{there is a directed path from each node
     to every other node}, then the causality graph recovered via
   pairwise causality tests is the complete graph.
-
-  This follows immediately from the fact (lemma \ref{lem:pwgc_anc})
+ 
+  This follows immediately from the fact (lemma \ref{prop:pwgc_anc})
   that $j \in \anc{i} \implies j \pwgc i$.
 \end{example}
 
@@ -940,7 +951,7 @@ enough that the graph simply be sparse, as the following example shows.
   which produces a contradiction (since there must then be a directed cycle).
 
   Since $j \in \anc{i}$ there is a path $\gcgpath{j}{a}{p}{i}$.
-  Moreover, since $i \pwgc j$ by lemma \ref{lem:pwgc_anc} there must
+  Moreover, since $i \pwgc j$ by lemma \ref{prop:pwgc_anc} there must
   be a common ancestor $k \in \anc{i} \cap \anc{j}$ (otherwise, we would
   have $i \in \anc{j}$, contradicting the acyclic property).  The node
   $k$ has paths to both $j,\ \gcgpath{k}{b}{q}{j}$ and $i,\ \gcgpath{k}{c}{r}{i}$.
@@ -989,7 +1000,7 @@ In this section we will show that if $\gcg$ is a strongly causal DAG, then it is
       $S_{k + 1} \leftarrow S_k \setminus \widehat{P}_k$ \texttt{\# remove from } $S$\\
 
       \;
-      $C_k \leftarrow \{i \in S_{k + 1}\ |\ \forall s \in S_{k + 1}\ s \not\pwgc i\}$   \texttt{\# potential children of }$P_k$\\
+      $C_k \leftarrow \{j \in S_{k + 1}\ |\ \forall s \in S_{k + 1}\ s \not\pwgc j\}$   \texttt{\# potential children of }$P_k$\\
 
       \For{$r = 0, \ldots, k$}
       {
@@ -1019,6 +1030,21 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
   \end{figure}
 \end{example}
 
+\begin{lemma}
+  \hl{Some lemma on the inner loop.}
+\end{lemma}
+\begin{proof}
+  Let $j \in C_k$ and $i \in \bigcup_{r = 0}^k P_{k - r}$.
+
+  First, suppose that $i \in \pa{j}$ and that there is no $i \rightarrow j$ path in $E$.  Then since $i \gc j$ we have $i \pwgc j$ by proposition \ref{prop:pwgc_anc} so at least one of $\{D_{kr} \}_{r = 0}^k$ contains $(i, j)$ and hence $(i, j)$ will be added to $E$ upon the end of the iteration.
+
+  Now, still assuming that $i \in \pa{j}$, suppose instead that there is already an $i \rightarrow j$ path in $E$.  Using an induction hypothesis that $E$ contains edges if and only if they are in $\gcg$, then either $(i, j) \in E$ correctly, or there is more than one $i \rightarrow j$ path in $\gcg$, which is not possible since $\gcg$ is strongly causal.
+
+  Finally, suppose that $i \not \in \pa{j}$.  If $i \not \pwgc j$ then we will correctly leave $(i, j)$ absent from $E$, so suppose that $i \pwgc j$.  Then we must have either $i \in \anc{j}$ or $\anc{i} \cap \anc{j} \ne \emptyset$; suppose first the former.  Then, there is some $u$ s.t. $i \pwgc u \pwgc j$, so by the construction of \hl{it seems} that both $(i, u)$ and $(u, j)$ should have already been added to $E$, so we have an $i \rightarrow j$ path in $E$ \hl{is this sound?}  Suppose then the latter case above, $u \in \anc{i} \cap \anc{j}$ \hl{try to construct a counterexample involving this case}.
+\end{proof}
+
+Proof of the actual theorem...
+
 \begin{proof}
 % 1. Dispense with trivialities
 % 2. Show that hat{P}_k is nonempty
@@ -1027,11 +1053,35 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
 % 5. show that each edge incident on C_k is in D_k
 % 6. Induction
 
-  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$, we will proceed by induction.
+% Given non-empty P and C...  Can we show all P -> C edges get collected in D?
+  Firstly, if $n = 0$ or $n = 1$ the algorithm is trivially correct, returning on the first iteration with $E = \emptyset$.  Suppose then that $n > 1$ and let us define
 
-On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E = \emptyset$.  The set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_0$ ($D_0$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, $\anc{i} \cap \anc{j} = \emptyset$ and therefore $i \in \anc{j}$ (proposition \ref{prop:ancestor_properties}).  Furthermore, the construction of $C_k$ implies that $i \in \pa{j}$ since otherwise, there would be some $u \in \anc{j}$ with $i \in \anc{u}$, but then by proposition \ref{lem:pwgc_anc} $i \pwgc u$ and $u \pwgc j$ so that $u \not \in \widehat{P}_0 \implies u \in S_0 \implies j \not\in C_0$, a contradiction.
+  \begin{equation*}
+    A_k = \{i \in [n]\ |\ \dist{i}{\widehat{P}_0} = k\},
+  \end{equation*}
 
-% and show that on each step, every edge incident upon a node in $C_k$ is contained in $D_k$, that every edge in $D_k$ is an edge in $\gcg$, and finally that $\bigcup_{k = 1}^n C_k = [n] \setminus \widehat{P}_0$ and that this implies $\big([n], \bigcup_{k = 1}^n D_k\big) = \gcg$.
+  where
+
+  \begin{equation*}
+    \dist{i}{P} = \text{max}\{r \in [n]\ |\ \exists (j \rightarrow i) \text{ path of length } r \text{ in } \gcg \text{ for some } j \in P\}.
+  \end{equation*}
+  
+  We will proceed by induction and show that when the counter has reached the value $k \ge 1$, it is guaranteed that all nodes in $\bigcup_{\ell \le k}A_\ell$ (nodes having paths of length up to $k$ between themselves and $\widehat{P}_0$) must have all of their incident edges included in $E$, and that every edge in $E$ is an edge of $\gcg$.  If this is the case, then it can be immediately seen that the algorithm terminates with the correct result, $\gcg = ([n], E)$, once $k = n$; since there can only be paths up to length $n - 1$ in $\gcg$, and there cannot be any nodes or edges that don't involve paths back to $\widehat{P}_0$.  That is, $\bigcup_{\ell \le n}A_\ell = [n]$.
+
+  % firstly dispensing with some trivialities, and then establishing that every edge in $\gcg$ makes an appearance in some $D_{kr}$ as well as that everything in any $D_{kr}$ is indeed an edge in $\gcg$.
+
+  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E = \emptyset$.  To quickly dispense with some trivialities: the set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.
+
+  Continuing with the non-trivial case: if $\widehat{P}_0 \ne [n]$ then $C_0$ must be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  In this case it is also clear that $A_1 \ne \emptyset$, so let us consider some $j \in A_1$.  We must have $j \in C_0$, otherwise there would be a path of length $2$ from $\widehat{P}_0$ to $j$.  Moreover, since $\exists i \in \widehat{P}_0$ s.t. $i \gc j$ and therefore $i \pwgc j$ (by proposition \ref{prop:pwgc_anc}) we have $(i, j) \in D_{00}$ and therefore $(i, j) \in E$.  Therefore $A_1 \subseteq D_{00}$.  \hl{This is nonsensical because $A_1$ does not contain tuples -- need to show that $A_1 \subseteq C_0$ ?}
+
+  Now consdider some $(i, j) \in D_{00}$ (the same reasoning as for $C_0$ is sufficient to see that $D_{00}$ is non-empty).  Since $i$ has no parents, $\anc{i} \cap \anc{j} = \emptyset$ and therefore $i \in \anc{j}$ (proposition \ref{prop:ancestor_properties}).  Furthermore, the construction of $C_k$ implies that $i \in \pa{j}$ since otherwise, there would be some $u \in \anc{j}$ with $i \in \anc{u}$, but then by proposition \ref{prop:pwgc_anc} $i \pwgc u$ and $u \pwgc j$ so that $u \not \in \widehat{P}_0 \implies u \in S_0 \implies j \not\in C_0$, a contradiction.  This implies every tuple in $D_{00}$ is a bona-fide edge of $\gcg$, as well as that $(i, j) \in A_1$.  So then $A_1 = D_{00}$, [\hl{nonsensical, see earlier.}] completing the base case for induction.
+
+  Suppose now the algorithm has reached step $k$ and that $E = \bigcup_{\ell \le k - 1}A_\ell$.
+  
+% The reasoning here is (I think) correct -- but isn't directly establishing the induction hypothesis.
+%   On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_{00}$ ($D_{00}$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, $\anc{i} \cap \anc{j} = \emptyset$ and therefore $i \in \anc{j}$ (proposition \ref{prop:ancestor_properties}).  Furthermore, the construction of $C_k$ implies that $i \in \pa{j}$ since otherwise, there would be some $u \in \anc{j}$ with $i \in \anc{u}$, but then by proposition \ref{prop:pwgc_anc} $i \pwgc u$ and $u \pwgc j$ so that $u \not \in \widehat{P}_0 \implies u \in S_0 \implies j \not\in C_0$, a contradiction.  So every tuple in $D_{00}$ is a bona-fide edge of $\gcg$.  Suppose now that for some $j \in C_0$ there is an $i$ s.t. $(i, j) \in \gcg$ but $(i, j) \not\in D_{00}$.  Since $(i, j) \in \gcg$ we have $i \pwgc j$ (corollary \ref{cor:gc_implies_pwgc}), but then if $i \not\in \widehat{P}_0$ then $j \notin C_0$ and if $i \in \widehat{P}_0, j \in C_0$ then necessarily $(i, j) \in D_{00}$ since we cannot at this stage have any paths in $E$.
+
+%   and show that on each step, every edge incident upon a node in $C_k$ is contained in $D_k$, that every edge in $D_k$ is an edge in $\gcg$, and finally that $\bigcup_{k = 1}^n C_k = [n] \setminus \widehat{P}_0$ and that this implies $\big([n], \bigcup_{k = 1}^n D_k\big) = \gcg$.
 
 
 %  On the first iteration of the algorithm ($k = 0$) we have $S_0 = [n]$ and $E_0 = \emptyset$.  The set $\widehat{P}_0$ is non-empty since $\gcg$ is a DAG and therefore there are nodes in $\gcg$ without parents, thence if $\widehat{P}_0 = \emptyset$ proposition \ref{prop:ancestor_properties} would be contradicted.  Now, if $\widehat{P}_0 = [n]$ then the graph necessarily contains no edges and we will correctly return $E = \emptyset$.  On the other hand, if $\widehat{P}_0 \ne [n]$ then $C_0$ must also be non-empty, otherwise there would be driving nodes not included in $\widehat{P}_0$.  Consider now an edge $(i, j) \in D_0$ (again $D_0$ is non-empty for the same reason as $C_0$).  Since $i$ has no parents, we must have $\anc{i}\cap\anc{j} = \emptyset$ and therefore $i \in \anc{j}$, and due to the construction of $C_0$ we in fact have $i \in \pa{j}$, which establishes that every edge in $D_0$ is also an edge in $\gcg$.  Finally consider $j \in C_0$, by proposition \ref{prop:pwgc_anc} and since the parents of $C_0$ must be in $P_0$, we see that every edge incident on $j$ must be present in $D_0$.
