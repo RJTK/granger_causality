@@ -458,7 +458,7 @@ We continue to develop the relationship between $x_i$ and it's family tree.
 
   \begin{equation}
     \label{eqn:ancestor_expansion}
-    x_i(t) = \A_{ii}(z)v_i(t) + \sum_{k \in \anc{i} \setminus\{i\}}\A_{ik}(z)v_k(t),
+    x_i(t) = \A_{ii}(z)v_i(t) + \sum_{\substack{k \in \anc{i} \\ k \ne i}}\A_{ik}(z)v_k(t),
   \end{equation}
 
   where $\A(z) = \sum_{\tau = 0}^\infty A(\tau)$ is the filter from
@@ -561,7 +561,7 @@ We now prove the proposition.
   \begin{align*}
     x_i(t) &= (I - \B(z))^{-1}\\
     &= \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
-    &= \A_{ii}(z) v_i(t) + \sum_{j \in \anc{i} \setminus \{i\}} \A_{ij}(z) v_j(t)\\
+    &= \A_{ii}(z) v_i(t) + \sum_{\substack{j \in \anc{i} \\ j \ne i}} \A_{ij}(z) v_j(t)\\
   \end{align*}
 \end{proof}
 
@@ -633,8 +633,10 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 
   \begin{enumerate}
     \item{$j \in \anc{i}$}
-    \item{$\anc{i} \cap \anc{j} \ne \emptyset$}
+    \item{$\anc{i} \cap \anc{j} \ne \emptyset$.}
   \end{enumerate}
+
+  \hl{Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ such that $i$ is not contained in at least one $u \rightarrow \cdots \rightarrow j$ path.  [Must still prove this.]}
 \end{proposition}
 \begin{proof}
   We will show the contrapositive.  Assume that $j \not \in \anc{i}$ and $\anc{i} \cap \anc{j} = \emptyset$, then $\forall \tau \in \Z_+,\ \E x_i(t)x_j(t - \tau) = 0$ since from the representation (\ref{eqn:parent_expansion}) we have
@@ -642,7 +644,7 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
   \begin{align*}
     \E x_i(t)x_j(t - \tau) &= \E \big(\A_{ii}(z)v_i(t)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
     &+ \sum_{k \in \anc{i}}\E[\big(\A_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{k \in \anc{j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
-    &+ \sum_{k \in \anc{i} \setminus i}\sum_{\ell \in \anc{j} \setminus j}\E[\big(\A_{ik}(z)v_k(t)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)]\\
+    &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\sum_{\substack{\ell \in \anc{j} \\ \ell \ne j}}\E[\big(\A_{ik}(z)v_k(t)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)]\\
   \end{align*}
 
   Keeping in mind that $v(t)$ is an isotropic and uncorrelated sequence (i.e. $\forall \tau \in \Z,\ k \ne \ell \implies \E v_k(t)v_\ell(t - \tau) = 0$ and $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$), we will see that each of these above four terms are 0.  The first term since $i \pwgc i$ is not possible and hence the case $j = i$ is vacuous.  The second term is 0 since $j \not\in \anc{i}$.  The fourth term above is 0 since $\anc{i} \cap \anc{j} = \emptyset$.  For the third term, it is possible that (due to cycles) $i \in \anc{j}$ which requires more care, however similarly as before we can at least see that
@@ -670,9 +672,11 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
   \end{equation*}
 
   so by theorem (\ref{thm:granger_causality_equivalences}) we conclude $j \not\pwgc i$.
+
+  For the second part of the theorem we exclude possibility $(1)$, namely, $j \not \in \anc{i}$ and suppose by way of contradiction that for every $u \in \anc{i} \cap \anc{j}$ 
 \end{proof}
 
-We can state some interesting corollaries of this result.
+An interesting corollary is the following:
 
 \begin{corollary}
   If the graph $\gcg$ is acyclic and if $j \pwgc i$ and $i \pwgc j$ then $\anc{i} \cap \anc{j} \ne \emptyset$.
@@ -810,6 +814,13 @@ forests), and DAGs where each node has at most one parent.
 
 % Is pwgc transitive?
 
+\begin{proposition}
+  If $\gcg$ is a strongly causal DAG and $i \pwgc j$ and $j \pwgc i$, then $i \not\in \pa{j}$ and $j \not\in \pa{i}$.  That is, a pairwise bidirectional edge indicates the absense of any edge in $\gcg$.
+\end{proposition}
+\begin{proof}
+  By way of contradiction, suppose that $i \in \pa{j}$ and note that the case $j \in \pa{i}$ is symmetric.  We consider the two possibilities allowed by proposition \ref{prop:ancestor_properties} for $j \pwgc i$:  Firstly $j \in \anc{i}$ is impossible since $\gcg$ is assumed to be acyclic; \hl{Secondly} $u \in \anc{i} \cap \anc{j}$ \hl{leads to a contradiction} since there must be multiple paths, namely $u \rightarrow \cdots \rightarrow i \rightarrow \cdots \rightarrow j$ and $u \rightarrow \cdots \rightarrow j$ in $\gcg$, but this isn't possible since $\gcg$ is strongly causal, therefore we cannot have $i \in \pa{j}$. \hl{This requires a strengthening of proposition 3!}
+\end{proof}
+
 In light of proposition \ref{prop:sc_graph_common_anc}, the following
 provides a converse to proposition \ref{prop:ancestor_properties}.
 
@@ -868,7 +879,7 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
     x_i(t) \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}},
   \end{equation*}
 
-  but this is impossible since with probability one $v_i(t) \not \in \H_{t - 1}^{(i)}$.
+  but this is impossible since with probability one $x_i(t) \not \in \H_{t - 1}^{(i)}$.
 \end{proof}
 
 \begin{corollary}
