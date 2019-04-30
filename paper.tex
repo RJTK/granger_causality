@@ -626,8 +626,6 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 
 \begin{proposition}
   \label{prop:ancestor_properties}
-\hl{Need to refine this to exclude $k \rightarrow i \rightarrow j$ from 2.}
-
   In a Granger-causality graph $\gcg$, if $j \pwgc i$ then at least
   one of the following must hold
 
@@ -636,13 +634,15 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
     \item{$\anc{i} \cap \anc{j} \ne \emptyset$.}
   \end{enumerate}
 
-  \hl{Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ such that $i$ is not contained in at least one $u \rightarrow \cdots \rightarrow j$ path, such an ancestor can be referred to as a \textit{confounder} [Must still prove this.]}
+  Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ such that $i$ is not contained in at least one $u \rightarrow \cdots \rightarrow j$ path.
 \end{proposition}
 
 \begin{remark}
-  Considering the contrapositive of the first part of this theorem (which is what we actually prove below) is enlightening: it says that if $i$ is not a decendent of $j$ ($j \not \in \anc{i}$) and that there are no common ancestors ($\anc{i} \cap \anc{j} = \emptyset$) then $j \not \pwgc i$, or $\linE{x_i(t)}{\H_{t - 1}^{(i, j)}} = \linE{x_i(t)}{\H_{t - 1}^{(i)}}$, which is an intuitively natural result.
+  Considering the contrapositive of the first part of this theorem (which is what we actually prove below) is enlightening: it says that if $i$ is not a descendent of $j$ (i.e. $j \not \in \anc{i}$) and that there are no common ancestors (i.e. $\anc{i} \cap \anc{j} = \emptyset$) then $j \not \pwgc i$, or $\linE{x_i(t)}{\H_{t - 1}^{(i, j)}} = \linE{x_i(t)}{\H_{t - 1}^{(i)}}$, which is an intuitively natural result.
 
-  The first part is used in part to prove the second (and stronger) statement, which allows common ancestors, but only if the are ``mediated'' by $i$.  For example, this covers the case of a graph $k \rightarrow i \rightarrow j$, where $\{k\} = \anc{i} \cap \anc{j}$, but clearly $j \not \pwgc i$.
+  The first part is used in part to prove the second (and stronger) statement, which allows common ancestors, but only if they are ``mediated'' by $i$.  For example, this covers the case of a graph $k \rightarrow i \rightarrow j$, where $\{k\} = \anc{i} \cap \anc{j}$, but clearly $j \not \pwgc i$.
+
+  An ancestor such as that in the second part of the theorem can be referred to as a \textit{confounder}, and a simple example is given by the fork $i \leftarrow k \rightarrow j$.
 \end{remark}
 
 \begin{proof}
@@ -650,14 +650,14 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 
   \begin{align*}
     \E x_i(t)x_j(t - \tau) &= \E \big(\A_{ii}(z)v_i(t)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
-    &+ \sum_{k \in \anc{i}}\E[\big(\A_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{k \in \anc{j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
+    &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\E[\big(\A_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{\substack{k \in \anc{j} \\ k \ne j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
     &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\sum_{\substack{\ell \in \anc{j} \\ \ell \ne j}}\E[\big(\A_{ik}(z)v_k(t)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)]\\
   \end{align*}
 
-  Keeping in mind that $v(t)$ is an isotropic and uncorrelated sequence (i.e. $\forall \tau \in \Z,\ k \ne \ell \implies \E v_k(t)v_\ell(t - \tau) = 0$ and $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$), we will see that each of these above four terms are 0.  The first term since $i \pwgc i$ is not possible and hence the case $j = i$ is vacuous.  The second term is 0 since $j \not\in \anc{i}$.  The fourth term above is 0 since $\anc{i} \cap \anc{j} = \emptyset$.  For the third term, it is possible that (due to cycles) $i \in \anc{j}$ which requires more care, however similarly as before we can at least see that
+  Keeping in mind that $v(t)$ is an isotropic and uncorrelated sequence (i.e. $\forall \tau \in \Z,\ k \ne \ell \implies \E v_k(t)v_\ell(t - \tau) = 0$ and $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$), we will see that each of these above four terms are 0.  The first term since $i \pwgc i$ is not possible and hence the case $j = i$ is vacuous.  The second term is 0 since $j \not\in \anc{i}$.  The fourth term above is 0 since $\anc{i} \cap \anc{j} = \emptyset$.  For the third term, it is possible that (due to cycles) $i \in \anc{j}$ which requires more care, although similarly as before we can at least see immediately that
 
   \begin{equation*}
-    \sum_{k \in \anc{j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)] = \E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)].
+    \sum_{\substack{k \in \anc{j} \\ k \ne j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)] = \E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)].
   \end{equation*}
 
   However, $k \ne \ell \implies \A_{k\ell}(z) = 0$ (i.e. $\A(z) = I + A(1)z^{-1} + \cdots$) so $\A_{ji}(z)v_i(t - \tau)$ is strictly earlier in time, for $\tau \ge 0$, than $v_i(t)$ and hence $\E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)] = 0$.  This establishes the fact that $H_t^{(i)} \perp \H_t^{(j)}$ where $H_t^{(i)} = \{\alpha x_i(t)\ |\ \alpha \in \R\}$ is the Hilbert space generated by the current sample of $x_i$.  It is clear that $\H_t^{(i)} = \bigvee_{\tau = 0}^\infty H_{t - \tau}^{(i)}$.
@@ -680,19 +680,25 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 
   so by theorem (\ref{thm:granger_causality_equivalences}) we conclude $j \not\pwgc i$.
 
-  For the second part of the theorem we exclude possibility $(1)$, namely, $j \not \in \anc{i}$ and suppose by way of contradiction that for every $k \in \anc{i} \cap \anc{j}$ every $k \rightarrow \cdots \rightarrow j$ path contains $i$.  First define the following partition of $\pa{j}$:
+  For the second part of the theorem we will suppose that $j$ is a node having the following two properties: $(a)$ $j \not \in \anc{i}$ and $(b)$ for every $k \in \anc{i} \cap \anc{j}$ every $k \rightarrow \cdots \rightarrow j$ path contains $i$.  The first is the negation of property $(1)$ above, and the second is to setup the contradiction $j \not\pwgc i$, which will then establish the theorem.
+
+  Firstly, notice that every $u \in \big(\pa{j} \setminus \{i\}\big)$ necesssarily inherits these same two properties since if $u \in \anc{i}$ then $u \in \anc{i} \cap \anc{j}$ so that every $u \rightarrow \cdots \rightarrow j$ path must contain $i$, but $u \in \pa{j}$, so this is not the case since $u \rightarrow j$ is a path that doesn't contain $i$; moreover, if we consider $w \in \anc{i} \cap \anc{u}$ then we also have $w \in \anc{i} \cap \anc{j}$ so every $w \rightarrow \cdots \rightarrow j$ path must contain $i$.  These properties therefore extend inductively to every $u \in \big(\anc{j} \setminus \{i\}\big)$.
+
+  In order to deploy a recursive argument, define the following partition of $\pa{u}$, for some node $u$:
 
   \begin{align*}
-    C_0 &= \{k \in \pa{j}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} = \emptyset, k \ne i\}\\
-    C_1 &= \{k \in \pa{j}\ |\ i \in \anc{k} \text{ or } k = i\}\\
-    C_2 &= \{k \in \pa{j}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} \ne \emptyset, k \ne i\}.
+    C_0(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} = \emptyset, k \ne i\}\\
+    C_1(u) &= \{k \in \pa{u}\ |\ i \in \anc{k} \text{ or } k = i\}\\
+    C_2(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} \ne \emptyset, k \ne i\}.
   \end{align*}
 
-  We notice that $C_2 = \emptyset$ since if $k \in C_2$ then $\exists u \in \anc{i} \cap \anc{k}$ s.t. $i \not \in \anc{k}$ and therefore there must be a path $u \rightarrow \cdots \rightarrow k \rightarrow \cdots \rightarrow j$ which does not contain $i$, violating the condition taken in the second part of the theorem's statement.  We can therefore expand $x_j(t)$ in terms of it's parents, where $\A_{jj}(z) = (1 - \B_{jj}(z))^{-1}$:
+  We notice that for any $u$ having the properties $a, b$ above, we must have $C_2(u) = \emptyset$ since if $k \in C_2(u)$ then $\exists w \in \anc{i} \cap \anc{k}$ s.t. $i \not \in \anc{k}$ and therefore there must be a path $w \rightarrow \cdots \rightarrow k \rightarrow \cdots \rightarrow u$ which does not contain $i$.
+
+  Using this partition, we will expand $x_j(t)$ in terms of it's parents, and recursively expand nodes in $C_1$ until we reach a case where $C_1 = \emptyset$.  For the first step:  %where $\A_{jj}(z) = (1 - \B_{jj}(z))^{-1}$:
 
   \begin{equation}
     \label{eqn:xj_partition_expansion}
-    x_j(t) = \A_{jj}(z)\Big(v_j(t) + \sum_{k \in C_0}\B_{ik}(z)x_k(t) + \sum_{k \in C_1}\B_{ik}(z)x_k(t)\Big).
+    x_j(t) = \A_{jj}(z)\Big(v_j(t) + \sum_{k \in C_0(j)}\B_{ik}(z)x_k(t) + \sum_{k \in C_1(j)}\B_{ik}(z)x_k(t)\Big).
   \end{equation}
 
   Using this representation we choose an arbitrary $\Phi(z) x_i(t - 1) \in \H_{t - 1}^{(j)}$ and show that
@@ -708,19 +714,27 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
     \inner{x_i(t)}{\Phi(z)x_j(t - 1) - \linE{\Phi(z)x_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
   \end{equation}
 
-  by the orthogonality principle since $\linE{x_i(t)}{\H_{t - 1}^{(i)}} \in \H_{t - 1}^{(i)}$.  Substituting (\ref{eqn:xj_partition_expansion}) into (\ref{eqn:sufficient_inner_prod}) and proceeding term by term we have firstly that
+  by the orthogonality principle since $\linE{x_i(t)}{\H_{t - 1}^{(i)}} \in \H_{t - 1}^{(i)}$.  Substituting (\ref{eqn:xj_partition_expansion}) into (\ref{eqn:sufficient_inner_prod}) and starting with the first term we have
+
+  \begin{align*}
+    &\inner{x_i(t)}{\Phi(z)\A_{jj}(z)v_j(t - 1) - \linE{\Phi(z)\A_{jj}(z)v_j(t - 1)}{\H_{t - 1}^{(i)}}}\\
+    \overset{(\alpha)}{=}\ &\inner{\A_{ii}(z)v_i(t) + \sum_{k \in \anc{i}}\A_{ik}(z)v_k(t)}{\Phi(z)\A_{jj}(z)v_j(t - 1)}\\
+    \overset{(\beta)}{=}\ &0,
+  \end{align*}
+
+  where $(\alpha)$ follows by expanding $x_i(t)$ with (\ref{eqn:ancestor_expansion}) and $\linE{\Phi(z)\A_{jj}(z)v_j(t - 1)}{\H_{t - 1}^{(i)}} = 0$ because $\forall \tau, s$
 
   \begin{equation*}
-    \inner{x_i(t)}{\Phi(z)\A_{jj}(z)v_j(t - 1) - \linE{\Phi(z)\A_{jj}(z)v_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0
+    \E v_j(t - \tau) x_i(t - s) = \E v_j(t - \tau) \sum_{k \in \anc{i} \cup \{i\}}\A_{ik}(z)v_k(t - s) = 0,
   \end{equation*}
 
-  by expanding $x_i(t)$ with (\ref{eqn:ancestor_expansion}) and using the fact that $j \not \in \anc{i}$.  Secondly we see that $\forall k \in C_0$
+  since $j \not \in \anc{i}$; $(\beta)$ follows similarly, that is, $j \not \in \anc{i}$.  Secondly we see that $\forall k \in C_0(j)$
 
   \begin{equation*}
     \inner{x_i(t)}{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1) - \linE{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
   \end{equation*}
 
-  which follows from the first part of the theorem.  Finally, for $k \in C_1$ the case $k = i$ is immediate, so suppose $k \ne i$.  
+  which follows from the first part of the theorem.  Finally, for $k \in C_1(j)$ the case $k = i$ is immediate, so suppose $k \ne i$.  We know from above that $k$ inherits the key properties referred to as $(a), (b)$ and therefore we can recursively expand $k$ in the same way as in equation (\ref{eqn:xj_partition_expansion}).  Continuing this recursion for each $k \in C_1(j)$ where $k \ne i$ must eventually terminate since $i \in \anc{k}$.
 \end{proof}
 
 An interesting corollary is the following:
