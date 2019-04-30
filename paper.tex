@@ -636,10 +636,17 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
     \item{$\anc{i} \cap \anc{j} \ne \emptyset$.}
   \end{enumerate}
 
-  \hl{Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ such that $i$ is not contained in at least one $u \rightarrow \cdots \rightarrow j$ path.  [Must still prove this.]}
+  \hl{Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ such that $i$ is not contained in at least one $u \rightarrow \cdots \rightarrow j$ path, such an ancestor can be referred to as a \textit{confounder} [Must still prove this.]}
 \end{proposition}
+
+\begin{remark}
+  Considering the contrapositive of the first part of this theorem (which is what we actually prove below) is enlightening: it says that if $i$ is not a decendent of $j$ ($j \not \in \anc{i}$) and that there are no common ancestors ($\anc{i} \cap \anc{j} = \emptyset$) then $j \not \pwgc i$, or $\linE{x_i(t)}{\H_{t - 1}^{(i, j)}} = \linE{x_i(t)}{\H_{t - 1}^{(i)}}$, which is an intuitively natural result.
+
+  The first part is used in part to prove the second (and stronger) statement, which allows common ancestors, but only if the are ``mediated'' by $i$.  For example, this covers the case of a graph $k \rightarrow i \rightarrow j$, where $\{k\} = \anc{i} \cap \anc{j}$, but clearly $j \not \pwgc i$.
+\end{remark}
+
 \begin{proof}
-  We will show the contrapositive.  Assume that $j \not \in \anc{i}$ and $\anc{i} \cap \anc{j} = \emptyset$, then $\forall \tau \in \Z_+,\ \E x_i(t)x_j(t - \tau) = 0$ since from the representation (\ref{eqn:parent_expansion}) we have
+  We will first establish the contrapositive of $(1)$ and $(2)$: assume that $j \not \in \anc{i}$ and $\anc{i} \cap \anc{j} = \emptyset$, then we will show that $\forall \tau \in \Z_+,\ \E x_i(t)x_j(t - \tau) = 0$.  This follows from representation (\ref{eqn:parent_expansion}) since we have
 
   \begin{align*}
     \E x_i(t)x_j(t - \tau) &= \E \big(\A_{ii}(z)v_i(t)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
@@ -673,7 +680,47 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 
   so by theorem (\ref{thm:granger_causality_equivalences}) we conclude $j \not\pwgc i$.
 
-  For the second part of the theorem we exclude possibility $(1)$, namely, $j \not \in \anc{i}$ and suppose by way of contradiction that for every $u \in \anc{i} \cap \anc{j}$ 
+  For the second part of the theorem we exclude possibility $(1)$, namely, $j \not \in \anc{i}$ and suppose by way of contradiction that for every $k \in \anc{i} \cap \anc{j}$ every $k \rightarrow \cdots \rightarrow j$ path contains $i$.  First define the following partition of $\pa{j}$:
+
+  \begin{align*}
+    C_0 &= \{k \in \pa{j}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} = \emptyset, k \ne i\}\\
+    C_1 &= \{k \in \pa{j}\ |\ i \in \anc{k} \text{ or } k = i\}\\
+    C_2 &= \{k \in \pa{j}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} \ne \emptyset, k \ne i\}.
+  \end{align*}
+
+  We notice that $C_2 = \emptyset$ since if $k \in C_2$ then $\exists u \in \anc{i} \cap \anc{k}$ s.t. $i \not \in \anc{k}$ and therefore there must be a path $u \rightarrow \cdots \rightarrow k \rightarrow \cdots \rightarrow j$ which does not contain $i$, violating the condition taken in the second part of the theorem's statement.  We can therefore expand $x_j(t)$ in terms of it's parents, where $\A_{jj}(z) = (1 - \B_{jj}(z))^{-1}$:
+
+  \begin{equation}
+    \label{eqn:xj_partition_expansion}
+    x_j(t) = \A_{jj}(z)\Big(v_j(t) + \sum_{k \in C_0}\B_{ik}(z)x_k(t) + \sum_{k \in C_1}\B_{ik}(z)x_k(t)\Big).
+  \end{equation}
+
+  Using this representation we choose an arbitrary $\Phi(z) x_i(t - 1) \in \H_{t - 1}^{(j)}$ and show that
+
+  \begin{equation}
+    \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}{\Phi(z)x_j(t - 1) - \linE{\Phi(z)x_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
+  \end{equation}
+
+  which will imply (\hl{by lemma ???}) that $j \not\pwgc i$ and for which it is equivalent to show that
+
+  \begin{equation}
+    \label{eqn:sufficient_inner_prod}
+    \inner{x_i(t)}{\Phi(z)x_j(t - 1) - \linE{\Phi(z)x_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
+  \end{equation}
+
+  by the orthogonality principle since $\linE{x_i(t)}{\H_{t - 1}^{(i)}} \in \H_{t - 1}^{(i)}$.  Substituting (\ref{eqn:xj_partition_expansion}) into (\ref{eqn:sufficient_inner_prod}) and proceeding term by term we have firstly that
+
+  \begin{equation*}
+    \inner{x_i(t)}{\Phi(z)\A_{jj}(z)v_j(t - 1) - \linE{\Phi(z)\A_{jj}(z)v_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0
+  \end{equation*}
+
+  by expanding $x_i(t)$ with (\ref{eqn:ancestor_expansion}) and using the fact that $j \not \in \anc{i}$.  Secondly we see that $\forall k \in C_0$
+
+  \begin{equation*}
+    \inner{x_i(t)}{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1) - \linE{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
+  \end{equation*}
+
+  which follows from the first part of the theorem.  Finally, for $k \in C_1$ the case $k = i$ is immediate, so suppose $k \ne i$.  
 \end{proof}
 
 An interesting corollary is the following:
