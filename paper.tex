@@ -21,9 +21,9 @@
 \newcommand{\anc}[1]{\mathcal{A}(#1)}  % Ancestors of a node
 \newcommand{\ancn}[2]{\mathcal{A}_{#1}(#2)}  % nth ancestors of a node
 \newcommand{\gpn}[2]{gp_{#1}(#2)}  % nth generation grandparents
-\newcommand{\gcgpath}[4]{#1 \rightarrow #2_1 \rightarrow \cdots \rightarrow #2_{#3} \rightarrow #4}
 \newcommand{\wtalpha}[2]{\widetilde{\alpha}(#1, #2)}  % Some notation for lem:pwgc_anc
 \newcommand{\dist}[2]{\mathsf{d}(#1, #2)}  % Distance between things
+\newcommand{\gcgpath}[2]{#1 \rightarrow \cdots \rightarrow #2}  % A shorter path command
 
 \input{\string~/Documents/academics/global_academics/latex_preamble}
 
@@ -624,6 +624,14 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
   % where $(a)$ follows because $\linE{\alpha}{\mathcal{X}} \in \mathcal{X}$ and $\beta - \linE{\beta}{\mathcal{X}} \in \mathcal{X}$, and $(b)$ follows since $\beta \perp \mathcal{A} \iff \linE{\beta}{\mathcal{A}} = 0$.
 \end{proof}
 
+\begin{definition}[\hl{Confounder}]
+  A node $k$ will be referred to as a \textit{confounder} of nodes
+  $i, j$ (neither of which are equal to $k$) if
+  $k \in \anc{i} \cap \anc{j}$ and there exists a path
+  $\gcgpath{k}{i}$ not containing $j$, and a path $\gcgpath{k}{i}$
+  not containing $i$.
+\end{definition}
+
 \begin{proposition}
   \label{prop:ancestor_properties}
   In a Granger-causality graph $\gcg$, if $j \pwgc i$ then at least
@@ -634,7 +642,7 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
     \item{$\anc{i} \cap \anc{j} \ne \emptyset$.}
   \end{enumerate}
 
-  Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ such that $i$ is not contained in at least one $u \rightarrow \cdots \rightarrow j$ path.
+  Moreover, if $j \not\in \anc{i}$ then $\exists u \in \anc{i} \cap \anc{j}$ which is a confounder, that is, such that $i$ is not contained in at least one $\gcgpath{u}{j}$ path.
 \end{proposition}
 
 \begin{remark}
@@ -743,7 +751,7 @@ An interesting corollary is the following:
   If the graph $\gcg$ is acyclic and if $j \pwgc i$ and $i \pwgc j$ then $\anc{i} \cap \anc{j} \ne \emptyset$.
 \end{corollary}
 
-It seems intuitive that a converse of \ref{prop:ancestor_properties}
+It seems intuitive that a converse of proposition \ref{prop:ancestor_properties}
 would hold, i.e. $j \in \anc{i} \implies j \pwgc i$.  Unfortunately,
 this is not the case in general, as different paths through $\gcg$ can
 lead to cancellation (see example \ref{ex:diamond_cancellation}).  In
@@ -827,16 +835,17 @@ Then
 and again $1 \not\pwgc 3$.
 \end{example}
 
-The previous examples seem rather pathological since we have simply
-constructed a case where different paths in the graph cancel exactly.
-It may be possible to rid ourselves of these pathologies for instance
-by defining a notion of ``robust'' pairwise causality where
-``$j \pwgc _R i$'' if $j \pwgc i$ almost surely for a ``small'' random
-perturbation of the system matrix.  However, we do not believe such a
-modification of our theory can have useful practical implications
-since the difference between paths that ``nearly cancel'' rather than
-cancel exactly would in practice require inordinate amounts of data to
-resolve.
+\subsection{Strongly Causal Graphs}
+The examples at the conclusion of the previous section seem rather
+pathological since we have simply constructed a case where different
+paths in the graph cancel exactly.  It may be possible to rid
+ourselves of these pathologies for instance by defining a notion of
+``robust'' pairwise causality where ``$j \pwgc _R i$'' if $j \pwgc i$
+almost surely for a ``small'' random perturbation of the system
+matrix.  However, we do not believe such a modification of our theory
+can have useful practical implications since the difference between
+paths that ``nearly cancel'' rather than cancel exactly would in
+practice require inordinate amounts of data to resolve.
 
 Alternatively, we could restrict the coefficients of the system
 matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead, we
@@ -851,35 +860,100 @@ if there is at most 1 directed path between any two nodes.
   not necessary for some theorems.}
 \end{definition}
 
+\hl{Conjecture: A graph is strongly causal if and only if it contains
+  no confounders.}
+
 Examples of strongly causal graphs include directed trees (or
 forests), and DAGs where each node has at most one parent.
+Fortunately, the strongly causal property is inherited by subgraphs:
 
 \begin{lemma}
   \label{lem:still_strongly_causal}
   If $\gcg$ is a strongly causal graph, any subgraph formed by eliminating nodes
-  and all of the in and out edges of the eliminated node is still strongly causal.
+  as well as all of the in and out edges thereof is still strongly causal.
 \end{lemma}
 \begin{proof}
   If $\gcg$ has at most one path between any two nodes, there can only
   be fewer paths after removing nodes from $\gcg$.
 \end{proof}
 
+We explore a number of properties of strongly causal graphs before
+moving into the main result of section \ref{sec:theory} in section
+\ref{sec:pairwise_algorithm}.
 
-\begin{lemma}
+\begin{proposition}
   \label{prop:sc_graph_common_anc}
-  In a strongly causal graph if $j \in \anc{i}$ and $k \in \anc{i} \cap \anc{j}$ then the unique path from $k$ to $i$ contains $j$.
-\end{lemma}
+  In a strongly causal graph if $j \in \anc{i}$ then any
+  $k \in \anc{i} \cap \anc{j}$ is not a confounder, that is,
+  the unique path from $k$ to $i$ contains $j$.
+\end{proposition}
 \begin{proof}
-  Suppose that there is a path from $k$ to $i$ which does not contain $j$.  In this case, there are multiple paths from $k$ to $i$ (one of which \textit{does} go through $j$ since $j \in \anc{i}$) which contradicts the assumption of strong causality.
+  Suppose that there is a path from $k$ to $i$ which does not contain
+  $j$.  In this case, there are multiple paths from $k$ to $i$ (one of
+  which \textit{does} go through $j$ since $j \in \anc{i}$) which
+  contradicts the assumption of strong causality.
 \end{proof}
 
 % Is pwgc transitive?
-
+  
 \begin{proposition}
-  If $\gcg$ is a strongly causal DAG and $i \pwgc j$ and $j \pwgc i$, then $i \not\in \pa{j}$ and $j \not\in \pa{i}$.  That is, a pairwise bidirectional edge indicates the absense of any edge in $\gcg$.
+  If $\gcg$ is a strongly causal DAG then $i \pwgc j$ and $j \in \anc{i}$ are
+  \textit{alternatives}, that is $i \pwgc j \implies j \notin \anc{i}$.
 \end{proposition}
 \begin{proof}
-  By way of contradiction, suppose that $i \in \pa{j}$ and note that the case $j \in \pa{i}$ is symmetric.  We consider the two possibilities allowed by proposition \ref{prop:ancestor_properties} for $j \pwgc i$:  Firstly $j \in \anc{i}$ is impossible since $\gcg$ is assumed to be acyclic; \hl{Secondly} $u \in \anc{i} \cap \anc{j}$ \hl{leads to a contradiction} since there must be multiple paths, namely $u \rightarrow \cdots \rightarrow i \rightarrow \cdots \rightarrow j$ and $u \rightarrow \cdots \rightarrow j$ in $\gcg$, but this isn't possible since $\gcg$ is strongly causal, therefore we cannot have $i \in \pa{j}$. \hl{This requires a strengthening of proposition 3!}
+  Suppose that $i \pwgc j$ and $j \in \anc{i}$.  Then since $\gcg$ is
+  acyclic $i \not\in \anc{j}$, and by proposition
+  \ref{prop:ancestor_properties} there is some
+  $k \in \anc{i}\cap\anc{j}$ which is a confounder.  However, by
+  proposition \ref{prop:sc_graph_common_anc} $k$ cannot be a
+  confounder, a contradiction.
+\end{proof}
+% This is a direct proof
+  % \begin{proof}
+%   Suppose that $\gcg$ is a strongly causal DAG and that we have both
+%   $i \pwgc j$ and $j \in \anc{i}$, which implies that
+%   $i \not \in \anc{j}$ since $\gcg$ is a DAG.  We will establish the
+%   contradiction $i \in \anc{j}$.
+
+%   Since $j \in \anc{i}$ there is a path $\gcgpath{j}{i}$.
+%   Moreover, since $i \pwgc j$ by proposition \ref{prop:pwgc_anc} there
+%   must be a confounding ancestor $k \in \anc{i} \cap \anc{j}$, where the
+%   node $k$ has a path to $j,\ \gcgpath{k}{j}$, as well as a path
+%   to $i,\ \gcgpath{k}{i}$.
+
+%   \hl{Double check that the ancestor properties proposition implies
+%     that BOTH paths do not contain the other node.}
+
+%   Now, since the graph is strongly causal, the only possible
+%   $\gcgpath{k}{i}$ path is the one obtained by concatenating the
+%   $\gcgpath{k}{j}$ path with the $\gcgpath{j}{i}$ path.
+%   However, this is a contradiction since $k$ is a confounder and
+%   should have a $\gcgpath{k}{i}$ path which does not contain $i$.
+% \end{proof}
+  
+\begin{proposition}
+  \label{prop:bidirectional_edge}
+  If $\gcg$ is a strongly causal DAG and $i \pwgc j$ and $j \pwgc i$,
+  then $i \not\in \pa{j}$ and $j \not\in \pa{i}$.  That is, a pairwise
+  bidirectional edge indicates the absense of any edge in $\gcg$.
+\end{proposition}
+\begin{proof}
+  \hl{TODO: This is just a corollary of the previous proposition.}
+% This is a direct proof
+% \begin{proof}
+  By way of contradiction, suppose that $i \in \pa{j}$.  We will
+  consider the two possibilities allowed by proposition
+  \ref{prop:ancestor_properties} for $j \pwgc i$.  Firstly
+  $j \in \anc{i}$ is impossible since $\gcg$ is assumed to be acyclic.
+  Secondly, if there is some confounding node
+  $u \in \anc{i} \cap \anc{j}$ with a path
+  $u \rightarrow \cdots \rightarrow j$ which does not contain $i$ we
+  have a contradiction since there must now be multiple
+  $u \rightarrow j$ paths: the aforementioned, and a path
+  $u \rightarrow \cdots \rightarrow i \rightarrow \cdots \rightarrow
+  j$ which \textit{does} contain $i$.  We conclude that $i \in \pa{j}$
+  is impossible, and symmetrically that $j \in \pa{i}$ is as well.
+% \end{proof}
 \end{proof}
 
 In light of proposition \ref{prop:sc_graph_common_anc}, the following
@@ -899,7 +973,7 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
 
   and therefore that $H_t^{(i)} \not\perp\ \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(i)}$, which by theorem (\ref{thm:granger_causality_equivalences}) and \hl{lemma [name the lemma]} is enough to establish that $j \pwgc i$.
 
-  Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $j \rightarrow i$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
+  Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $\gcgpath{j}{i}$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
 
   \begin{align*}
     x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
@@ -943,11 +1017,12 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
   but this is impossible since with probability one $x_i(t) \not \in \H_{t - 1}^{(i)}$.
 \end{proof}
 
+We immediately obtain the corollary, which we remind the reader is,
+surprisingly, not true in a general graph.
+
 \begin{corollary}
   \label{cor:gc_implies_pwgc}
   If $\gcg$ is a strongly causal DAG then $j \gc i \implies j \pwgc i$.
-
-  \hl{This must be true in general, should include this shortly after the definition ow PWGC}
 \end{corollary}
 
 \begin{remark}
@@ -969,6 +1044,22 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
   \hl{This is certainly true, but I don't think I need to use it anywhere.}
 \end{proof}
 
+\hl{We can possibly supply another part of the converse, as well as
+  formalizing the concept described in the second part of proposition} \ref{prop:ancestor_properties}.  \hl{This also ties in nicely with proposition} \ref{prop:bidirectional_edge}
+
+\hl{Finally, that only \textit{confounders} seem to cause problems,
+  but not \textit{colliders} is a feature of the time-based nature of
+  Granger-causality as opposed to Pearl's static notion of causation.}
+
+\begin{proposition}
+  If $\gcg$ is a strongly causal DAG and nodes $i, j$ have a confounder $k$, then
+  $i \pwgc j$ and $j \pwgc i$.
+\end{proposition}
+
+\begin{proof}
+  \hl{I'm not actually sure yet if this is true.}
+\end{proof}  
+
 % $B(1) = \left[ \begin{array}{cc} 0 & 1 \\ 1 & 0 \end{array} \right]$
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -987,20 +1078,6 @@ provides a converse to proposition \ref{prop:ancestor_properties}.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-We are interested in understanding under what conditions a causality
-graph can be correctly recovered by pairwise testing alone.  It is not
-enough that the graph simply be sparse, as the following example shows.
-
-\begin{example}
-  If the causality graph $\gcg$ of the vector process $x(t)$ is
-  strongly connected\footnote{there is a directed path from each node
-    to every other node}, then the causality graph recovered via
-  pairwise causality tests is the complete graph.
- 
-  This follows immediately from the fact (lemma \ref{prop:pwgc_anc})
-  that $j \in \anc{i} \implies j \pwgc i$.
-\end{example}
-
 % \begin{definition}[Simply Causal]
 %   If the Granger-Causality graph $\gcg$ for $x(t)$ is as a directed
 %   acyclic graph such that there is at most one non-overlapping
@@ -1013,34 +1090,28 @@ enough that the graph simply be sparse, as the following example shows.
 %   graph.
 % \end{example}
 
-\begin{lemma}
-  If $\gcg$ is a strongly causal DAG then $i \pwgc j$ and $j \in \anc{i}$ are
-  \textit{alternatives}, that is $i \pwgc j \implies j \notin \anc{i}$.
-\end{lemma}
-\begin{proof}
-  Suppose that $\gcg$ is a strongly causal DAG and that we have both
-  $i \pwgc j$ and $j \in \anc{i}$.  We will show that $i \in \anc{j}$,
-  which produces a contradiction (since there must then be a directed cycle).
-
-  Since $j \in \anc{i}$ there is a path $\gcgpath{j}{a}{p}{i}$.
-  Moreover, since $i \pwgc j$ by lemma \ref{prop:pwgc_anc} there must
-  be a common ancestor $k \in \anc{i} \cap \anc{j}$ (otherwise, we would
-  have $i \in \anc{j}$, contradicting the acyclic property).  The node
-  $k$ has paths to both $j,\ \gcgpath{k}{b}{q}{j}$ and $i,\ \gcgpath{k}{c}{r}{i}$.
-
-  Now, since the graph is strongly causal, path $c$ must overlap with
-  path $a$ from $j$ to $i$ otherwise there would be multiple paths
-  from $k$ to $i$.  By the same reasoning with paths from $k$ to $j$,
-  the path $c$ must also overlap with path $b$ from $k$ to $j$, so in
-  fact path $c$ from $k$ to $i$ is
-  $c = b \rightarrow j \rightarrow a$.
-
-  \hl{TODO: We need the strengthening of prop }(\ref{prop:ancestor_properties})\hl{in order to conclude.}
-
-\end{proof}
-
 \subsection{Recovering $\gcg$ via Pairwise Tests}
-In this section we will show that if $\gcg$ is a strongly causal DAG, then it is possible to recover $\gcg$ via pairwise tests alone.  This is an interesting fact in and of itself, but also has some implications for applications since pairwise testing is trivially parallelizable.  In section \ref{sec:structure_learning} we will also analyze the use of pairwise testing as a heuristic for general graphs.
+\label{sec:pairwise_algorithm}
+In this section we will show that if $\gcg$ is a strongly causal DAG,
+then it is possible to recover $\gcg$ via pairwise tests alone.  This
+is an interesting fact in and of itself, but also has some
+implications for applications since pairwise testing is trivially
+parallelizable.  In section \ref{sec:structure_learning} we will also
+analyze the use of pairwise testing as a heuristic for general graphs.
+
+In order to recover $\gcg$ via pairwise testing alone, it is not
+enough that the graph simply be sparse, as the following example
+shows.
+
+\begin{example}
+  If the causality graph $\gcg$ of the vector process $x(t)$ is
+  strongly connected\footnote{there is a directed path from each node
+    to every other node}, then the causality graph recovered via
+  pairwise causality tests is the complete graph.
+ 
+  This follows immediately from the fact (proposition \ref{prop:pwgc_anc})
+  that $j \in \anc{i} \implies j \pwgc i$.
+\end{example}
 
 \begin{theorem}[Pairwise Recovery]
   \label{thm:tree_recovery}
