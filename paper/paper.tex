@@ -648,9 +648,9 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
 \end{proposition}
 
 \begin{remark}
-  Considering the contrapositive of the first part of this theorem (which is what we actually prove below) is enlightening: it says that if $i$ is not a descendent of $j$ (i.e. $j \not \in \anc{i}$) and that there are no common ancestors (i.e. $\anc{i} \cap \anc{j} = \emptyset$) then $j \not \pwgc i$, or $\linE{x_i(t)}{\H_{t - 1}^{(i, j)}} = \linE{x_i(t)}{\H_{t - 1}^{(i)}}$, which is an intuitively natural result.
+  Considering the contrapositive of the first part of this theorem (which is what we actually prove below) is enlightening: it says that if $i$ is not a descendent of $j$ (i.e. $j \not \in \anc{i}$) and that there are no common ancestors (i.e. $\anc{i} \cap \anc{j} = \emptyset$) then $j \npwgc i$, or $\linE{x_i(t)}{\H_{t - 1}^{(i, j)}} = \linE{x_i(t)}{\H_{t - 1}^{(i)}}$, which is an intuitively natural result.
 
-  The first part is used in part to prove the second (and stronger) statement, which allows common ancestors, but only if they are ``mediated'' by $i$.  For example, this covers the case of a graph $k \rightarrow i \rightarrow j$, where $\{k\} = \anc{i} \cap \anc{j}$, but clearly $j \not \pwgc i$.
+  The first part is used in part to prove the second (and stronger) statement, which allows common ancestors, but only if they are ``mediated'' by $i$.  For example, this covers the case of a graph $k \rightarrow i \rightarrow j$, where $\{k\} = \anc{i} \cap \anc{j}$, but clearly $j \npwgc i$.
 
   An ancestor such as that in the second part of the theorem can be referred to as a \textit{confounder}, and a simple example is given by the fork $i \leftarrow k \rightarrow j$.
 \end{remark}
@@ -865,8 +865,9 @@ if there is at most 1 directed path between any two nodes.
 \end{definition}
 
 Examples of strongly causal graphs include directed trees (or
-forests), and DAGs where each node has at most one parent.
-Fortunately, the strongly causal property is inherited by subgraphs:
+forests), DAGs where each node has at most one parent, and each of the
+figures of this paper.  Fortunately, the strongly causal property is
+inherited by subgraphs:
 
 \begin{lemma}
   \label{lem:still_strongly_causal}
@@ -1082,7 +1083,7 @@ surprisingly, not true in a general graph.
   \end{equation*}
 
   In this case, node $1$ is a confounder for nodes $2$ and $3$, but
-  $x_3(t) = v_3(t) - v_2(t) + x_2(t)$ and $2 \not \pwgc 3$ (even
+  $x_3(t) = v_3(t) - v_2(t) + x_2(t)$ and $2 \npwgc 3$ (even
   though $x_2(t)$ and $x_3(t)$ are contemporaneously correlated)
 
   If we were to augment this system by simply adding an autoregressive
@@ -1124,22 +1125,23 @@ analyze the use of pairwise testing as a heuristic for general graphs.
       % $P_0 = \emptyset$  \texttt{\# layer by layer driving nodes}\\
       $k = 0$ \texttt{\# a counter used only for notation}}
     \BlankLine
-    $W_0 \leftarrow \{(i, j)\ |\ i \pwgc j, j \npwgc i\}$  \texttt{\# potential edges}\\
+    $W \leftarrow \{(i, j)\ |\ i \pwgc j, j \npwgc i\}$  \texttt{\# potential edges}\\
     \While{$S_k \ne \emptyset$}{
-      $P_k \leftarrow \{i \in S_{k - 1}\ |\ \forall s \in S_{k - 1}\ (s, i) \not\in W_k\}$  \texttt{\# parents of current layer}\\
+      $P_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W\}$  \texttt{\# parents of current layer}\\
       % $P_k \leftarrow P_{k - 1} \cup P_k$ \texttt{\# Expand parent set}\\
       $S_{k + 1} \leftarrow S_k \setminus P_k$ \texttt{\# remove from } $S$\\
 
       \;
-      $C_k \leftarrow \{j \in S_{k + 1}\ |\ \forall s \in S_{k + 1}\ (s, j) \not\in W_k\}$   \texttt{\# potential children of }$P_k$\\
+      $C_k \leftarrow \{j \in S_{k + 1}\ |\ \forall s \in S_{k + 1}\ (s, j) \not\in W\}$   \texttt{\# potential children of }$P_k$\\
 
       \For{$r = 0, \ldots, k$}
       {
-        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times C_k\ |\ (i, j) \in W_k,\ \text{no } i \rightarrow j \text{ path in } E \}$\\%  \texttt{\# edges incident on }$C_k$\\
+        \label{alg:inner_loop}
+        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times C_k\ |\ (i, j) \in W,\ \text{no } i \rightarrow j \text{ path in } E \}$\\%  \texttt{\# edges incident on }$C_k$\\
         $E \leftarrow E \cup D_{kr}$ \texttt{\# add edges to }$E$\\
         % $W_{k + 1} \leftarrow W_k \setminus D_{kr}$  \texttt{\# remove edges from consideration}\\
       }
-      $W_{k + 1} \leftarrow W_k \setminus \big(\bigcup_{r = 0}^k D_{kr}\big)$  \texttt{\# remove edges from consideration}\\
+      % $W_{k + 1} \leftarrow W_k \setminus \big(\bigcup_{r = 0}^k D_{kr}\big)$  \texttt{\# remove edges from consideration}\\
 
       \;
       $k \leftarrow k + 1$
@@ -1151,15 +1153,25 @@ analyze the use of pairwise testing as a heuristic for general graphs.
 We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $\bigcup_{r = 0}^kP_{k - r}$ and can be determined by a pairwise test.
 
 \begin{example}
-  
-  
-  That we need to proceed backwards through $P_{k - r}$ can be seen from the example of figure \ref{fig:example_fig3}, where if $D_k = \{(i, j) \in \Big(\bigcup_{r = 0}^k P_{k - r}\Big) \times C_k\ |\ i \pwgc j \}$ above we would infer the false positive edge $2 \rightarrow 3$.  Moreover, the same example shows that if simply $D_k = \{(i, j) \in P_k \times C_k\ |\ i \pwgc j \}$, then the edge $1 \rightarrow 3$ would be missed.
+  The set $W$ collects all of the edges that may be edges of $\gcg$.
+  In reference to figure \ref{fig:example_fig3}, each of the solid
+  black edges, as well as the dotted red edges will be included, but
+  \textit{not} the bidirectional green dash-dotted edge.  That we exclude
+  bidirectional edges is important since it will provide guarantees
+  that $P_k$ is non-empty.  The groupings $P_0, \ldots, P_3$
+  are also indicated in figure \ref{fig:example_fig3}.
 
-\hl{TODO: Inkscape figure}
-
+  The algorithm proceeds first with the parentless nodes $1, 2$ on the
+  initial iteration where the edge $(1, 3)$ is added to $E$.  On the
+  next iteration, the edges $(3, 4), (2, 4)$ are added, and the false
+  edge $(1, 4)$ is excluded due to the path
+  $1 \rightarrow 3 \rightarrow 4$ in E.  Finally, edges
+  $(3, 5), (4, 6)$ are added, and the false
+  $(1, 5), (1, 6), (3, 6), (2, 6)$ edges are similarly excluded due to
+  the ordering of the inner loop.
+  
   \begin{figure}
     \centering
-    \label{fig:example_fig3}
     \caption{Example graph for Algorithm \ref{alg:pwgr}}
     \footnotesize{Black arrows indicate true parent-child
       relations.  Red dotted arrows indicate pairwise causality (due to
@@ -1167,7 +1179,8 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
       bidirectional pairwise causality (due to the confounding node
       $1$).  Blue groupings indicate each $P_k$ in Algorithm
       \ref{alg:pwgr}.  Repetition is for aesthetics.}
-
+    \label{fig:example_fig3}
+    
     \begin{subfigure}[b]{0.45\textwidth}
       \includegraphics[width=\linewidth]{example_algorithm.pdf}
     \end{subfigure}
@@ -1175,38 +1188,85 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
       \includegraphics[width=\linewidth]{example_algorithm2.pdf}
     \end{subfigure}
   \end{figure}
+
+  That we need to proceed backwards through $P_{k - r}$ as in the
+  inner loop of line \ref{alg:inner_loop} can also be seen from this
+  example, where if instead
+  $D_k = \{(i, j) \in \Big(\bigcup_{r = 0}^k P_{k - r}\Big) \times
+  C_k\ |\ i \pwgc j \}$ we would infer the false positive edge
+  $1 \rightarrow 4$.  Moreover, the same example shows that if simply
+  $D_k = \{(i, j) \in P_k \times C_k\ |\ i \pwgc j \}$, then the edge
+  $1 \rightarrow 3$ would be missed.
 \end{example}
 
 \begin{lemma}
-  \hl{Some lemma on the inner loop.}
+  \label{lem:inner_loop_lemma}
+  At any given iteration, $k$, of Algorithm \ref{alg:pwgr}, if we have
+  $e \in E$ if and only if $e \in \mathcal{E}$, then the inner loop (line \ref{alg:inner_loop})
+  will add $(i, j) \in \big(\bigcup_{r = 0}^kP_{k - r}\big) \times C_k$ to $E$
+  if $(i, j) \in \mathcal{E}$.  i.e. any real edge will be included.
 \end{lemma}
 \begin{proof}
-  Let $j \in C_k$ and $i \in \bigcup_{r = 0}^k P_{k - r}$.
+  Let $j \in C_k$, $i \in \bigcup_{r = 0}^k P_{k - r}$, and assume
+  $i \in \pa{j}$.
 
-  First, suppose that $i \in \pa{j}$ and that there is no
-  $i \rightarrow j$ path in $E$.  Then since $i \gc j$ we have
-  $i \pwgc j$ by proposition \ref{prop:pwgc_anc} so at least one of
+  First, suppose that there is no $i \rightarrow j$ path in $E$.  Then
+  since $i \gc j$ we have $i \pwgc j$ and $j \npwgc i$ (i.e.
+  $(i, j) \in W$) by Proposition \ref{prop:pwgc_anc} and Corollary
+  \ref{cor:bidirectional_edge} so at least one of
   $\{D_{kr} \}_{r = 0}^k$ contains $(i, j)$ and hence $(i, j)$ will be
   added to $E$ upon the end of the iteration.
 
-  Now, still assuming that $i \in \pa{j}$, suppose instead that there
-  is already an $i \rightarrow j$ path in $E$.  Using an induction
-  hypothesis that $E$ contains edges if and only if they are in
-  $\gcg$, then either $(i, j) \in E$ correctly, or there is more than
-  one $i \rightarrow j$ path in $\gcg$, which is not possible since
-  $\gcg$ is strongly causal.
-
-  Finally, suppose that $i \not \in \pa{j}$.  If $i \not \pwgc j$ then
-  we will correctly leave $(i, j)$ absent from $E$, so suppose that
-  $i \pwgc j$.  Then we must have either $i \in \anc{j}$ or
-  $\anc{i} \cap \anc{j} \ne \emptyset$; suppose first the former.
-  Then, there is some $u$ s.t. $i \pwgc u \pwgc j$, so by the
-  construction of \hl{it seems} that both $(i, u)$ and $(u, j)$ should
-  have already been added to $E$, so we have an $i \rightarrow j$ path
-  in $E$ \hl{is this sound?}  Suppose then the latter case above,
-  $u \in \anc{i} \cap \anc{j}$ \hl{try to construct a counterexample
-    involving this case}.
+  Now, suppose instead that there is already an $i \rightarrow j$ path
+  in $E$.  Given our assumption that $E$ contains edges if and only if
+  they are edges of $\gcg$, then either we already have $(i, j) \in E$
+  correctly, or there is more than one $i \rightarrow j$ path in
+  $\gcg$, which is not possible since $\gcg$ is strongly causal.
 \end{proof}
+
+\begin{lemma}
+  \label{lem:W_subset_E}
+  $W \subseteq \mathcal{E}$
+\end{lemma}
+\begin{proof}
+  By proposition \ref{prop:pwgc_anc} we have
+  $j \in \pa{i} \Rightarrow j \pwgc i$ and by Corollary \ref{cor:bidirectional_edge}
+  there are no bidirectional edges in $\gcg$.
+\end{proof}
+
+\hl{Must show that Algorithm terminates in $n$ steps.}
+\begin{lemma}
+  For any $i \in P_k$ we have $i \in C_{k - 1}$.  \hl{[Can't yet prove
+    this part] Moreover, for each $i \in \bigcup_{k = 0}^n P_k$, if
+    $(s, i) \in W$ then $(s, i) \in E$ upon the termination of
+    Algorithm} \ref{alg:pwgr}.
+\end{lemma}
+\begin{proof}
+  We prove the second part by induction, the first part being
+  established along the way.  By construction $P_0$ has no parent
+  nodes in $\gcg$ so the base case is immediate.  Fix now some
+  $k \ge 1$, $i \in P_k$, and let $s$ be such that $(s, i) \in W$.
+  For every $s$ such that $(s, i) \in W$ we have $s \not\in S_k$ since
+  otherwise $i \not\in P_k$.  Therefore
+  $s \in \bigcup_{r = 0}^{k - 1}P_{k - r}$, which implies
+  $s \not\in S_k$, and finally that $i \in C_{k - 1}$.  Then by Lemma
+  \ref{lem:W_subset_E} every edge in $\mathcal{E}$ is also present in
+  $W$, and by Lemma \ref{lem:inner_loop_lemma} \hl{[We can't conclude
+    here because of the strong conditions required on lemma}
+    \ref{lem:inner_loop_lemma}]
+\end{proof}
+
+%   Finally, suppose that $i \not \in \pa{j}$.  If $i \npwgc j$ then
+%   we will correctly leave $(i, j)$ absent from $E$, so suppose that
+%   $i \pwgc j$.  Then we must have either $i \in \anc{j}$ or a confounding 
+%   $k \in \anc{i} \cap \anc{j}$; suppose first the former.
+%   Then, there is some $u$ s.t. $i \pwgc u \pwgc j$, so by the
+%   construction of \hl{it seems} that both $(i, u)$ and $(u, j)$ should
+%   have already been added to $E$, so we have an $i \rightarrow j$ path
+%   in $E$ \hl{is this sound?}  Suppose then the latter case above,
+%   $u \in \anc{i} \cap \anc{j}$ \hl{try to construct a counterexample
+%     involving this case}.
+% \end{proof}
 
 Proof of the actual theorem...
 
@@ -1220,14 +1280,14 @@ Proof of the actual theorem...
   the algorithm is correct, returning on the first iteration with
   $E = \emptyset$.  Suppose then that $n > 1$.  The set
   $P_0$ is non-empty since $\gcg$ is a DAG and therefore
-  there are nodes in $\gcg$ without parents, thence if
+  there are nodes in $\gcg$ without parents (if
   $P_0 = \emptyset$ proposition
-  \ref{prop:ancestor_properties} would be contradicted.  Now, if
+  \ref{prop:ancestor_properties} would be contradicted).  Now, if
   $P_0 = [n]$ then the graph necessarily contains no edges
   and we will correctly return $E = \emptyset$.
 
   Moving on from any trivial cases, notice that
-  $\mathcal{E} \subseteq W_0$.  This follows since by Proposition
+  $\mathcal{E} \subseteq W$.  This follows since by Proposition
   \ref{prop:pwgc_anc} we have $j \in \pa{i} \Rightarrow j \pwgc i$ and by
   Corollary \ref{cor:bidirectional_edge} there are no bidirectional
   edges in $\gcg$.
