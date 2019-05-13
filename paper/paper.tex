@@ -1,5 +1,12 @@
 \documentclass[12pt]{article}
 
+% TODO: read this https://lemire.me/blog/rules-to-write-a-good-research-paper/
+
+% TODO:
+% -- define "DAG"
+% -- remove speculative statements
+% -- 
+
 %% bibliography stuff -- this needs come before the preamble inclusion
 \usepackage[backend=bibtex,sorting=none]{biblatex}
 \bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
@@ -310,21 +317,21 @@ $\forall z \in \H_{t - 1}^j\ (z - \linE{z}{\H_{t - 1}^{-j}}) \in \H_{t
 %   \end{equation}
 % \end{theorem}
 
-\begin{proposition}[Invariance Under Invertible and Deterministic Modifications]
-  Let $x(t)$ be a WSS process with absolutely summable covariance
-  sequence, and spectral density uniformly bounded above and below.  Let
-  $F(z), G$ represent univariate and invertible
-  linear-time-invariant filters.  And, let $f(t), g(t)$ be perfectly
-  predictable processes.  Then,
+% \begin{proposition}[Invariance Under Invertible and Deterministic Modifications]
+%   Let $x(t)$ be a WSS process with absolutely summable covariance
+%   sequence, and spectral density uniformly bounded above and below.  Let
+%   $F(z), G$ represent univariate and invertible
+%   linear-time-invariant filters.  And, let $f(t), g(t)$ be perfectly
+%   predictable processes.  Then,
 
-  \begin{equation}
-    x_j \gc x_i \iff F(x_j - f)(t) \gc G(x_i - g)(t)
-  \end{equation}
+%   \begin{equation}
+%     x_j \gc x_i \iff F(x_j - f)(t) \gc G(x_i - g)(t)
+%   \end{equation}
 
-\begin{proof}
-  \hl{TODO}
-\end{proof}
-\end{proposition}
+% \begin{proof}
+%   \hl{TODO}
+% \end{proof}
+% \end{proposition}
 
 \subsection{Pairwise Granger Causality}
 \label{sec:pwgc}
@@ -355,40 +362,55 @@ We first need to establish some graph theoretic notation and
 terminology, collected formally in definitions for the reader's
 convenient reference.
 
+\begin{definition}[Graph Theory Review]
+  A \textit{graph} $\gcg = (\mathcal{V}, \mathcal{E})$ is simply a
+  tuple of sets respectively called \textit{nodes} and \textit{edges}.
+  Throughout this paper, we have in all cases
+  $V = [n] \defeq \{1, 2, \ldots, n\}$.  We will also focus solely on
+  \textit{directed} graphs, where the edges
+  $\mathcal{E} \subseteq V \times V$ are \textit{ordered} pairs.
+
+  A (directed) \textit{path} (of length $r$) between nodes $i, j$,
+  denoted $\gcgpath{i}{j}$, is a sequence
+  $a_0, a_1, \ldots, a_{r - 1}, a_r$ with $a_0 = i$ and $a_r = j$ such
+  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \mathcal{E}$.
+
+  A \textit{cycle} is a path of length $2$ or more between a node and
+  itself.  An edge between a node and itself $(i, i)$ (which is not a
+  cycle) is referred to as a \textit{loop}.
+
+  A graph $\gcg$ is a \textit{directed acyclic graph} (DAG) if it is a
+  directed graph and does not contain any cycles.
+\end{definition}
+
 \begin{definition}[Causality graph, Parents]
 
 Remaining in the context of a collection of $n$ WSS processes
 $x(t) = \big(x_1(t), \ldots, x_n(t)\big)$, we define the Granger-causality
 graph $\gcg$ to be the directed graph formed on $n$ vertices where an
-edge $(j, i) \in \gcg$ if and only if $x_j \gc x_i$.  
+edge $(j, i) \in \gcg$ if and only if $x_j \gc x_i$.
 
 We refer to the set of \textit{parents} of $x_i$ in $\gcg$ by
 $\pa{i}$, that is, $j \in \pa{i} \iff x_j \gc x_i$.
 \end{definition}
 
 \begin{definition}[Grandparents, ancestors]
-The set of level $\ell$ \textit{grandparents} of node $i$, denoted
-$\gpn{\ell}{i}$, is the set such that $j \in \gpn{\ell}{i}$ if and only if
-there is a \textit{directed and cycle-free path} of length $\ell$ in
-$\gcg$ from $j$ to $i$ \textit{or} if $j = i$ and there is a cycle of
-length $\ell$ starting at $i$ and ending back at $i$, that is, $i$ can be
-it's own grandparent.  Clearly, $\pa{i} = \gpn{1}{i}$.
+  The set of level $\ell$ \textit{grandparents} of node $i$, denoted
+  $\gpn{\ell}{i}$, is the set such that $j \in \gpn{\ell}{i}$ if and
+  only if there is a \textit{directed path} of length $\ell$ in $\gcg$
+  from $j$ to $i$.  Note that a node can be it's own grandparent
+  unless $\gcg$ is a DAG.  Clearly, $\pa{i} = \gpn{1}{i}$.
 
-Finally, the set of \textit{level $\ell$ ancestors} of
-$i$: $\ancn{\ell}{i} = \bigcup_{\lambda \le \ell}\gpn{\lambda}{i}$ is the set such that
-$j \in \ancn{\ell}{i}$ if and only if there is a directed and cycle-free
-path of length $\ell$ \textit{or less} in $\gcg$ from $j$ to $i$
-\textit{or} if $j = i$ and there is a directed cycle of length $\ell$ or
-less from $i$ back to $i$ in $\gcg$.  The set of \textit{all
-  ancestors} of $i$ (i.e. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
+  Finally, the set of \textit{level $\ell$ ancestors} of $i$:
+  $\ancn{\ell}{i} = \bigcup_{\lambda \le \ell}\gpn{\lambda}{i}$ is the
+  set such that $j \in \ancn{\ell}{i}$ if and only if there is a
+  directed path of length $\ell$ \textit{or less} in $\gcg$ from $j$
+  to $i$.  The set of \textit{all ancestors} of $i$
+  (i.e. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
+
+  Note that since loops are not considered paths, it is not possible
+  for a node to be it's own parent.
 \end{definition}
-
-Even though the definitions of Granger-causality naturally suggests
-that each node in the graph should have a self-loop (unless the node
-is simply independent noise) we will not include nodes in their own
-parent sets: $i \not\in \pa{i} \subseteq \anc{i}$.  However, we do not
-immediately assume that $\gcg$ is a DAG, and so \textit{we will allow for $i$
-to be it's own ancestor}.
 
 The edges of the Granger-causality graph $\gcg$ can be given a general
 notion of ``weight'' by associating an edge $(j, i)$ with a
@@ -452,8 +474,11 @@ We continue to develop the relationship between $x_i$ and it's family tree.
   $x_i$ as well as the parents of $x_i$:
 
   \begin{equation}
-    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t).
+    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t),
   \end{equation}
+
+  where $\wtB_{ii}(z) = (1 - \B_{ii}(z))^{-1}$ and
+  $\wtB_{ik}(z) = \wtB_{ii}(z) B_{ik}(z)$.
 
   Moreover, $x_i$ can be expanded in terms of it's ancestors and
   driving noise only:
@@ -463,7 +488,7 @@ We continue to develop the relationship between $x_i$ and it's family tree.
     x_i(t) = \A_{ii}(z)v_i(t) + \sum_{\substack{k \in \anc{i} \\ k \ne i}}\A_{ik}(z)v_k(t),
   \end{equation}
 
-  where $\A(z) = \sum_{\tau = 0}^\infty A(\tau)$ is the filter from
+  where $\A(z) = \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$ is the filter from
   the Wold decomposition representation of $x(t)$, equation
   (\ref{eqn:wold}).
 \end{proposition}
@@ -561,9 +586,9 @@ We now prove the proposition.
   Thence
 
   \begin{align*}
-    x_i(t) &= (I - \B(z))^{-1}\\
+    x_i(t) &= (I - \B(z))^{-1}v(t)\\
     &= \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
-    &= \A_{ii}(z) v_i(t) + \sum_{\substack{j \in \anc{i} \\ j \ne i}} \A_{ij}(z) v_j(t)\\
+    &= \A_{ii}(z) v_i(t) + \sum_{\substack{j \in \anc{i} \\ j \ne i}} \A_{ij}(z) v_j(t)
   \end{align*}
 \end{proof}
 
@@ -578,7 +603,7 @@ some intuitively apparent facts.
     \linE{x}{\bigvee_{n = 0}^\infty\H_n} = \linE{x}{\bigvee_{n = 1}^\infty\H_n},
   \end{equation*}
 
-  where $\H_2 \vee \H_2 = \cl \{\alpha + \beta\ |\ \alpha \in \H_1, \beta \in \H_2 \}$ is the closed sum of subspaces.
+  where $\H_1 \vee \H_2 = \cl \{\alpha + \beta\ |\ \alpha \in \H_1, \beta \in \H_2 \}$ is the closed sum of subspaces.
 \end{lemma}
 \begin{proof}
   We can apply the Gram-schmidt process to the collection of subspaces to obtain a sequence of orthogonal subspaces $\widetilde{\H}_0, \widetilde{\H}_1, \ldots$ with $\widetilde{\H}_0 = \H_0$, $\widetilde{\H}_n \subseteq \H_n$, and $\bigvee_{n = 0}^\infty\H_n = \bigoplus_{n = 0}^\infty \widetilde{\H}_n$, where $\oplus$ indicates the orthogonal sum of subspaces (which is always closed).  Then, we have an explicit representation of the projection
@@ -632,10 +657,15 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
   $k \in \anc{i} \cap \anc{j}$ and there exists a path
   $\gcgpath{k}{i}$ not containing $j$, and a path $\gcgpath{k}{j}$
   not containing $i$.
+
+  A simple example is furnished by the ``fork'' graph
+  $i \leftarrow k \rightarrow j$.
 \end{definition}
 
 \begin{proposition}
   \label{prop:ancestor_properties}
+  \hl{Add the stronger statements on uncorrelatedness for use on confounders later.}
+
   In a Granger-causality graph $\gcg$, if $j \pwgc i$ then at least
   one of the following must hold
 
@@ -651,8 +681,6 @@ The following lemma is reproduced from \cite{lindquist} here for convenience.
   Considering the contrapositive of the first part of this theorem (which is what we actually prove below) is enlightening: it says that if $i$ is not a descendent of $j$ (i.e. $j \not \in \anc{i}$) and that there are no common ancestors (i.e. $\anc{i} \cap \anc{j} = \emptyset$) then $j \npwgc i$, or $\linE{x_i(t)}{\H_{t - 1}^{(i, j)}} = \linE{x_i(t)}{\H_{t - 1}^{(i)}}$, which is an intuitively natural result.
 
   The first part is used in part to prove the second (and stronger) statement, which allows common ancestors, but only if they are ``mediated'' by $i$.  For example, this covers the case of a graph $k \rightarrow i \rightarrow j$, where $\{k\} = \anc{i} \cap \anc{j}$, but clearly $j \npwgc i$.
-
-  An ancestor such as that in the second part of the theorem can be referred to as a \textit{confounder}, and a simple example is given by the fork $i \leftarrow k \rightarrow j$.
 \end{remark}
 
 \begin{proof}
@@ -840,34 +868,42 @@ and again $1 \npwgc 3$.
 \end{example}
 
 \subsection{Strongly Causal Graphs}
-The examples at the conclusion of the previous section seem rather
-pathological since we have simply constructed a case where different
-paths in the graph cancel exactly.  It may be possible to rid
-ourselves of these pathologies for instance by defining a notion of
-``robust'' pairwise causality where ``$j \pwgc _R i$'' if $j \pwgc i$
-almost surely for a ``small'' random perturbation of the system
-matrix.  However, we do not believe such a modification of our theory
-can have useful practical implications since the difference between
-paths that ``nearly cancel'' rather than cancel exactly would in
-practice require inordinate amounts of data to resolve.
+\label{sec:strongly_causal_graphs}
+% The examples at the conclusion of the previous section seem rather
+% pathological since we have simply constructed a case where different
+% paths in the graph cancel exactly.  It may be possible to rid
+% ourselves of these pathologies for instance by defining a notion of
+% ``robust'' pairwise causality where ``$j \pwgc _R i$'' if $j \pwgc i$
+% almost surely for a ``small'' random perturbation of the system
+% matrix.  However, we do not believe such a modification of our theory
+% can have useful practical implications since the difference between
+% paths that ``nearly cancel'' rather than cancel exactly would in
+% practice require inordinate amounts of data to resolve.
 
-Alternatively, we could restrict the coefficients of the system
-matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead, we
-think it is more meaningful to focus on the defining feature of time
-series networks, that is, the topology of $\gcg$.
+In this section and the next we will seek to understand when converse
+statements of Proposition \ref{prop:ancestor_properties} \textit{do}
+hold.  One possibility is to restrict to coefficients of the system
+matrix matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead,
+we think it is more meaningful to focus on the defining feature of
+time series networks, that is, the topology of $\gcg$.
 
 \begin{definition}[Strongly Causal]
-  We will say that a Granger-causality graph $\gcg$ is \textit{strongly causal}
-if there is at most 1 directed path between any two nodes.
-
-\hl{TODO: Should DAG be included in this definition?  I think it is
-  not necessary for some theorems.}
+  \label{def:strongly_causal}
+  We will say that a Granger-causality graph $\gcg$ is
+  \textit{strongly causal} if there is at most 1 directed path between
+  any two nodes.
 \end{definition}
 
 Examples of strongly causal graphs include directed trees (or
-forests), DAGs where each node has at most one parent, and each of the
-figures of this paper.  Fortunately, the strongly causal property is
-inherited by subgraphs:
+forests), DAGs where each node has at most one parent, and figure
+\ref{fig:example_fig3} of this paper.  The persistence condition is
+used to ensure that $\linE{x_i(t)}{\H_{t - 1}^{(i)}} \ne 0$ i.e. that
+the each process has at least some amount of ``memory'' -- this can
+occur either due to cycles, or non-zero $\B_{ii}(z)$ terms in equation
+\eqref{eqn:ar_representation}.  It is evident that the strong causal property
+is inherited by subgraphs, but persistence need not be, unless $\gcg$ is a DAG.
+
+\hl{Not sure these are needed, but were important in my own thinking.}
 
 \begin{lemma}
   \label{lem:still_strongly_causal}
@@ -877,6 +913,15 @@ inherited by subgraphs:
 \begin{proof}
   If $\gcg$ has at most one path between any two nodes, there can only
   be fewer paths after removing nodes from $\gcg$.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:still_persistent}
+  If $\gcg$ is a persistent DAG, any subgraph formed by eliminating nodes
+  as well as all of the in and out edges thereof is still persistent.
+\end{lemma}
+\begin{proof}
+  \hl{TODO -- is this needed?}
 \end{proof}
 
 We explore a number of properties of strongly causal graphs before
@@ -963,6 +1008,31 @@ for the case of strongly causal graphs.
 % \end{proof}
 \end{proof}
 
+\begin{proposition}
+  \label{prop:independent_confounders}
+  If $\gcg$ is strongly causal we have distinct
+  $k_1, k_2 \in \anc{i} \cap \anc{j}$ are confounders of $i, j$, then
+  $k_1 \not\in \anc{k_2}$, $k_2 \not\in \anc{k_1}$ and
+  $\not\exists \ell \in \anc{k_1} \cap \anc{k_2}$ confounding
+  $k_1, k_2$.
+\end{proposition}
+\begin{proof}
+  \hl{TODO}
+\end{proof}
+
+\begin{corollary}
+  If $\gcg$ is strongly causal, then distinct confounders are
+  uncorrelated.
+\end{corollary}
+\begin{proof}
+  This follows directly by combining proposition
+  \ref{prop:independent_confounders} with proposition \ref{prop:ancestor_properties}.  \hl{I need to update prop} \ref{prop:ancestor_properties} \hl{to note the strong non-correlation property.}
+\end{proof}
+
+% \begin{lemma}
+%   If $\gcg$ is a strongly causal DAG and $j \in \anc{i}$ then 
+% \end{lemma}
+
 In light of proposition \ref{prop:sc_graph_common_anc}, the following
 provides a partial converse to proposition \ref{prop:ancestor_properties}.
 
@@ -982,6 +1052,7 @@ provides a partial converse to proposition \ref{prop:ancestor_properties}.
 
   Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $\gcgpath{j}{i}$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
 
+  % Should this be written as a lemma?
   \begin{align*}
     x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
            &= \underbrace{v_{a_0}(t) + \B_{a_0a_0}(z) x_i(t) + \sum_{\substack{k \in \pa{a_0} \\ k \ne a_1}}\B_{a_0 k}(z) x_k(t)}_{\defeq \wtalpha{a_0}{a_1}} + \B_{a_0a_1}(z)x_{a_1}(t)\\
@@ -1021,7 +1092,7 @@ provides a partial converse to proposition \ref{prop:ancestor_properties}.
     x_i(t) \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}},
   \end{equation*}
 
-  but this is impossible since with probability one $x_i(t) \not \in \H_{t - 1}^{(i)}$.
+  but this is impossible since $x_i(t) \not \in \H_{t - 1}^{(i)}$.
 \end{proof}
 
 We immediately obtain the corollary, which we remind the reader is,
@@ -1092,6 +1163,168 @@ surprisingly, not true in a general graph.
   $x_3(t) = v_3(t) + av_1(t - 1) - bv_2(t - 1) + bx_2(t - 1)$.
 \end{example}
 
+\subsection{Persistent Systems}
+\label{sec:persistent_systems}
+In section \ref{sec:strongly_causal_graphs} we obtained a converse to
+the part $(a)$ of proposition \ref{prop:ancestor_properties} via the
+notion of a strongly causal graph topology.  In this section, we
+complete a converse by adding the additional requirement we refer to
+as ``persistence''.  This condition requires that each node maintains
+some ``memory'' of the past.
+
+\begin{definition}[Lag Function]
+  Given a caual filter $\B(z) = \sum_{\tau = 0}^\infty b(\tau)z^{-\tau}$
+  define 
+
+  \begin{align}
+    \tau_0(\B) &= \text{min}\{\tau \in \Z_+\ |\ b(\tau) \ne 0\},\\
+    \tau_{\infty}(\B) &= \text{sup}\{\tau \in \Z_+\ |\ b(\tau) \ne 0\}.\\
+  \end{align}
+
+  i.e. the ``first'' and ``last'' coefficients of the filter $\B(z)$,
+  where $\tau_\infty(\B) = \infty$ if the filter has an infinite
+  impulse response.
+\end{definition}
+
+\begin{definition}[Persistent]
+  We will say that a WSS process $x(t)$ with Granger-causality graph
+  $\gcg$ is \textit{persistent} if for every $i \in [n]$, every
+  $k \in \anc{i}$ we have $\tau_\infty(\A_{ik}) = \infty$.
+\end{definition}
+
+\begin{remark}
+  There are a multitude of conditions which would guarantee $x(t)$ is
+  persistent, for innstance, any ARMA system with a non-zero
+  autoregressive component is likely to be persistent due to recursion
+  in the coefficients naturally lead to an $\mathsf{MA}(\infty)$
+  representation.
+
+  In particular, any system with a finite impulse response
+  (i.e. $\mathsf{VAR}(q)$ models) is likely to be persistent.  These
+  models are common in applications of Granger-causality.
+
+  Moreover, persistence is not the weakest condition necessary for the
+  results of this section, but we opt to avoid unnecessarily
+  complicated definitions.
+\end{remark}
+
+\begin{lemma}
+  \label{lem:time_lag_cancellation}
+  Suppose $v(t)$ is a scalar sequence with unit variance and zero
+  autocorrelation and let $\A(z), \B(z)$ be nonzero and strictly
+  causal (i.e. $\tau_0(\A) \ge 1$) linear filters.  Then,
+
+  \begin{equation}
+    \inner{F(z)\A(z)v(t)}{\B(z)v(t)} = 0\ \forall \text{ strictly causal filters } F(z)
+  \end{equation}
+
+  if and only if $\tau_0(\A) \ge \tau_\infty(\B)$.
+\end{lemma}
+\begin{proof}
+  We have
+
+  \begin{align}
+    \inner{\A(z)v(t)}{\B(z)v(t)} &= \sum_{\tau = 1}^\infty \sum_{s = 1}^\infty a(\tau)b(s)\E[v(t - s)v(t - \tau)]\\
+    &= \sum_{\tau = \text{max}(\tau_0(\A), \tau_0(\B))}^{\text{min}(\tau_\infty(\A), \tau_\infty(\B))} a(\tau) b(\tau)\\
+  \end{align}
+
+  due to the uncorrelatedness assumptions on $v(t)$.  This expression
+  is $0$ if and only if $\tau_0(\A) \ge 1 + \tau_\infty(\B)$ or if
+  $\tau_0(\B) \ge 1 + \tau_\infty(\A)$ or if the coefficients are
+  orthogonal along the common support.
+
+  Specializing this fact to $\inner{F(z)\A(z)v(t)}{\B(z)v(t)} = 0$ we
+  see that the coefficients cannot be orthogonal for every choice of
+  $F$, and that $\text{sup}_F \tau_\infty(F\A) = \infty$, leaving only
+  the possibility that
+
+  \begin{align*}
+    \tau_0(F\A) \ge 1 + \tau_\infty(\B) \forall F &\overset{(a)}{\iff} \tau_0(\A) \ge 1 + \tau_\infty(\B) - \underset{F}{\text{min }} \tau_0(F)\\
+    &\overset{(b)}{\iff} \tau_0(\A) \ge \tau_\infty(\B),
+  \end{align*}
+
+  where $(a)$ follows since $\tau_0(F\A) = \tau_0(F) + \tau_0(\A)$,
+  and $(b)$ since $\text{min}_F\ \tau_0(F) = 1$.
+\end{proof}
+
+\begin{corollary}
+  \label{cor:time_lag_cancellation}
+  For $k \in \anc{i} \cap \anc{j}$ we have
+
+  \begin{align*}
+    \linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} &= 0\ \forall \text{ strictly causal } F(z)\\
+    \iff \inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} &= 0\ \forall \text{ strictly causal } F(z)\\
+    \iff \tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})
+  \end{align*}
+\end{corollary}
+\begin{proof}
+  The final equivalence follows immediately from the Lemma.  For the first equivalence we have
+
+  \begin{align*}
+    \linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} &= 0\ \forall \text{ strictly causal } F(z)\\
+    \iff \inner{F(z)A_{jk}(z)v_k(t)}{x_i(t - \tau)} &= 0\ \forall \tau \ge 1, \text{ strictly causal } F(z),
+  \end{align*}
+
+  which can be expanded by equation \eqref{eqn:ancestor_expansion} to
+  obtain (after cancellinng all ancestors of $i$ other than $k$)
+
+  \begin{equation*}
+    \inner{F(z)A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t - \tau)} = 0\ \forall \tau \ge 1, \text{ strictly causal } F(z),
+  \end{equation*}
+
+  which by the Lemma is equivalent to $\tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})$ as stated.
+\end{proof}
+
+\begin{proposition}
+  Suppose $\gcg$ is a strongly causal DAG and that $x(t)$ is persistent DAG, then if $k$
+  confounds $i, j$ we have $i \pwgc j$ and $j \pwgc i$.
+\end{proposition}
+\begin{proof}
+  We will show that $j \pwgc i$, the other being symmetric.  First
+  note also that by proposition \ref{prop:sc_graph_common_anc} we
+  cannot have $i \in \anc{j}$ or $j \in \anc{i}$ and therefore every
+  $k \in \anc{i}\cap\anc{j}$ will be a confounder.
+
+  It is sufficient to show that $\exists \psi \in \H_{t - 1}^{(j)}$
+  such that
+
+  \begin{equation*}
+    \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0.
+  \end{equation*}
+
+  To this end, let $F(z)$ be an arbitrary but strictly causal linear,
+  and equation \eqref{eqn:ancestor_expansion} to $x_i(t)$ and
+  $\psi \defeq F(z)x_j(t)$:
+
+  \begin{align*}
+    &\inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}\\
+    &\overset{(a)}{=} \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{\A_{ii}(z)v_i(t) + \sum_{k \in \anc{i}}\A_{ik}(z)v_k(t)}\\
+    &\overset{(b)}{=} \inner{\sum_{k \in \anc{j}}\big(F(z)\A_{jk}(z)v_k(t) - \linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}}\big)}{\A_{ii}(z)v_i(t) + \sum_{k \in \anc{i}}\A_{ik}(z)v_k(t)}\\
+    &\overset{(c)}{=} \sum_{k \in \anc{i}\cap\anc{j}}\Big(\inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} - \inner{\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}}}{\A_{ii}v_i(t)}\\
+    &- \sum_{\ell \in \anc{i}}\inner{\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}}}{\A_{i\ell}(z)v_\ell(t)}\Big)
+  \end{align*}
+
+  where in $(a)$ we have removed the $\linE{x_i(t)}{\H_{t - 1}^{(i)}}$
+  term via the orthogonality principle, in $(b)$ there is no
+  $F(z)\A_{jj}(z)v_j(t)$ term since due to $j \not\in \anc{i}$ it is
+  orthogonal to $\H_t^{(i)}$.  Finally, $(c)$ follows by applying
+  orthogonality properties of $v(t)$, as well as the fact that
+  $\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} = 0$ for
+  $k \not \in \anc{i}$.  Note that
+  $\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} \in \H_{t - 1}^{(i)}$
+  and thence there is in general no cancellation in the final term
+  above for $\ell \in \anc{i}$.
+
+  Evidently, (\hl{This is clearly not immediately evident}) this is
+  $0$ for each $F$ if and only if
+  $\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} = 0$ and
+  $\inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} = 0$, which by
+  Collary \ref{cor:time_lag_cancellation} occurs if and only if
+  $\tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})$, which is impossible
+  since in general $\tau_0(\A_{jk}) < \infty$ and in a persistent
+  graph $\tau_\infty(\A_{ik}) = \infty$.
+\end{proof}
+
 \subsection{Recovering $\gcg$ via Pairwise Tests}
 \label{sec:pairwise_algorithm}
 In this section we will show that if $\gcg$ is a strongly causal DAG,
@@ -1121,7 +1354,7 @@ analyze the use of pairwise testing as a heuristic for general graphs.
     \Input{Pairwise Granger-causality relations between $n$ processes whose joint Granger-causality relations are known to form a strongly causal DAG $\gcg$.}
     \Output{Edges $E = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of the graph $\gcg$.}
     \Initialize{$S_0 = [n]$  \texttt{\# unprocessed nodes}\\
-      $E = \emptyset$  \texttt{\# edges of }$\gcg$\\
+      $E_0 = \emptyset$  \texttt{\# edges of }$\gcg$\\
       % $P_0 = \emptyset$  \texttt{\# layer by layer driving nodes}\\
       $k = 0$ \texttt{\# a counter used only for notation}}
     \BlankLine
@@ -1137,8 +1370,8 @@ analyze the use of pairwise testing as a heuristic for general graphs.
       \For{$r = 0, \ldots, k$}
       {
         \label{alg:inner_loop}
-        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times C_k\ |\ (i, j) \in W,\ \text{no } i \rightarrow j \text{ path in } E \}$\\%  \texttt{\# edges incident on }$C_k$\\
-        $E \leftarrow E \cup D_{kr}$ \texttt{\# add edges to }$E$\\
+        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times C_k\ |\ (i, j) \in W,\ \text{no } i \rightarrow j \text{ path in } E_k \}$\\%  \texttt{\# edges incident on }$C_k$\\
+        $E_k \leftarrow E_k \cup D_{kr}$ \texttt{\# add edges to }$E_k$\\
         % $W_{k + 1} \leftarrow W_k \setminus D_{kr}$  \texttt{\# remove edges from consideration}\\
       }
       % $W_{k + 1} \leftarrow W_k \setminus \big(\bigcup_{r = 0}^k D_{kr}\big)$  \texttt{\# remove edges from consideration}\\
@@ -1146,6 +1379,7 @@ analyze the use of pairwise testing as a heuristic for general graphs.
       \;
       $k \leftarrow k + 1$
     }
+    $E \leftarrow E_{k + 1}$\\
     \Return{$E$}
   \end{algorithm}
 \end{theorem}
@@ -1163,22 +1397,22 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
 
   The algorithm proceeds first with the parentless nodes $1, 2$ on the
   initial iteration where the edge $(1, 3)$ is added to $E$.  On the
-  next iteration, the edges $(3, 4), (2, 4)$ are added, and the false
-  edge $(1, 4)$ is excluded due to the path
-  $1 \rightarrow 3 \rightarrow 4$ in E.  Finally, edges
-  $(3, 5), (4, 6)$ are added, and the false
-  $(1, 5), (1, 6), (3, 6), (2, 6)$ edges are similarly excluded due to
-  the ordering of the inner loop.
+  next iteration, the edges $(3, 4), (2, 4), (3, 5)$ are added, and
+  the false edges $(1, 4), (1, 5)$ is excluded due to the paths
+  $1 \rightarrow 3 \rightarrow 4$ and $1 \rightarrow 3 \rightarrow 5$
+  in E.  Finally, edge $(4, 6)$ are added, and the false
+  $(1, 6), (3, 6), (2, 6)$ edges are similarly excluded due to the
+  ordering of the inner loop.
   
   \begin{figure}
     \centering
     \caption{Example graph for Algorithm \ref{alg:pwgr}}
     \footnotesize{Black arrows indicate true parent-child
       relations.  Red dotted arrows indicate pairwise causality (due to
-      ancestor relations), green dash-dotted arrow indicates
+      ancestor relations), green dash-dotted arrows indicates
       bidirectional pairwise causality (due to the confounding node
       $1$).  Blue groupings indicate each $P_k$ in Algorithm
-      \ref{alg:pwgr}.  Repetition is for aesthetics.}
+      \ref{alg:pwgr}.}
     \label{fig:example_fig3}
     
     \begin{subfigure}[b]{0.45\textwidth}
@@ -1255,6 +1489,92 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
     here because of the strong conditions required on lemma}
     \ref{lem:inner_loop_lemma}]
 \end{proof}
+
+\begin{lemma}[Loop Invariant]
+  \label{lem:loop_invariant}
+  $\forall k \ge 0,\ e \in E_k \Rightarrow e \in \mathcal{E}$.
+  \hl{Not sure if this is useful / the right approach.}
+\end{lemma}
+\begin{proof}
+  We will proceed by induction.  Firstly, the base case
+  $E_0 = \emptyset$ is trivial, so fix some $k \ge 1$ and consider an
+  edge $(i, j) \in \big(\bigcup_{r = 0}^k P_{k - r} \big) \times C_k$
+  such that $(i, j) \in W$ (if the edge is not in $W$ then it is not
+  in $\mathcal{E}$ by Lemma \ref{lem:W_subset_E}).
+
+  \hl{WIP}
+\end{proof}
+
+\begin{definition}[Depth]
+  For our present purposes we will define the \textit{depth} $d(j)$ of
+  a node $j$ in $\gcg$ to be the length of the \textit{longest} path
+  from a node in $P_0$ to $j$, where $d(j) = 0$ if $j \in P_0$.  It is
+  apparent (\hl{right?}) that such a path will always exist in a
+  strongly causal graph.  For example, in Figure
+  \ref{fig:example_fig3} we have $d(3) = 1$ and $d(4) = 2$.
+\end{definition}
+
+\begin{lemma}
+  $i \in P_k \iff d(i) = k$ and $j \in S_k \iff d(j) \ge k$.
+\end{lemma}
+\begin{proof}
+  We proceed by induction.  The base case $j \in P_0 \iff d(j) = 0$ is
+  by definition, and $j \in S_0 \iff d(j) \ge 0$ is trivial since
+  $S_0 = [n]$.  So suppose that the lemma is true up to $k - 1$.
+
+  For $i \in P_k$ we have by construction that there is no $j \in S_k$
+  such that $(j, i) \in W$ and therefore no $j \in S_k$ such that
+  $j \in \pa{i}$.  Therefore, any parent of $i$ can only be in
+  $S_{k - r}$ for $r \ge 1$ and by the induction hypothesis which
+  implies that $d(i) \le k$.  But if $d(i) < k$ then $i \in P_{k - r}$
+  for some $r \ge 1$ (again by the induction hypothesis) thence
+  $d(i) = k$ since $P_k \cap P_{k - r} = \emptyset$ by construction.
+
+  Now for $s \in S_k$ we have by induction that and the fact that
+  $s \in S_k \implies s \in S_{k - 1}$ by construction we have
+  $d(s) \ge k - 1$, but again by induction (this time on $P_{k - 1}$)
+  we have $d(s) \ne k$ since $S_k = S_{k - 1} \setminus P_{k - 1}$
+  and therefore $d(s) \ge k$.
+
+  Conversely, suppose $i \in [n]$ is such that $d(i) = k$.  Then
+  $i \in S_{k - 1}$ by the hypothesis, but also $i \not\in P_{k - 1}$
+  so then $i \in S_k = S_{k - 1} \setminus P_{k - 1}$.  Now, recalling
+  the definition of $P_k$
+
+  \begin{equation*}
+    P_k = \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W \},
+  \end{equation*}
+
+  if $s \in S_k$ is such that $s \pwgc i$ then by Proposition
+  \ref{prop:ancestor_properties} $(a) s \in \anc{i}$ or
+  $(b) \exists u \in \anc{i} \cap \anc{j}$ which is a confounder.  If
+  we have $s \in \anc{i}$ then since $d(s) \ge k$ we must have
+  $d(i) > k$, which is a contradiction so $s \not\in \anc{i}$.  On the
+  other hand, if we have a confounding $u \in \anc{i} \cap \anc{s}$
+  then we must have $d(u) < k$ (since $s \in \anc{i}$ and $d(i) = k$)
+  which implies by induction that $u \in P_{k - r}$ for some $r \ge 1$,
+  and therefore that $u \not\in ???$  \hl{This is wrong.}
+
+  Now let $j \in S_k$, then $d(j) \ge k - 1$ since we
+  also have $j \in S_{k - 1}$ (i.e. $S_k$ is a decreasing sequence of
+  sets) \hl{Can't conclude unless $i \in P_k \iff d(i) = k$, in which
+    case, we have $S_k = S_{k - 1} \setminus P_{k - 1}$ and therefore
+    $d(j) \ge k$.}
+\end{proof}
+
+\begin{lemma}[Loop Invariant]
+  For every $(i, j) \in \mathcal{E}$ such that $d(j) \le k$ we have
+  $(i, j) \in E_k$.  Conversely, for every $(i, j) \in E_{k}$ we have
+  $d(j) \le k$ and $(i, j) \in \mathcal{E}$.  That is, at iteration
+  $k, E_k$ and $\mathcal{E}$ agree on the set of edges whose
+  terminating node is at most $k$ steps away from $P_0$.
+\end{lemma}
+\begin{proof}
+  We will proceed by induction.  The base case $E_0 = \emptyset$ is
+  trivial, so fix some $k \ge 1$, and suppose that the lemma holds for
+  all nodes of depth less than $k$.
+\end{proof}
+  
 
 %   Finally, suppose that $i \not \in \pa{j}$.  If $i \npwgc j$ then
 %   we will correctly leave $(i, j)$ absent from $E$, so suppose that
