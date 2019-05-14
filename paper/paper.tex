@@ -18,6 +18,7 @@
 \def\npwgc{\overset{\text{PW}}{\nrightarrow}}  % Negated pairwise Granger causality arrow
 \def\te{\overset{\mathcal{T}}{\rightarrow}}  % Transfer entropy arrow
 \def\gcg{\mathcal{G}}  % Granger-causality graph
+\def\gcge{\mathcal{E}}  % Graph edges
 \def\VAR{\mathsf{VAR}}  % VAR(p) model
 \def\B{\mathsf{B}}  % Filter B
 \def\wtB{\widetilde{\B}}  % General filter B
@@ -363,17 +364,17 @@ terminology, collected formally in definitions for the reader's
 convenient reference.
 
 \begin{definition}[Graph Theory Review]
-  A \textit{graph} $\gcg = (\mathcal{V}, \mathcal{E})$ is simply a
+  A \textit{graph} $\gcg = (\mathcal{V}, \gcge)$ is simply a
   tuple of sets respectively called \textit{nodes} and \textit{edges}.
   Throughout this paper, we have in all cases
   $V = [n] \defeq \{1, 2, \ldots, n\}$.  We will also focus solely on
   \textit{directed} graphs, where the edges
-  $\mathcal{E} \subseteq V \times V$ are \textit{ordered} pairs.
+  $\gcge \subseteq V \times V$ are \textit{ordered} pairs.
 
   A (directed) \textit{path} (of length $r$) between nodes $i, j$,
   denoted $\gcgpath{i}{j}$, is a sequence
   $a_0, a_1, \ldots, a_{r - 1}, a_r$ with $a_0 = i$ and $a_r = j$ such
-  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \mathcal{E}$.
+  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \gcge$.
 
   A \textit{cycle} is a path of length $2$ or more between a node and
   itself.  An edge between a node and itself $(i, i)$ (which is not a
@@ -915,14 +916,14 @@ is inherited by subgraphs, but persistence need not be, unless $\gcg$ is a DAG.
   be fewer paths after removing nodes from $\gcg$.
 \end{proof}
 
-\begin{lemma}
-  \label{lem:still_persistent}
-  If $\gcg$ is a persistent DAG, any subgraph formed by eliminating nodes
-  as well as all of the in and out edges thereof is still persistent.
-\end{lemma}
-\begin{proof}
-  \hl{TODO -- is this needed?}
-\end{proof}
+% \begin{lemma}
+%   \label{lem:still_persistent}
+%   If $\gcg$ is a persistent DAG, any subgraph formed by eliminating nodes
+%   as well as all of the in and out edges thereof is still persistent.
+% \end{lemma}
+% \begin{proof}
+%   \hl{TODO -- is this needed?}
+% \end{proof}
 
 We explore a number of properties of strongly causal graphs before
 moving into the main result of section \ref{sec:theory} in section
@@ -1008,26 +1009,26 @@ for the case of strongly causal graphs.
 % \end{proof}
 \end{proof}
 
-\begin{proposition}
-  \label{prop:independent_confounders}
-  If $\gcg$ is strongly causal we have distinct
-  $k_1, k_2 \in \anc{i} \cap \anc{j}$ are confounders of $i, j$, then
-  $k_1 \not\in \anc{k_2}$, $k_2 \not\in \anc{k_1}$ and
-  $\not\exists \ell \in \anc{k_1} \cap \anc{k_2}$ confounding
-  $k_1, k_2$.
-\end{proposition}
-\begin{proof}
-  \hl{TODO}
-\end{proof}
+% \begin{proposition}
+%   \label{prop:independent_confounders}
+%   If $\gcg$ is strongly causal we have distinct
+%   $k_1, k_2 \in \anc{i} \cap \anc{j}$ are confounders of $i, j$, then
+%   $k_1 \not\in \anc{k_2}$, $k_2 \not\in \anc{k_1}$ and
+%   $\not\exists \ell \in \anc{k_1} \cap \anc{k_2}$ confounding
+%   $k_1, k_2$.
+% \end{proposition}
+% \begin{proof}
+%   \hl{TODO}
+% \end{proof}
 
-\begin{corollary}
-  If $\gcg$ is strongly causal, then distinct confounders are
-  uncorrelated.
-\end{corollary}
-\begin{proof}
-  This follows directly by combining proposition
-  \ref{prop:independent_confounders} with proposition \ref{prop:ancestor_properties}.  \hl{I need to update prop} \ref{prop:ancestor_properties} \hl{to note the strong non-correlation property.}
-\end{proof}
+% \begin{corollary}
+%   If $\gcg$ is strongly causal, then distinct confounders are
+%   uncorrelated.
+% \end{corollary}
+% \begin{proof}
+%   This follows directly by combining proposition
+%   \ref{prop:independent_confounders} with proposition \ref{prop:ancestor_properties}.  \hl{I need to update prop} \ref{prop:ancestor_properties} \hl{to note the strong non-correlation property.}
+% \end{proof}
 
 % \begin{lemma}
 %   If $\gcg$ is a strongly causal DAG and $j \in \anc{i}$ then 
@@ -1276,8 +1277,9 @@ some ``memory'' of the past.
 \end{proof}
 
 \begin{proposition}
-  Suppose $\gcg$ is a strongly causal DAG and that $x(t)$ is persistent DAG, then if $k$
-  confounds $i, j$ we have $i \pwgc j$ and $j \pwgc i$.
+  \label{prop:persistence_converse}
+  Suppose $\gcg$ is a strongly causal DAG and that $x(t)$ is persistent, then if $k$
+  confounds $(i, j)$ we have $i \pwgc j$ and $j \pwgc i$.
 \end{proposition}
 \begin{proof}
   We will show that $j \pwgc i$, the other being symmetric.  First
@@ -1292,9 +1294,9 @@ some ``memory'' of the past.
     \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0.
   \end{equation*}
 
-  To this end, let $F(z)$ be an arbitrary but strictly causal linear,
-  and equation \eqref{eqn:ancestor_expansion} to $x_i(t)$ and
-  $\psi \defeq F(z)x_j(t)$:
+  To this end, let $F(z)$ be an arbitrary but strictly causal linear
+  filter.  We apply equation \eqref{eqn:ancestor_expansion} to
+  $x_i(t)$ and $\psi \defeq F(z)x_j(t)$:
 
   \begin{align*}
     &\inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}\\
@@ -1321,8 +1323,8 @@ some ``memory'' of the past.
   $\inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} = 0$, which by
   Collary \ref{cor:time_lag_cancellation} occurs if and only if
   $\tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})$, which is impossible
-  since in general $\tau_0(\A_{jk}) < \infty$ and in a persistent
-  graph $\tau_\infty(\A_{ik}) = \infty$.
+  since in general $\tau_0(\A_{jk}) < \infty$ and for a persistent system
+  $\tau_\infty(\A_{ik}) = \infty$.
 \end{proof}
 
 \subsection{Recovering $\gcg$ via Pairwise Tests}
@@ -1336,10 +1338,11 @@ analyze the use of pairwise testing as a heuristic for general graphs.
 
 \begin{theorem}[Pairwise Recovery]
   \label{thm:tree_recovery}
-  If the Granger-Causality graph $\gcg$ for $x(t)$ is a strongly
-  causal DAG then $\gcg$ can be inferred from pairwise causality
-  tests alone.  The procedure can be carried out, assuming we have an
-  oracle for pairwise causality, via algorithm (\ref{alg:pwgr}).
+  If the Granger-causality graph $\gcg$ for persistent process $x(t)$
+  is a strongly causal DAG then $\gcg$ can be inferred from pairwise
+  causality tests alone.  The procedure can be carried out, assuming
+  we have an oracle for pairwise causality, via algorithm
+  (\ref{alg:pwgr}).
 
   \begin{algorithm}
     \SetKwInOut{Input}{input}
@@ -1351,56 +1354,69 @@ analyze the use of pairwise testing as a heuristic for general graphs.
     \caption{Pairwise Graph Recovery}
     \label{alg:pwgr}
     % \TitleOfAlgo{Pairwise Graph Recovery}
-    \Input{Pairwise Granger-causality relations between $n$ processes whose joint Granger-causality relations are known to form a strongly causal DAG $\gcg$.}
-    \Output{Edges $E = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of the graph $\gcg$.}
+    \Input{Pairwise Granger-causality relations between a persistent
+      processes of dimension $n$ whose joint Granger-causality
+      relations are known to form a strongly causal DAG $\gcg$.}
+    \Output{Edges $\gcge = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of
+      the graph $\gcg$.}
     \Initialize{$S_0 = [n]$  \texttt{\# unprocessed nodes}\\
       $E_0 = \emptyset$  \texttt{\# edges of }$\gcg$\\
       % $P_0 = \emptyset$  \texttt{\# layer by layer driving nodes}\\
-      $k = 0$ \texttt{\# a counter used only for notation}}
+      $k = 1$ \texttt{\# a counter used only for notation}}
     \BlankLine
-    $W \leftarrow \{(i, j)\ |\ i \pwgc j, j \npwgc i\}$  \texttt{\# potential edges}\\
-    \While{$S_k \ne \emptyset$}{
-      $P_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W\}$  \texttt{\# parents of current layer}\\
-      % $P_k \leftarrow P_{k - 1} \cup P_k$ \texttt{\# Expand parent set}\\
-      $S_{k + 1} \leftarrow S_k \setminus P_k$ \texttt{\# remove from } $S$\\
-
+    $W \leftarrow \{(i, j)\ |\ i \pwgc j, j \npwgc i\}$  \texttt{\# candidate edges}\\
+    $P_0 \leftarrow \{i \in S_0\ |\ \forall s \in S_0\ (s, i) \not\in W\}$  \texttt{\# parentless nodes}\\
+    \While{$S_{k - 1} \ne \emptyset$}{
+      $S_k \leftarrow S_{k - 1} \setminus P_{k - 1}$ \texttt{\# remove nodes with depth }$k - 1$\\
+      $P_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W\}$   \texttt{\# candidate children of }$P_{k - 1}$\\
       \;
-      $C_k \leftarrow \{j \in S_{k + 1}\ |\ \forall s \in S_{k + 1}\ (s, j) \not\in W\}$   \texttt{\# potential children of }$P_k$\\
 
-      \For{$r = 0, \ldots, k$}
+      $D_{k0} \leftarrow \emptyset$\\
+      \For{$r = 1, \ldots, k$} 
       {
-        \label{alg:inner_loop}
-        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times C_k\ |\ (i, j) \in W,\ \text{no } i \rightarrow j \text{ path in } E_k \}$\\%  \texttt{\# edges incident on }$C_k$\\
-        $E_k \leftarrow E_k \cup D_{kr}$ \texttt{\# add edges to }$E_k$\\
+        $Q \leftarrow E_{k - 1} \cup \big(\bigcup_{\ell = 0}^{r - 1} D_{k\ell}\big)$ \texttt{\# currently known edges}\\
+        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times P_k\ |\ (i, j) \in W,\ \text{no } \gcgpath{i}{j} \text{ path in } Q\}$
+        % $E_k \leftarrow E_{k - 1} \cup D_{kr}$ \texttt{\# add edges to }$E_k$ \label{alg:inner_loop_end}\\
         % $W_{k + 1} \leftarrow W_k \setminus D_{kr}$  \texttt{\# remove edges from consideration}\\
       }
+      $E_k \leftarrow E_{k - 1} \cup \big(\bigcup_{r = 1}^k D_{kr}\big)$ \texttt{\# update } $E_k$ \texttt{ with new edges}\\
+      % \label{alg_line:inner_loop_end}\\
       % $W_{k + 1} \leftarrow W_k \setminus \big(\bigcup_{r = 0}^k D_{kr}\big)$  \texttt{\# remove edges from consideration}\\
-
       \;
       $k \leftarrow k + 1$
     }
-    $E \leftarrow E_{k + 1}$\\
-    \Return{$E$}
+    \Return{$E_{k - 1}$}
   \end{algorithm}
 \end{theorem}
 
-We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away layers'' of nodes by removing the nodes that have no parents remaining, which always exist since the graph is acyclic.  The additional requirement of strong causality ensures firstly that all actual edges of $\gcg$ manifest in some way as pairwise relations (by proposition \ref{prop:pwgc_anc}), and secondly, as we will see, that parents of $C_k$ are in $\bigcup_{r = 0}^kP_{k - r}$ and can be determined by a pairwise test.
+We will shortly prove the theorem by establishing the correctness of
+algorithm (\ref{alg:pwgr}).  The idea is to iteratively ``peel away
+layers'' of nodes by removing the nodes that have no parents
+remaining, which always exist since the graph is acyclic.  The
+requirement of strong causality ensures that all actual edges of
+$\gcg$ manifest in some way as pairwise relations (by proposition
+\ref{prop:pwgc_anc}), and the requirement of persistence allows
+confounding to be eliminated by removing bidirectional edges.  Without
+persistence, each confounded pair would give rise to $4$ possible
+pairwise topologies consistent with $\gcg$, one for each type of
+pairwise edge (no edge, unidirectional, bidirectional).
 
 \begin{example}
-  The set $W$ collects all of the edges that may be edges of $\gcg$.
-  In reference to figure \ref{fig:example_fig3}, each of the solid
-  black edges, as well as the dotted red edges will be included, but
-  \textit{not} the bidirectional green dash-dotted edge.  That we exclude
-  bidirectional edges is important since it will provide guarantees
-  that $P_k$ is non-empty.  The groupings $P_0, \ldots, P_3$
-  are also indicated in figure \ref{fig:example_fig3}.
+  The set $W$ collects ancestor relations in $\gcg$ (see Lemma
+  \ref{lem:W_subset_E}).  In reference to figure
+  \ref{fig:example_fig3}, each of the solid black edges, as well as
+  the dotted red edges will be included in $W$, but \textit{not} the
+  bidirectional green dash-dotted edges, which we are able to exclude
+  by appealing to Corollary \ref{cor:bidirectional_edge}.  The
+  groupings $P_0, \ldots, P_3$ are also indicated in figure
+  \ref{fig:example_fig3}.
 
   The algorithm proceeds first with the parentless nodes $1, 2$ on the
   initial iteration where the edge $(1, 3)$ is added to $E$.  On the
   next iteration, the edges $(3, 4), (2, 4), (3, 5)$ are added, and
   the false edges $(1, 4), (1, 5)$ is excluded due to the paths
   $1 \rightarrow 3 \rightarrow 4$ and $1 \rightarrow 3 \rightarrow 5$
-  in E.  Finally, edge $(4, 6)$ are added, and the false
+  already present.  Finally, edge $(4, 6)$ is added, and the false
   $(1, 6), (3, 6), (2, 6)$ edges are similarly excluded due to the
   ordering of the inner loop.
   
@@ -1409,7 +1425,7 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
     \caption{Example graph for Algorithm \ref{alg:pwgr}}
     \footnotesize{Black arrows indicate true parent-child
       relations.  Red dotted arrows indicate pairwise causality (due to
-      ancestor relations), green dash-dotted arrows indicates
+      non-parent relations), green dash-dotted arrows indicates
       bidirectional pairwise causality (due to the confounding node
       $1$).  Blue groupings indicate each $P_k$ in Algorithm
       \ref{alg:pwgr}.}
@@ -1424,85 +1440,120 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
   \end{figure}
 
   That we need to proceed backwards through $P_{k - r}$ as in the
-  inner loop of line \ref{alg:inner_loop} can also be seen from this
-  example, where if instead
-  $D_k = \{(i, j) \in \Big(\bigcup_{r = 0}^k P_{k - r}\Big) \times
-  C_k\ |\ i \pwgc j \}$ we would infer the false positive edge
-  $1 \rightarrow 4$.  Moreover, the same example shows that if simply
-  $D_k = \{(i, j) \in P_k \times C_k\ |\ i \pwgc j \}$, then the edge
-  $1 \rightarrow 3$ would be missed.
+  inner loop of on $r$ can also be seen from this example, where if
+  instead we simply added the set
+
+  \begin{equation*}
+    D_k' = \{(i, j) \in \Big(\bigcup_{r = 1}^k P_{k - r}\Big) \times P_k\ |\ i \pwgc j \}
+  \end{equation*}
+
+  to $E_k$ then we would infer the false positive edge
+  $1 \rightarrow 4$.  Moreover, the same example shows that simply
+  using the set
+
+  \begin{equation*}
+    D_k'' = \{(i, j) \in P_{k - 1} \times P_k\ |\ i \pwgc j \}  ,
+  \end{equation*}
+
+  causes the edge $1 \rightarrow 3$ to be missed.
 \end{example}
 
-\begin{lemma}
-  \label{lem:inner_loop_lemma}
-  At any given iteration, $k$, of Algorithm \ref{alg:pwgr}, if we have
-  $e \in E$ if and only if $e \in \mathcal{E}$, then the inner loop (line \ref{alg:inner_loop})
-  will add $(i, j) \in \big(\bigcup_{r = 0}^kP_{k - r}\big) \times C_k$ to $E$
-  if $(i, j) \in \mathcal{E}$.  i.e. any real edge will be included.
-\end{lemma}
-\begin{proof}
-  Let $j \in C_k$, $i \in \bigcup_{r = 0}^k P_{k - r}$, and assume
-  $i \in \pa{j}$.
+% \begin{lemma}
+%   \label{lem:inner_loop_lemma}
+%   At any given iteration, $k$, of Algorithm \ref{alg:pwgr}, if we have
+%   $e \in E$ if and only if $e \in \gcge$, then the inner loop (line \ref{alg:inner_loop})
+%   will add $(i, j) \in \big(\bigcup_{r = 0}^kP_{k - r}\big) \times C_k$ to $E$
+%   if $(i, j) \in \gcge$.  i.e. any real edge will be included.
+% \end{lemma}
+% \begin{proof}
+%   Let $j \in C_k$, $i \in \bigcup_{r = 0}^k P_{k - r}$, and assume
+%   $i \in \pa{j}$.
 
-  First, suppose that there is no $i \rightarrow j$ path in $E$.  Then
-  since $i \gc j$ we have $i \pwgc j$ and $j \npwgc i$ (i.e.
-  $(i, j) \in W$) by Proposition \ref{prop:pwgc_anc} and Corollary
-  \ref{cor:bidirectional_edge} so at least one of
-  $\{D_{kr} \}_{r = 0}^k$ contains $(i, j)$ and hence $(i, j)$ will be
-  added to $E$ upon the end of the iteration.
+%   First, suppose that there is no $i \rightarrow j$ path in $E$.  Then
+%   since $i \gc j$ we have $i \pwgc j$ and $j \npwgc i$ (i.e.
+%   $(i, j) \in W$) by Proposition \ref{prop:pwgc_anc} and Corollary
+%   \ref{cor:bidirectional_edge} so at least one of
+%   $\{D_{kr} \}_{r = 0}^k$ contains $(i, j)$ and hence $(i, j)$ will be
+%   added to $E$ upon the end of the iteration.
 
-  Now, suppose instead that there is already an $i \rightarrow j$ path
-  in $E$.  Given our assumption that $E$ contains edges if and only if
-  they are edges of $\gcg$, then either we already have $(i, j) \in E$
-  correctly, or there is more than one $i \rightarrow j$ path in
-  $\gcg$, which is not possible since $\gcg$ is strongly causal.
-\end{proof}
+%   Now, suppose instead that there is already an $i \rightarrow j$ path
+%   in $E$.  Given our assumption that $E$ contains edges if and only if
+%   they are edges of $\gcg$, then either we already have $(i, j) \in E$
+%   correctly, or there is more than one $i \rightarrow j$ path in
+%   $\gcg$, which is not possible since $\gcg$ is strongly causal.
+% \end{proof}
 
-\begin{lemma}
+% \begin{lemma}
+%   \label{lem:W_subset_E}
+%   $W \subseteq \gcge$
+% \end{lemma}
+% \begin{proof}
+%   By proposition \ref{prop:pwgc_anc} we have
+%   $j \in \pa{i} \Rightarrow j \pwgc i$ and by Corollary \ref{cor:bidirectional_edge}
+%   there are no bidirectional edges in $\gcg$.
+% \end{proof}
+
+% \hl{Must show that Algorithm terminates in $n$ steps.}
+% \begin{lemma}
+%   For any $i \in P_k$ we have $i \in C_{k - 1}$.  \hl{[Can't yet prove
+%     this part] Moreover, for each $i \in \bigcup_{k = 0}^n P_k$, if
+%     $(s, i) \in W$ then $(s, i) \in E$ upon the termination of
+%     Algorithm} \ref{alg:pwgr}.
+% \end{lemma}
+% \begin{proof}
+%   We prove the second part by induction, the first part being
+%   established along the way.  By construction $P_0$ has no parent
+%   nodes in $\gcg$ so the base case is immediate.  Fix now some
+%   $k \ge 1$, $i \in P_k$, and let $s$ be such that $(s, i) \in W$.
+%   For every $s$ such that $(s, i) \in W$ we have $s \not\in S_k$ since
+%   otherwise $i \not\in P_k$.  Therefore
+%   $s \in \bigcup_{r = 0}^{k - 1}P_{k - r}$, which implies
+%   $s \not\in S_k$, and finally that $i \in C_{k - 1}$.  Then by Lemma
+%   \ref{lem:W_subset_E} every edge in $\gcge$ is also present in
+%   $W$, and by Lemma \ref{lem:inner_loop_lemma} \hl{[We can't conclude
+%     here because of the strong conditions required on lemma}
+%     \ref{lem:inner_loop_lemma}]
+% \end{proof}
+
+% \begin{lemma}[Loop Invariant]
+%   \label{lem:loop_invariant}
+%   $\forall k \ge 0,\ e \in E_k \Rightarrow e \in \gcge$.
+%   \hl{Not sure if this is useful / the right approach.}
+% \end{lemma}
+% \begin{proof}
+%   We will proceed by induction.  Firstly, the base case
+%   $E_0 = \emptyset$ is trivial, so fix some $k \ge 1$ and consider an
+%   edge $(i, j) \in \big(\bigcup_{r = 0}^k P_{k - r} \big) \times C_k$
+%   such that $(i, j) \in W$ (if the edge is not in $W$ then it is not
+%   in $\gcge$ by Lemma \ref{lem:W_subset_E}).
+
+%   \hl{WIP}
+% \end{proof}
+
+Our proof proceeds in 5 steps stated formally as lemmas.  Firstly, we
+characterize the sets $W$ and $P_k$.  Then we establish a correctness
+result for the inner loop on $r$, a correctness result for the outer
+loop on $k$, and finally that the algorithm terminates in a finite
+number of steps.
+
+\begin{lemma}[$W$ Represents Ancestor Relations]
   \label{lem:W_subset_E}
-  $W \subseteq \mathcal{E}$
+  In Algorithm \ref{alg:pwgr} we have
+  $(i, j) \in W$ if and only if $i \in \anc{j}$.  In particular,
+  $W \subseteq \gcge$.
 \end{lemma}
 \begin{proof}
-  By proposition \ref{prop:pwgc_anc} we have
-  $j \in \pa{i} \Rightarrow j \pwgc i$ and by Corollary \ref{cor:bidirectional_edge}
-  there are no bidirectional edges in $\gcg$.
-\end{proof}
+  Let $j \in [n]$ and suppose that $i \in \anc{j}$.  Then $i \pwgc j$
+  by Proposition \ref{prop:pwgc_anc}.  Proposition
+  \ref{prop:sc_graph_common_anc} ensures that $(i, j)$ are not
+  confounded and Corollary \ref{cor:parent_corollary} that
+  $j \not\in \anc{i}$ so $j \npwgc i$ and thence by Proposition
+  \ref{prop:ancestor_properties} $(i, j) \in W$.
 
-\hl{Must show that Algorithm terminates in $n$ steps.}
-\begin{lemma}
-  For any $i \in P_k$ we have $i \in C_{k - 1}$.  \hl{[Can't yet prove
-    this part] Moreover, for each $i \in \bigcup_{k = 0}^n P_k$, if
-    $(s, i) \in W$ then $(s, i) \in E$ upon the termination of
-    Algorithm} \ref{alg:pwgr}.
-\end{lemma}
-\begin{proof}
-  We prove the second part by induction, the first part being
-  established along the way.  By construction $P_0$ has no parent
-  nodes in $\gcg$ so the base case is immediate.  Fix now some
-  $k \ge 1$, $i \in P_k$, and let $s$ be such that $(s, i) \in W$.
-  For every $s$ such that $(s, i) \in W$ we have $s \not\in S_k$ since
-  otherwise $i \not\in P_k$.  Therefore
-  $s \in \bigcup_{r = 0}^{k - 1}P_{k - r}$, which implies
-  $s \not\in S_k$, and finally that $i \in C_{k - 1}$.  Then by Lemma
-  \ref{lem:W_subset_E} every edge in $\mathcal{E}$ is also present in
-  $W$, and by Lemma \ref{lem:inner_loop_lemma} \hl{[We can't conclude
-    here because of the strong conditions required on lemma}
-    \ref{lem:inner_loop_lemma}]
-\end{proof}
-
-\begin{lemma}[Loop Invariant]
-  \label{lem:loop_invariant}
-  $\forall k \ge 0,\ e \in E_k \Rightarrow e \in \mathcal{E}$.
-  \hl{Not sure if this is useful / the right approach.}
-\end{lemma}
-\begin{proof}
-  We will proceed by induction.  Firstly, the base case
-  $E_0 = \emptyset$ is trivial, so fix some $k \ge 1$ and consider an
-  edge $(i, j) \in \big(\bigcup_{r = 0}^k P_{k - r} \big) \times C_k$
-  such that $(i, j) \in W$ (if the edge is not in $W$ then it is not
-  in $\mathcal{E}$ by Lemma \ref{lem:W_subset_E}).
-
-  \hl{WIP}
+  Convsersely, suppose $(i, j) \in W$.  Then since $j \npwgc i$
+  Proposition \ref{prop:persistence_converse} ensures that $(j, i)$
+  are not confounded and so by Proposition \ref{prop:ancestor_properties}
+  we must have $i \in \anc{j}$.
 \end{proof}
 
 \begin{definition}[Depth]
@@ -1514,103 +1565,149 @@ We prove the theorem by establishing the correctness of algorithm (\ref{alg:pwgr
   \ref{fig:example_fig3} we have $d(3) = 1$ and $d(4) = 2$.
 \end{definition}
 
-\begin{lemma}
+\begin{lemma}[Depth Characterization of $P_k$]
+  \label{lem:depth_lemma}
   $i \in P_k \iff d(i) = k$ and $j \in S_k \iff d(j) \ge k$.
 \end{lemma}
 \begin{proof}
-  We proceed by induction.  The base case $j \in P_0 \iff d(j) = 0$ is
-  by definition, and $j \in S_0 \iff d(j) \ge 0$ is trivial since
-  $S_0 = [n]$.  So suppose that the lemma is true up to $k - 1$.
+  We proceed by induction, noting that $P_0$ is non-empty since $\gcg$
+  is acyclic and therefore $\gcg$ contains nodes without parents.  The
+  base case $i \in P_0 \iff d(i) = 0$ is by definition, and
+  $j \in S_0 \iff d(j) \ge 0$ is trivial since $S_0 = [n]$.  So
+  suppose that the lemma is true up to $k - 1$.
 
-  For $i \in P_k$ we have by construction that there is no $j \in S_k$
-  such that $(j, i) \in W$ and therefore no $j \in S_k$ such that
-  $j \in \pa{i}$.  Therefore, any parent of $i$ can only be in
-  $S_{k - r}$ for $r \ge 1$ and by the induction hypothesis which
-  implies that $d(i) \le k$.  But if $d(i) < k$ then $i \in P_{k - r}$
-  for some $r \ge 1$ (again by the induction hypothesis) thence
-  $d(i) = k$ since $P_k \cap P_{k - r} = \emptyset$ by construction.
+  ($i \in P_k \implies d(i) = k$): Let $i \in P_k$.  Suppose that
+  $d(i) \ge k + 1$, then $\exists j \in \pa{i}$ such that
+  $j \not\in \cup_{r \ge 1}P_{k - r}$ (otherwise $d(i) \le k$), this
+  implies that $j \in S_k$ with $(j, i) \in W$ (by Lemma
+  \ref{lem:W_subset_E}) which is not possible due to the construction of
+  $P_k$ and therefore $d(i) \le k$.  Moreover,
+  $P_k \subseteq S_k \subseteq S_{k - 1}$ implies that
+  $d(i) \ge k - 1$ by the induction hypothesis, but if $d(i) = k - 1$
+  then $i \in P_{k - 1}$ again by induction which is impossible since
+  $i \in P_k$ and therefore $d(i) = k$.
 
-  Now for $s \in S_k$ we have by induction that and the fact that
-  $s \in S_k \implies s \in S_{k - 1}$ by construction we have
+  ($s \in S_k \implies d(s) \ge k$): Let
+  $s \in S_k \subseteq S_{k - 1}$.  We have by induction that
   $d(s) \ge k - 1$, but again by induction (this time on $P_{k - 1}$)
-  we have $d(s) \ne k$ since $S_k = S_{k - 1} \setminus P_{k - 1}$
+  we have $d(s) \ne k - 1$ since $S_k = S_{k - 1} \setminus P_{k - 1}$
   and therefore $d(s) \ge k$.
 
-  Conversely, suppose $i \in [n]$ is such that $d(i) = k$.  Then
-  $i \in S_{k - 1}$ by the hypothesis, but also $i \not\in P_{k - 1}$
-  so then $i \in S_k = S_{k - 1} \setminus P_{k - 1}$.  Now, recalling
-  the definition of $P_k$
+  ($d(i) = k \implies i \in P_k$): Suppose $i \in [n]$ is such that
+  $d(i) = k$.  Then $i \in S_{k - 1}$ by the hypothesis, but also
+  $i \not\in P_{k - 1}$ so then
+  $i \in S_k = S_{k - 1} \setminus P_{k - 1}$ and thus $d(i) \ge k$.
+  Now, recalling the definition of $P_k$
 
   \begin{equation*}
     P_k = \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W \},
   \end{equation*}
 
-  if $s \in S_k$ is such that $s \pwgc i$ then by Proposition
-  \ref{prop:ancestor_properties} $(a) s \in \anc{i}$ or
-  $(b) \exists u \in \anc{i} \cap \anc{j}$ which is a confounder.  If
-  we have $s \in \anc{i}$ then since $d(s) \ge k$ we must have
-  $d(i) > k$, which is a contradiction so $s \not\in \anc{i}$.  On the
-  other hand, if we have a confounding $u \in \anc{i} \cap \anc{s}$
-  then we must have $d(u) < k$ (since $s \in \anc{i}$ and $d(i) = k$)
-  which implies by induction that $u \in P_{k - r}$ for some $r \ge 1$,
-  and therefore that $u \not\in ???$  \hl{This is wrong.}
+  if $s \in S_k$ is such that $(s, i) \in W$ then $s \pwgc i$ and
+  $i \npwgc s$ so that by persistence and Proposition
+  \ref{prop:persistence_converse} there cannot be a counfounder of
+  $(s, i)$ (otherwise $i \pwgc s$) so then by Proposition
+  \ref{prop:ancestor_properties} we have $s \in \anc{i}$.  We have
+  shown that $s \in S_k \implies d(s) \ge k$ and so we must have
+  $d(i) > k$, a contradiction, thence $s \not\in \anc{i}$,
+  $s \npwgc i$, $(s, i) \not\in W$ and $i \in P_k$.
 
-  Now let $j \in S_k$, then $d(j) \ge k - 1$ since we
-  also have $j \in S_{k - 1}$ (i.e. $S_k$ is a decreasing sequence of
-  sets) \hl{Can't conclude unless $i \in P_k \iff d(i) = k$, in which
-    case, we have $S_k = S_{k - 1} \setminus P_{k - 1}$ and therefore
-    $d(j) \ge k$.}
+  ($d(j) \ge k \implies j \in S_k$): Let $j \in [n]$ such that
+  $d(j) \ge k$, then by induction we have $j \in S_{k - 1}$.  This
+  implies by the construction of $S_k$ that $j \not\in S_k$ only if
+  $j \in P_{k - 1}$, but we have shown that this only occurs when
+  $d(j) = k - 1$, but $d(j) > k - 1$ so $j \in S_k$.
 \end{proof}
 
-\begin{lemma}[Loop Invariant]
-  For every $(i, j) \in \mathcal{E}$ such that $d(j) \le k$ we have
-  $(i, j) \in E_k$.  Conversely, for every $(i, j) \in E_{k}$ we have
-  $d(j) \le k$ and $(i, j) \in \mathcal{E}$.  That is, at iteration
-  $k, E_k$ and $\mathcal{E}$ agree on the set of edges whose
-  terminating node is at most $k$ steps away from $P_0$.
+\begin{lemma}[Inner Loop]
+  \label{lem:inner_loop_lemma}
+  Fix an integer $k \ge 1$ and suppose that $(i, j) \in E_{k - 1}$ if
+  and only if $(i, j) \in \gcge$ and $d(j) \le k - 1$.  Then, we have
+  $(i, j) \in D_{kr}$ if and only if $(i, j) \in \gcge $, $d(j) = k$,
+  and $d(i) = k - r$.
+\end{lemma}
+\begin{proof}
+  We prove by induction on $r$, keeping in mind the results of Lemmas
+  \ref{lem:W_subset_E} and \ref{lem:depth_lemma}.  For the base case,
+  let $r = 1$ and suppose that $(i, j) \in \gcge$ with $d(j) = k$ and
+  $d(i) = k - 1$.  Then, $(i, j) \in W$ and by our assumptions on
+  $E_{k - 1}$ there is no $\gcgpath{i}{j}$ path in $E_{k - 1}$
+  and therefore $(i, j) \in D_{k1}$.  Conversely, suppose that
+  $(i, j) \in D_{k1}$.  Then, $d(i) = k - 1$ and $d(j) = k$ which, since
+  $(i, j) \in W \implies i \in \anc{j}$ implies that
+  $i \in \pa{j}$ and $(i, j) \in \gcge$.
+
+  Now, fix $r > 1$ and suppose that the result holds up to $r - 1$.
+  Let $(i, j) \in \gcge$ with $d(j) = k$ and $d(i) = k - r$.  Then,
+  $(i, j) \in W$ and by induction and strong causality there cannot
+  already be an $\gcgpath{i}{j}$ path in
+  $E_{k - 1} \cup \big(\bigcup_{\ell = 0}^{r - 1} D_{kr}\big)$,
+  therefore $(i, j) \in D_{kr}$.  Conversely, suppose
+  $(i, j) \in D_{kr}$.  Then we have $d(i) = k - r$, $d(j) = k$, and
+  $i \in \anc{j}$.  Suppose by way of contradiction that
+  $i \not\in \pa{j}$, then there must be some $u \in \pa{j}$ such that
+  $i \in \anc{u}$.  But, this implies that $d(i) < d(u)$ and by
+  induction that $(u, j) \in \bigcup_{\ell = 1}^{r - 1}D_{k\ell}$.
+  Morevoer, sice $d(u) < k$ (otherwise $d(j) > k$) each edge in
+  the $\gcgpath{i}{u}$ path must already be in $E_{k - 1}$, and so
+  there must be an $\gcgpath{i}{j}$ path in
+  $E_{k - 1}\cup\big(\bigcup_{\ell = 0}^{r - 1}D_{kr}\big)$, which is
+  a contradiction since we assumed $(i, j) \in D_{kr}$.  Therefore
+  $i \in \pa{j}$ and $(i, j) \in \gcge$.
+\end{proof}
+
+\begin{lemma}[Outer Loop]
+  \label{lem:outer_loop_lemma}
+  We have $(i, j) \in E_k$ if and only if $(i, j) \in \gcge$ and
+  $d(j) \le k$.  That is, at iteration $k, E_k$ and $\gcge$ agree on
+  the set of edges whose terminating node is at most $k$ steps away
+  from $P_0$.
 \end{lemma}
 \begin{proof}
   We will proceed by induction.  The base case $E_0 = \emptyset$ is
   trivial, so fix some $k \ge 1$, and suppose that the lemma holds for
   all nodes of depth less than $k$.
+
+  Suppose that
+  $(i, j) \in E_k = E_{k - 1}\cup \big(\bigcup_{r = 1}^k D_{rk}
+  \big)$.  Then clearly there is some $1 \le r \le k$ such that
+  $(i, j) \in D_{kr}$ so that by Lemma \ref{lem:inner_loop_lemma} we
+  have $(i, j) \in \gcge$ and $d(j) = k$.
+
+  Conversely, suppose that $(i, j) \in \gcge$ and $d(j) \le k$.  If
+  $d(j) < k$ then by induction $(i, j) \in E_{k - 1} \subseteq E_k$ so
+  suppose further than $d(j) = k$.  Since $i \in \pa{j}$ we must have
+  $d(i) < k$ (else $d(j) > k$) and again by Lemma
+  \ref{lem:inner_loop_lemma} $(i, j) \in \bigcup_{r = 1}^k D_{kr}$
+  which implies that $(i, j) \in E_k$.  The result follows.
 \end{proof}
-  
 
-%   Finally, suppose that $i \not \in \pa{j}$.  If $i \npwgc j$ then
-%   we will correctly leave $(i, j)$ absent from $E$, so suppose that
-%   $i \pwgc j$.  Then we must have either $i \in \anc{j}$ or a confounding 
-%   $k \in \anc{i} \cap \anc{j}$; suppose first the former.
-%   Then, there is some $u$ s.t. $i \pwgc u \pwgc j$, so by the
-%   construction of \hl{it seems} that both $(i, u)$ and $(u, j)$ should
-%   have already been added to $E$, so we have an $i \rightarrow j$ path
-%   in $E$ \hl{is this sound?}  Suppose then the latter case above,
-%   $u \in \anc{i} \cap \anc{j}$ \hl{try to construct a counterexample
-%     involving this case}.
-% \end{proof}
-
-Proof of the actual theorem...
-
+\begin{lemma}[Finite Termination]
+  Algorithm \ref{alg:pwgr} terminates and returns $E_{k^\star - 1} = \gcge$
+  for some $k^\star \le n$.
+\end{lemma}
 \begin{proof}
-  Denote the edges of $\gcg$ by $\mathcal{E}$, we endevour to show
-  that upon the termination of Algorithm \ref{alg:pwgr} we have
-  $E = \mathcal{E}$.  On the first iteration of the algorithm
-  ($k = 0$) we have $S_0 = [n]$ and $E = \emptyset$.
+  If $n = 1$, the algorithm is clearly correct, returning on the first
+  iteration with $E_1 = \emptyset$.  When $n > 1$ Lemma
+  \ref{lem:outer_loop_lemma} ensures that $E_k$ coincides with
+  $\{(i, j) \in \gcge\ |\ d(j) \le k\}$ and since $d(j) \le n - 1$ for
+  any $j \in [n]$ there is some $k^\star \le n$ such that
+  $E_{k^\star - 1} = \gcge$.  We must have $S_{k^\star} = \emptyset$
+  since $j \in S_{k^\star} \iff d(j) \ge k^\star$ (if $d(j) > k - 1$ then
+  $E_{k^\star - 1} \ne \gcge$) and therefore the algorithm terminates.
+\end{proof}
 
-  We will first dispense with some trivialities: if $n = 0$ or $n = 1$
-  the algorithm is correct, returning on the first iteration with
-  $E = \emptyset$.  Suppose then that $n > 1$.  The set
-  $P_0$ is non-empty since $\gcg$ is a DAG and therefore
-  there are nodes in $\gcg$ without parents (if
-  $P_0 = \emptyset$ proposition
-  \ref{prop:ancestor_properties} would be contradicted).  Now, if
-  $P_0 = [n]$ then the graph necessarily contains no edges
-  and we will correctly return $E = \emptyset$.
+% \begin{proof}
+%   Denote the edges of $\gcg$ by $\gcge$, we endevour to show
+%   that upon the termination of Algorithm \ref{alg:pwgr} we have
+%   $E = \gcge$.  On the first iteration of the algorithm
+%   ($k = 0$) we have $S_0 = [n]$ and $E = \emptyset$.
 
-  Moving on from any trivial cases, notice that
-  $\mathcal{E} \subseteq W$.  This follows since by Proposition
-  \ref{prop:pwgc_anc} we have $j \in \pa{i} \Rightarrow j \pwgc i$ and by
-  Corollary \ref{cor:bidirectional_edge} there are no bidirectional
-  edges in $\gcg$.
+%   Moving on from any trivial cases, notice that
+%   $\gcge \subseteq W$.  This follows since by Proposition
+%   \ref{prop:pwgc_anc} we have $j \in \pa{i} \Rightarrow j \pwgc i$ and by
+%   Corollary \ref{cor:bidirectional_edge} there are no bidirectional
+%   edges in $\gcg$.
 
 % 1. Dispense with trivialities
 % 2. Show that hat{P}_k is nonempty
@@ -1660,11 +1757,25 @@ Proof of the actual theorem...
 
 %Consider now step $K < n$ of algorithm \ref{alg:pwgr}.  By lemma \ref{lem:still_strongly_causal} the graph remains strongly causal after having removed nodes $\bigcup_{k = 0}^K P_k$ from $S$, and we assume for induction that $\bigcup_{k = 1}^K D_k$ are all edges of $\gcg$.
 
-\hl{WIP}
-\end{proof}
+% \hl{WIP}
+% \end{proof}
 
 \begin{example}
-  Being a strongly causal DAG is merely a sufficient condition.  For example, the complete directed graph with 2 nodes (e.g. $B(1) = \left[ \begin{array}{cc} 1/2 & 1 \\ 1 & 1/2 \end{array} \right]$) contains a loop but is pairwise recoverable, though not by algorithm (\ref{alg:pwgr}).  Clearly, this example is somewhat artificial since when $n = 2$ there is no difference between pairwise Granger-causality and joint Granger-causality amongst all series -- however, one can take any strongly causal DAG, and then add two additional nodes having such a loop without impacting the pairwise recoverability.
+  We close this section by noting that the conditions of persistence
+  and strong causality are only sufficient conditions.  For example,
+  the complete directed graph with 2 nodes i.e.
+
+  \begin{equation*}
+    B(1) = \left[ \begin{array}{cc} 1/2 & 1 \\ 1 & 1/2 \end{array}\right]
+  \end{equation*}
+
+  contains a loop but is pairwise recoverable, though not by algorithm
+  (\ref{alg:pwgr}).  Clearly, this example is somewhat artificial
+  since when $n = 2$ there is no difference between pairwise
+  Granger-causality and joint Granger-causality amongst all series --
+  however, one can add any number of nodes having no parents or
+  children to a graph containing a length 2 cycle, in which case the
+  graph clearly remains pairwise recoverable.
 \end{example}
 
 \section{Structure Learning}
