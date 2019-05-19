@@ -964,8 +964,11 @@ time series networks, that is, the topology of $\gcg$.
 
 Examples of strongly causal graphs include directed trees (or
 forests), DAGs where each node has at most one parent, and figure
-\ref{fig:example_fig3} of this paper.  It is evident that the strong
-causal property is inherited by subgraphs.  
+\ref{fig:example_fig3} of this paper.  A complete bipartite graph with
+$2n$ nodes is also strongly causal, demonstrating that the number of
+edges of such a graph can still scale quadratically with the number of
+nodes.  It is evident that the strong causal property is inherited by
+subgraphs.
 
 % \begin{lemma}
 %   \label{lem:still_strongly_causal}
@@ -1411,7 +1414,7 @@ $\gcg$ via pairwise tests alone.
     \label{alg:pwgr}
     % \TitleOfAlgo{Pairwise Graph Recovery}
     \Input{Pairwise Granger-causality relations between a persistent
-      processes of dimension $n$ whose joint Granger-causality
+      processe of dimension $n$ whose joint Granger-causality
       relations are known to form a strongly causal DAG $\gcg$.}
     \Output{Edges $\gcge = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of
       the graph $\gcg$.}
@@ -1850,37 +1853,119 @@ Minimize the sparsity promoting regularized least squares problem and choose the
   \underset{\lambda, p}{\text{minimize}}\ L(\lambda, p) + \mathsf{AIC}(B^{(\lambda, p)})
 \end{equation}
 
-\subsection{Bayesian Posterior Thresholding}
-Consider the Bayesian model
+% \subsection{Bayesian Posterior Thresholding}
+% Consider the Bayesian model
 
-\begin{equation}
-  \begin{aligned}
-    (x(t)\ |\ B, \sigma_v^2, \{x(t - \tau)\}_{\tau = 1}^p) &\sim \mathcal{N}(\sum_{\tau = 1}^pB(\tau)x(t - \tau), \sigma_v^2)\\
-    (B_{ij}(\tau)\ |\ G_{ij}(\tau)) &\sim G_{ij}(\tau)\mathcal{N}(0, \sigma_\beta^2) + (1 - G_{ij}(\tau))\delta_0(B_{ij}(\tau))\\
-    (G_{ij}(\tau)) &\sim \mathsf{BER}(p_{ij}(\tau))\\
-    \sigma_v^2 &\sim \Gamma(a_v, b_v)\\
-    \sigma_\beta^2 &\sim \Gamma(a_\beta, b_\beta)
-  \end{aligned}
-\end{equation}
+% \begin{equation}
+%   \begin{aligned}
+%     (x(t)\ |\ B, \sigma_v^2, \{x(t - \tau)\}_{\tau = 1}^p) &\sim \mathcal{N}(\sum_{\tau = 1}^pB(\tau)x(t - \tau), \sigma_v^2)\\
+%     (B_{ij}(\tau)\ |\ G_{ij}(\tau)) &\sim G_{ij}(\tau)\mathcal{N}(0, \sigma_\beta^2) + (1 - G_{ij}(\tau))\delta_0(B_{ij}(\tau))\\
+%     (G_{ij}(\tau)) &\sim \mathsf{BER}(p_{ij}(\tau))\\
+%     \sigma_v^2 &\sim \Gamma(a_v, b_v)\\
+%     \sigma_\beta^2 &\sim \Gamma(a_\beta, b_\beta)
+%   \end{aligned}
+% \end{equation}
 
-Similar models have been studied by various authors in the context of the linear regression model \hl{[(cite them)]} where it is referred to as \textit{stochastic variable selection}, or referred to as a model for Bayesian variable selection.
+% Similar models have been studied by various authors in the context of the linear regression model \hl{[(cite them)]} where it is referred to as \textit{stochastic variable selection}, or referred to as a model for Bayesian variable selection.
 
-Since we have in mind applications where $n$ is large, sampling posterior probabilities can be prohibitively burdensome, so we can instead fit the mean-field variational approximation $p(B, G, \sigma\ |\ X) \approx q_Gq_Bq_\sigma$ and subsequently apply a thresholding operation to the posterior edge inclusion probabilities under $q_G$.
+% Since we have in mind applications where $n$ is large, sampling posterior probabilities can be prohibitively burdensome, so we can instead fit the mean-field variational approximation $p(B, G, \sigma\ |\ X) \approx q_Gq_Bq_\sigma$ and subsequently apply a thresholding operation to the posterior edge inclusion probabilities under $q_G$.
 
-\subsection{Pairwise Minimum Error Spanning Trees}
-Inspired by theorem \ref{thm:tree_recovery}, we propose the following
-structure learning heuristic.
+% \subsection{Pairwise Minimum Error Spanning Trees}
+% Inspired by theorem \ref{thm:tree_recovery}, we propose the following
+% structure learning heuristic.
 
-%% This algorithm should perform coordinate descent or jointly refit all the trees.
+% %% This algorithm should perform coordinate descent or jointly refit all the trees.
 
-\begin{enumerate}
-  \item{Set $k = 0$ and $x^0(t) = x(t)$}
-  \item{Compute all pairwise causality measures $\Xi \defeq \big[\ln \frac{\xi_i}{\xi_{ij}} \big]_{i, j}$}
-  \item{Find the maximum spanning arborescence\footnote{An ``arborescence'' is a french word for a tree diagram, and refers to a \textit{directed} tree in graph theory} $\mathcal{T}_k$ of a graph having edge weights $\Xi_{ij}$.}
-  \item{Fit a vector LTI filter $F_k$ having graph defined by $\mathcal{T}_k$ to $x^{k - 1}(t)$ and set $x^k(t) = x^{k - 1}(t) - \hat{x}^{k - 1}(t)$}
-  \item{Repeat over $k$ until a stopping criteria is met}
-\end{enumerate}
+% \begin{enumerate}
+%   \item{Set $k = 0$ and $x^0(t) = x(t)$}
+%   \item{Compute all pairwise causality measures $\Xi \defeq \big[\ln \frac{\xi_i}{\xi_{ij}} \big]_{i, j}$}
+%   \item{Find the maximum spanning arborescence\footnote{An ``arborescence'' is a french word for a tree diagram, and refers to a \textit{directed} tree in graph theory} $\mathcal{T}_k$ of a graph having edge weights $\Xi_{ij}$.}
+%   \item{Fit a vector LTI filter $F_k$ having graph defined by $\mathcal{T}_k$ to $x^{k - 1}(t)$ and set $x^k(t) = x^{k - 1}(t) - \hat{x}^{k - 1}(t)$}
+%   \item{Repeat over $k$ until a stopping criteria is met}
+% \end{enumerate}
 
+\subsection{Layered Strongly Causal Graphs}
+It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, and cannot be applied directly to real data.  Instead, we convert the algorithm into an heuristic and observe it's performance experimentally.  We first consider the heuristic version of Algorithm \ref{alg:pwgr} in Algorithm \ref{alg:pwgr_heuristic} and show that is a well defined procedure:
+
+\begin{proposition}
+  Algorithm \ref{alg:pwgr_heuristic} terminates in at most $n$ iterations and returns a strongly causal graph $\widehat{\gcg}$.
+\end{proposition}
+\begin{proof}
+  \hl{TODO}
+\end{proof}
+
+A complete estimation procedure for a sparse filter $\widehat{\B}(z)$
+used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{alg:Bz_estimate}.
+
+\begin{algorithm}
+  \SetKwInOut{Input}{input}
+  \SetKwInOut{Output}{output}
+  \SetKwInOut{Initialize}{initialize}
+  \DontPrintSemicolon
+
+  \BlankLine
+  \caption{Graph Recovery Heuristic $\mathsf{pw\_scg}(F, \delta, b, R)$}
+  \label{alg:pwgr_heuristic}
+  % \TitleOfAlgo{Pairwise Graph Recovery}
+  \Input{Estimates of pairwise Granger-causaltiy statistics $F_{ij} = \ln \frac{\xi_{ij}}{\xi_i}$\\
+    Sparsity parameters ($\delta, b, R$)}
+  \Output{A strongly causal graph $\widehat{\gcg}$}
+  \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
+    $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
+    $k = 1$ \texttt{\# a counter used only for notation}}
+
+  \BlankLine
+
+  $W_\delta \leftarrow \{(i, j)\ |\ F_{ji} \ge \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
+  $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total incident strength for each node}\\
+  $P_0 \leftarrow \mathsf{arg\_select\_min\_N}(\mathcal{I}_0, N=R)$  \texttt{\# select} $R$ \texttt{root nodes}\\
+  \BlankLine
+
+  \While{$S \ne \emptyset$}{
+    $S \leftarrow S \setminus P_{k - 1}$ \texttt{\# remove processed nodes}\\
+    $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
+    $P_k \leftarrow \mathsf{arg\_select\_min\_N}(\mathcal{I}_k, N=b)$  \texttt{\# select} $b$ \texttt{branching nodes}\\
+    \;
+    \texttt{\# add strongest} $P_{k - r} \rightarrow P_k$ \texttt{edges and maintain strong causality}\\
+    \For{$r = 1, \ldots, k$} 
+    {
+      \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in P_{k - r} \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$}{
+        \If{\textit{no }$\gcgpath{i}{j}$\textit{ path in }$E$}{
+          $E \leftarrow E \cup \{(i, j)\}$
+        }
+      }
+    }
+    $k \leftarrow k + 1$
+  }
+  \Return{$([n], E)$}
+\end{algorithm}
+
+\begin{algorithm}
+  \SetKwInOut{Input}{input}
+  \SetKwInOut{Output}{output}
+  \SetKwInOut{Initialize}{initialize}
+  \DontPrintSemicolon
+
+  \BlankLine
+  \caption{Filter Estimator}
+  \label{alg:Bz_estimate}
+  \Input{Wide sense stationary process $x(t)$\\
+    Maximum iterations $M$\\
+    Sparsity parameters $\{(\delta_m\, b_m, R_m)\}_{m = 1}^M$}
+  \Output{Linear one-step-ahead estimator $\widehat{\B}(z)$}
+  \Initialize{$\epsilon^{(0)}(t) = x(t)$ \texttt{\# initial error process}\\
+    $m = 1$ \texttt{\# iteration counter}}
+  \BlankLine
+  \For{$m = 1, \ldots, M$}{
+    $F \leftarrow \mathsf{pwgc}(\epsilon^{(m - 1)}(t))$ \texttt{\# estimate pairwise Granger-causality statistics}\\
+    $\widehat{\gcg}_m \leftarrow \mathsf{pw\_scg}(F, \delta_m, b_m, R_m)$ \texttt{\# graph estimate (Algorithm \ref{alg:pwgr_heuristic})}\\
+    $\widehat{\B}^{(m)}(z) \leftarrow \mathsf{estimate\_B}(\epsilon^{(m - 1)}(t), \widehat{\gcg}_m)$ \texttt{\# Estimate filter with topology} $\widehat{\gcg}_m$\\
+    $\epsilon^{(m)} \leftarrow \epsilon^{(m - 1)}(t) - \widehat{\B}^{(m)}(z)\epsilon^{(m - 1)}(t)$ \texttt{\# updated error process}\\
+  }
+  \BlankLine
+  $\widehat{\B}(z) \leftarrow \widehat{\B}^{(M)}(z) \prod_{k = 1}^{M - 1}\big(I - \widehat{\B}^{(M - k)}(z)\big)$ \texttt{\# compute total filter}\\
+  \Return{$\widehat{\B}(z)$}
+\end{algorithm}
 
 \section{Application}
 \section{Conclusion}
