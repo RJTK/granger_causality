@@ -58,35 +58,37 @@ Can we quantify any of the underlying relationships?  Can the arrow of
 time help us to distinguish a directionality or flow of dependence
 among our observed series?  In this paper we contribute to the
 understanding of the notion of Granger-Causality
-\cite{granger1969investigating} as a tool for answering these questions.
+\cite{granger1969investigating} \cite{Granger1980329} as a tool for
+answering these questions.
 
-Though the notion of causality is a philosophically slippery concept,
-it is fundamental to the way we understand the world and to the
-progress of science in general.  Indeed, without faith in the
-consistency of causal interactions the results of experimental science
-could not be generalized or applied in any meaningful way.  In the
-case of Granger-Causality, we state that if an event '$A$' provides us
-with unique (that is, not available anywhere else) information about a
-later event $B$, then $A$ must have a causal impact on $B$.  As
-opposed to the notion of Causation promoted by Pearl
-\cite{pearl2000art}, this is an entirely model-free notion of cause,
-and instead leverages the intuition that a cause must precede it's
-effect.
+Heuristically, we state that if an event '$A$' occuring strictly prior
+in time to an even '$B$' and $A$ provides us with exclusive (that is,
+not available anywhere else) information about $B$, then $A$ must have
+had a causal impact on $B$.  This is an entirely model-free notion of
+cause, and instead leverages the intuition that a cause must precede
+it's effect.
 
 In practice, Granger's notion of causation it not a convincing test
 for \textit{true} causation, since our statements about causation are
-highly dependent upon the data that we are able to observe.  We prefer
-instead to interpret Granger causality as a means of uncovering a flow
-of ``information'' or ``energy'' through some underlying graph of
+highly dependent upon the data that we are able to observe.  Rather,
+the interpretation of Granger causality is as a means of uncovering a
+flow of ``information'' or ``energy'' through some underlying graph of
 interactions.  Though this graph cannot be observed directly, we will
 infer it's presence as a latent structure among our observed time
-series data.
+series data.  This intuition is levereged in a variety of applications
+e.g. in Neuroscience as a means of recovering interactions amongst
+brain regions \cite{bressler2011wiener}, \cite{anna_paper2008},
+\cite{david2008identifying}; in the study of the dependence and
+connectedness of financial institutions \cite{NBERw16223}; gene
+expression networks \cite{Fujita2007}; and power system design
+\cite{Misyrlis2016450}, \cite{yuan2014root}.
 
 Finding the ``best'' graph structure consistent with observed data is
-generally an extremely challenging problem, though the comparison of
-quality between different structures, and hence the notion of
-``best'', needs to be quantified.  In applications where we are
-interested merely in minimizing the mean squared error of a linear
+generally an extremely challenging problem (i.e. this is a best subset
+selection problem, see \cite{bss_mio}, \cite{hastie_bss_comp}), though
+the comparison of quality between different structures, and hence the
+notion of ``best'', needs to be quantified.  In applications where we
+are interested merely in minimizing the mean squared error of a linear
 one-step-ahead predictor, then we will naturally desire an entirely
 dense graph of connections, since each edge can only serve to reduce
 estimation error.  However, since the number of edges scales
@@ -95,10 +97,10 @@ graph for large systems, both to avoid overfitting observed data, as
 well as to aid the interpretability of the results.
 
 In \cite{bach2004learning} the authors apply a local search heuristic
-to an AIC penalized approximation of the likelihood where at each
-iteration an edge is either added, removed, or reversed.  This is a
-common approach to combinatorial optimization due to it's simplicity,
-but is liable to get stuck in shallow local minima.
+to the Whittle likelihood with an AIC penalization.  The local search
+heuristic where at each iteration an edge is either added, removed, or
+reversed is a common approach to combinatorial optimization due to
+it's simplicity, but is liable to get stuck in shallow local minima.
 
 A second and wildly successful heuristic is the LASSO regularizer
 \cite{tibshirani1996regression}, which can be understood as a natural
@@ -107,18 +109,24 @@ LASSO enjoys strong theoretical guarantees \cite{wainwright2009sharp},
 even in the case of time series data \cite{basu2015}
 \cite{wong2016lasso}.
 
-From a Bayesian perspective, spike-and-slab priors can be used to
-estimate the probability of an edge's inclusion, after which a graph
-can be chosen heuristically by thresholding or searching for the MAP
-graph structure.
-
-Our contribution is to provide an alternative heuristic based on
-minimum spanning trees, inspired by our result in section
-\ref{sec:theory} that the true causality graph can be recovered from
-pairwise information alone in the case that the underlying graph is a
-directed forest.  We compare this algorithm to a grouped LASSO
-\cite{yuan2006model}, local search, and a Bayesian posterior
-probability thresholding scheme.
+The contributions of this paper are as follows: firstly, in section
+\ref{sec:theory} we study \textit{pairwise} Granger-causality
+relations, providing novel theorems connecting the structure of the
+causality graph to the pairwise ``causality flow'' in the system, as
+well as a characterization of the sparsity pattern of matrices arising
+in the Wold decomposition.  We establish sufficient conditions
+(sections \ref{sec:strongly_causal_graphs},
+\ref{sec:persistent_systems}) under which a fully conditional
+Granger-causality graph can be recovered from pairwise tests alone
+(section \ref{sec:pairwise_algorithm}).  Secondly, we propose in
+section \ref{sec:structure_learning} alternative graph search
+heuristics inspired by our theoretical results.  Our heuristics are
+compared against a standard grouped LASSO algorithm
+\cite{yuan2006model} as well as local search hill climbing (\hl{state
+  here the results}).  In section \ref{sec:application} we develop an
+example application (\hl{more detail...}).  And provide concluding
+remarks on further open problems in our conclusion (section
+\ref{sec:conclusion}).
 
 %% -Can we also formulate an SDP relaxation?
 %% -Fit trees jointly or via coordinate descent?
@@ -129,15 +137,13 @@ probability thresholding scheme.
 Consider the space $L_2(\Omega)$, the usual Hilbert space of finite
 variance random variables over a probability space
 $(\Omega, \mathcal{F}, \mathbb{P})$ having inner product
-$\inner{x}{y} = \E[xy]$.  We will denote the collection vectors of
-such random elements as $L_2^n(\Omega)$ or simply $L_2^n$.
-
-We will work with a discrete time and wide-sense stationary process
-$x(t)$ taking elements in $L_2$.  We suppose that $x(t)$ (with
-$t \in \Z$) has zero mean, $\E x(t) = 0$, and the matrix valued
-covariance sequence
-$R(\tau) \overset{\Delta}{=} \E x(t)x(t - \tau)^\T$ is absolutely
-summable and has a spectra $S(\omega)$:
+$\inner{x}{y} = \E[xy]$.  We will work with a discrete time and
+wide-sense stationary (WSS) vector valued process $x(t)$ (with
+$t \in \Z$) with elements taking values in $L_2$.  We suppose that
+$x(t)$ has zero mean, $\E x(t) = 0$, and has absolutely summable
+matrix valued covariance sequence
+$R(\tau) \overset{\Delta}{=} \E x(t)x(t - \tau)^\T$ with an absolutely
+continuous spectral density $S(\omega)$:
 
 \begin{equation}
   \label{eqn:fourier_pair}
@@ -146,6 +152,12 @@ summable and has a spectra $S(\omega)$:
     S(\omega) &= \sum_{\tau=-\infty}^\infty R(\tau)e^{-j\tau\omega}.
   \end{aligned}
 \end{equation}
+
+% and that the spectra is bounded uniformly away from 0:
+
+% \begin{equation*}
+%   \int_{-\pi}^\pi \ln\det S(\omega) \d\omega > -\infty.
+% \end{equation*}
 
 We will also work frequently with the spaces spanned by the values of
 such a process
@@ -159,59 +171,74 @@ such a process
   \end{aligned}
 \end{equation}
 
-where the closure is naturally in mean-square.  $\H_t^x$ is the space
-spanned by the values of $x(t)$ between the ``infinite past'' and
-``now'', we will often omit the superscript $x$ which should be clear
-from context.  Evidently these spaces are separable, and as closed
-subspaces of a Hilbert space they are themselves Hilbert.  We will
-denote the spaces generated in analagous ways by particular components
-of $x$ as e.g. $\H_t^{(i, j)}$, $\H_t^{i}$ or by all but particular
-components as e.g. $\H_t^{-j}$.
+where the closure is naturally in mean-square.  We will often omit the
+superscript $x$ which should be clear from context.  Evidently these
+spaces are separable, and as closed subspaces of a Hilbert space they
+are themselves Hilbert.  We will denote the spaces generated in
+analagous ways by particular components of $x$ as e.g.
+$\H_t^{(i, j)}$, $\H_t^{i}$ or by all but particular components as
+e.g. $\H_t^{-j}$.
 
 As a consequence of the Wold decomposition theorem \cite{lindquist},
-every such sequence has the ``moving average'' $MA(\infty)$
+every WSS sequence has the moving average $MA(\infty)$
 representation
 
 \begin{equation}
 \label{eqn:wold}
-  x(t) = c(t) + \sum_{\tau = 0}^\infty A(\tau) w(t - \tau),
+  x(t) = c(t) + \sum_{\tau = 0}^\infty A(\tau) v(t - \tau),
 \end{equation}
 
-where $c(t)$ is a perfectly predictable sequence\footnote{$c(t)$ is
-  perfectly predictable if any sample $c(t_0)$ is enough to determine
-  $c(t)$ for every $t$.  For example,
+where $c(t)$ is a purely deterministic sequence\footnote{the purely
+  deterministic sequence $c(t)$ is one which lies in the remote past
+  $\bigcap_{\tau=1}^\infty \H_{t - \tau}^x$ of the process.  For such
+  processes a single sample $c(t_0)$ is enough to determine $c(t)$ for
+  every $t$.  For example,
   $c(t) = \text{sin}(2\pi t + \Theta);\; \Theta \sim \mathcal{U}[-\pi,
-  \pi]$}, and $w(t)$ is an uncorrelated sequence having a diagonal
-covariance and $A(0) = I$.  We will assume that $c(t) = 0$, which in
-practice is to say that it has been accurately estimated and removed.
-
-Furthermore, we assume that the spectra is uniformly bounded away from
-$0$:
-$\exists \delta:\ \delta I \preceq S(\omega) \preceq \frac{1}{\delta}
-I\ \forall \omega$ so that the Wold representation can be inverted to
-yield the $VAR(\infty)$ form
+  \pi]$}, and $w(t)$ is an uncorrelated sequence and $A(0) = I$.  We
+will assume that $c(t) = 0$, which in practice is to say that it has
+been accurately estimated and removed.  We additionally require that
+this representation can be inverted to yield the $VAR(\infty)$ form
 
 \begin{equation}
   \label{eqn:ar_representation}
-  x(t) = \sum_{\tau = 1}^\infty B(\tau) x(t - \tau) + v(t),
+  x(t) = \sum_{\tau = 1}^\infty B(\tau) x(t - \tau) + v(t).
 \end{equation}
 
-where $v(t)$ is an uncorrelated sequence with covariance $\Sigma_v$.
-
 The equations (\ref{eqn:wold}), (\ref{eqn:ar_representation}) can be
-represented as $x(t) = \A(z)w(t) = \B(z)x(t) + v(t)$ via the action of
-the operators (LTI filters)
+represented as $x(t) = \A(z)v(t) = \B(z)x(t) + v(t)$ via the action
+(convolution) of the operators (LTI filters)
 $\A(z) \defeq \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$ and
 $\B(z) \defeq \sum_{\tau = 1}^\infty B(\tau)z^{-\tau}$ where the
-operator $z^{-1}$ is the backshift operator acting on $\H$.  Since
-$||z^{-1}|| = 1$, the inversion formulae
+operator $z^{-1}$ is the backshift operator acting on
+$\ell_2^n(\Omega, \mathcal{F}, \mathbb{P})$, that is:
+
+\begin{equation}
+  \label{eqn:filter_action}
+  \B_{ij}(z)x_j(t) \defeq \sum_{\tau = 1}^\infty B_{ij}(\tau)x_j(t - \tau).
+\end{equation}
+
+Finally, since $||z^{-1}|| = 1$ we have the inversion formula
 
 \begin{equation}
   \label{eqn:lsi_inversion}
-  \A(z) = (I - \B(z))^{-1} = \sum_{k = 0}^\infty \B(z)^k
+  \A(z) = (I - \B(z))^{-1} = \sum_{k = 0}^\infty \B(z)^k.
 \end{equation}
 
-are valid.
+The aforementioned assumptions are quite weak.  The strongest
+assumption we require is finally that $\Sigma_v$ is a diagonal matrix,
+which is referred to as a lack of instantaneous feedback in $x(t)$.
+We formally state our setup to conclude this section:
+
+\begin{definition}[Basic Setup]
+  The process $x(t)$ is an $n$ dimensional wide sense stationary
+  process having invertible $VAR(\infty)$ representation
+  \eqref{eqn:ar_representation} where $v(t)$ is sequentially
+  uncorrelated and has a diagonal covariance matrix.  The $MA(\infty)$
+  representation of equation \eqref{eqn:wold} has $c(t) = 0$ and
+  $A(0) = I$.
+\end{definition}
+
+
 \subsection{Granger Causality}
 
 \begin{definition}[Granger Causality]
@@ -238,8 +265,8 @@ observations of a common cause, and existing GC relations can
 disappear if we observe a new mediating series.
 
 The notion is closely related to the information theoretic measure of
-transfer entropy, indeed, if everything is Gaussian then they are
-equivalent \cite{barnett2009granger}.
+transfer entropy, indeed, if the distribution of $v(t)$ is known to be
+Gaussian then they are equivalent \cite{barnett2009granger}.
 
 We require two technical facts we refer to in the sequel, the notion
 of conditional orthogonality is used throughout.
@@ -446,57 +473,60 @@ Our principle object of study will be a graph determined by
 Granger-causality relations as follows.
 
 \begin{definition}[Causality graph, Parents]
-
-Remaining in the context of a collection of $n$ WSS processes
-$x(t) = \big(x_1(t), \ldots, x_n(t)\big)$, we define the Granger-causality
-graph $\gcg$ to be the directed graph formed on $n$ vertices where an
-edge $(j, i) \in \gcg$ if and only if $x_j \gc x_i$.
-
-We refer to the set of \textit{parents} of $x_i$ in $\gcg$ by
-$\pa{i}$, that is, $j \in \pa{i} \iff x_j \gc x_i$.
+  We define the Granger-causality graph $\gcg = ([n], \gcge)$ to be the directed
+  graph formed on $n$ vertices where an edge $(j, i) \in \gcge$ if and
+  only if $x_j$ Granger-causes $x_i$ (with respect to $x$).  That is,
+  $$(j, i) \in \gcge \iff j \in \pa{i} \iff x_j \gc x_i.$$
 \end{definition}
 
 The edges of the Granger-causality graph $\gcg$ can be given a general
-notion of ``weight'' by associating an edge $(j, i)$ with a
-\textit{strictly causal} LTI filter
+notion of ``weight'' by associating an edge $(j, i)$ with the
+\textit{strictly causal} LTI filter $\B_{ij}(z)$ (see eqn
+\eqref{eqn:filter_action}).  Thence, the matrix $\B(z)$ is analagous
+to a \textit{weighted adjacency matrix}\footnote{We are using the
+  convention that $\B_{ij}(z)$ is a filter with input $x_j$ and output
+  $x_i$ so as to write the action of the system as $\B(z)x(t)$ with
+  $x(t)$ as a column vector.  This competes with the usual convention
+  for adjacency matrices where $A_{ij} = 1$ if there is an edge
+  $(i, j)$.  In our case, the sparsity pattern of $\B_{ij}$ is the
+  \textit{transposed} adjacency matrix.} for the graph $\gcg$.  And,
+in the same way that the $k^{\text{th}}$ power of an adjacency matrix
+counts the number of paths of length $k$ between nodes,
+$(\B(z)^k)_{ij}$ is a filter isolating the ``action'' of $j$ on $i$ at
+a time lag of $k$ steps, this is exemplified in the inversion formula
+\ref{eqn:lsi_inversion}.
 
-\begin{equation}
-  \label{eqn:filter}
-  \B_{ij}(z) = \sum_{\tau = 1}^{\infty} B_{ij}(\tau)z^{-\tau}
-\end{equation}
+An elementary theorem connecting the adjacency matrix with paths will
+allow us to deduce the sparsity pattern of $\A(z)$.  We omit proof,
+though it follows easily by induction:
 
-from the $\VAR$ representation of equation
-\ref{eqn:ar_representation}.  We will represent the action
-(convolution) of this filter compactly by taking $z^{-1}$ as the
-backshift operator on $\ell_2^n(\Omega, \mathcal{F}, \mathbb{P})$ when
-convenient
-
-\begin{equation}
-  \B_{ij}(z)x_j(t) \defeq \sum_{\tau = 1}^\infty B_{ij}(\tau)x_j(t - \tau).
-\end{equation}
+\begin{lemma}
+  \label{lem:adj_matrix}
+  Let $S$ be the transposed adjacency matrix of the Granger-causality
+  graph $\gcg$.  Then, $(S^k)_{ij}$ is the number of paths of length
+  $k$ from node $j$ to node $i$.  Evidently, if
+  $\forall k \in \N,\ (S^k)_{ij} = 0$ then $j \not\in \anc{i}$.
+\end{lemma}
 
 % What if we take this as the definition of PWGC?  then, in a simply causal graph
 % the "normal" definition becomes a theorem.  Or, if lem:pwgc_anc is true then
 % maybe that is good enough?
 
 From the $\VAR$ representation of $x(t)$ there is clearly a tight
-relationship between each node and it's parent nodes, indeed
+relationship between each node and it's parent nodes, the following
+proposition is analagous to the definition of feedback free processes
+of \cite{caines1975feedback}:
 
-\begin{equation}
-  \label{eqn:parent_expansion}
-  x_i(t) = v_i(t) + \B_{ii}(z)x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t).
-\end{equation}
+% % When is this guaranteed w.r.t. the full system?
+% Furthermore, if the filter $\B_{ii}$ is invertible, we can write
 
-% When is this guaranteed w.r.t. the full system?
-Furthermore, if the filter $\B_{ii}$ is invertible, we can write
-
-\begin{equation*}
-  \begin{aligned}
-    (1 - \B_{ii}(z))x_i(t) &= v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\\
-    \Rightarrow x_i(t) &= (1 - \B_{ii}(z))^{-1}\big[v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\big]\\
-    &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t)
-  \end{aligned}
-\end{equation*}
+% \begin{equation*}
+%   \begin{aligned}
+%     (1 - \B_{ii}(z))x_i(t) &= v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\\
+%     \Rightarrow x_i(t) &= (1 - \B_{ii}(z))^{-1}\big[v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\big]\\
+%     &= \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t)
+%   \end{aligned}
+% \end{equation*}
 
 % In general, we will write $\wtB$ for arbitrary filters maintaining the
 % convention that $\wtB_{ii}$ is a filter that modifies the future of
@@ -509,26 +539,22 @@ Furthermore, if the filter $\B_{ii}$ is invertible, we can write
 % from line to line in the same sequence of calculations as it's exact
 % properties or specification are not important.
 
-We continue to develop the relationship between $x_i$ and it's family
-tree, where the following proposition is analagous to the definitions
-of feedback free processes of \cite{caines1975feedback}.
+% We continue to develop the relationship between $x_i$ and it's family
+% tree, where the following proposition is analagous to the definitions
+% of feedback free processes of \cite{caines1975feedback}.
 
 \begin{proposition}[Ancestor Expansion]
   \label{prop:parent_expanding}
-  The component $x_i(t)$ of $x(t)$ can be represented as a sum of
-  linear filtering operations acting on the driving noise $v_i$ of
-  $x_i$ as well as the parents of $x_i$:
+  The component $x_i(t)$ of $x(t)$ can be represented in terms of it's
+  parents in $\gcg$:
 
   \begin{equation}
     \label{eqn:parent_expansion}
-    x_i(t) = \wtB_{ii}(z)v_i(t) + \sum_{k \in \pa{i}}\wtB_{ik}(z)x_k(t),
+    x_i(t) = v_i(t) + \B_{ii}(z)x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t).
   \end{equation}
 
-  where $\wtB_{ii}(z) = (1 - \B_{ii}(z))^{-1}$ and
-  $\wtB_{ik}(z) = \wtB_{ii}(z) B_{ik}(z)$.
-
-  Moreover, $x_i$ can be expanded in terms of it's ancestors and
-  driving noise only:
+  Moreover, $x_i$ can be expanded in terms of it's ancestor's $v(t)$
+  components only:
 
   \begin{equation}
     \label{eqn:ancestor_expansion}
@@ -582,30 +608,11 @@ $j \in \anc{i}$.
 % \end{proof}
 % \textbf{this is an alternative proof, I think superior to the one above}.
 
-The matrix $\B(z)$ is analagous to a \textit{weighted adjacency
-  matrix} for the graph $\gcg$.  And, in the same way that the
-$k^{\text{th}}$ power of an adjacency matrix counts the number of
-paths of length $k$ between nodes, $(\B(z)^k)_{ij}$ is a filter
-isolating the ``action'' of $j$ on $i$ at a time lag of $k$ steps.
-Though we only need the sparsity pattern of $\B(z)^k$ for the proof.
-
-We state the following well known theorem as a lemma, proof follows
-easily by induction.
-
-\begin{lemma}
-  \label{lem:adj_matrix}
-  Let $S$ be the transposed adjacency matrix of the Granger-causality
-  graph $\gcg$.  Then, $(S^k)_{ij}$ is the number of paths of length
-  $k$ from node $j$ to node $i$.  Evidently, if
-  $\forall k \in \N,\ (S^k)_{ij} = 0$ then $j \not\in \anc{i}$.
-\end{lemma}
-
-We now prove the proposition.
-
 \begin{proof}
-  Equation \eqref{eqn:parent_expansion} was derived prior to the
-  statement of the theorem.  We are left to demonstrate equation
-  \eqref{eqn:ancestor_expansion}.
+  Equation \eqref{eqn:parent_expansion} is immediate from the
+  $VAR(\infty)$ representation of \eqref{eqn:ar_representation} and
+  Theorem \ref{thm:granger_causality_equivalences}, we are left to
+  demonstrate \eqref{eqn:ancestor_expansion}.
   
   From equation (\ref{eqn:ar_representation}), which we are assuming
   throughout the paper to be invertible, we can write
@@ -650,8 +657,10 @@ Recall that Granger-causality in general must be understood with
 respect to a particular universe of observations.  If $x_j \gc x_i$
 with respect to $x_{-k}$, it may not hold with respect to $x$.  For
 example, $x_k$ may be a common ancestor which when observed completely
-explains the connection from $x_j$ to $x_i$.  In particular, we will
-study \textit{pairwise} Granger-causality.
+explains the connection from $x_j$ to $x_i$.  In this paper we study
+\textit{pairwise} Granger-causality, and seek to understand when
+knowledge of pairwise relations is sufficient to deduce the true fully
+conditional relations of $\gcg$.
 
 \begin{definition}[Pairwise Granger-causality]
   We will say that $x_j$ pairwise Granger-causes $x_i$ and write
@@ -660,18 +669,20 @@ study \textit{pairwise} Granger-causality.
 \end{definition}
 
 This notion is of interest for a variety of reasons.  From a purely
-theoretical or conceptual standpoint, we will seek to understand when
-and how pairwise causality can capture the idea of ``flow of
-information'' in the underlying graph.  It may also be useful for
-reasoning about what the conditions under which \textit{unobserved}
-components of $x(t)$ may or may not interfere with inference in the
-actually observed components.  Finally, motivated from a practical
-standpoint to analyze causation in large systems, we will seek to
-construct practical estimation procedures based purely on pairwise
-causality tests which can result in reduced computational complexity.
+conceptual standpoint, we will see how the notion can in some sense
+capture the idea of ``flow of information'' in the underlying graph.
+It may also be useful for reasoning about what the conditions under
+which \textit{unobserved} components of $x(t)$ may or may not
+interfere with inference in the actually observed components.
+Finally, motivated from a practical standpoint to analyze causation in
+large systems, we will seek to construct practical estimation
+procedures based purely on pairwise causality tests since the
+computation of such pairwise relations is somewhat easier.
 
-\begin{proposition}
-  \label{prop:ancestor_uncorrelated}
+The following is a fundamental building block:
+
+\begin{lemma}
+  \label{lem:ancestor_uncorrelated}
   Consider distinct nodes $i, j$ in a Granger-causality graph
   $\gcg$.  Then, if
 
@@ -683,16 +694,13 @@ causality tests which can result in reduced computational complexity.
   then $H_t^{(i)} \perp \H_t^{(j)}$, that is,
   $\forall \tau \in \Z_+\ \E[x_i(t)x_j(t - \tau)] = 0$.  Moreover,
   this implies that $j \npwgc i$.
-\end{proposition}
+\end{lemma}
 
 \begin{remark}
   Note that $H_t^{(i)} \perp \H_t^{(j)}$ states that the
   \textit{present} of $x_i(t)$ is uncorrelated with $x_j(t)$,
   but we need not have $\H_t^{(i)} \perp \H_t^{(j)}$ since
   $i \in \anc{j}$ is not excluded.
-
-  We also point out the contrapositive that if $j \pwgc i$ then we
-  must have either $j \in \anc{i}$ or $\anc{i} \cap \anc{j} \ne 0$.
 \end{remark}
 
 \begin{proof}
@@ -831,7 +839,7 @@ effectively eliminates the possibility presented in this example.
     \inner{x_i(t)}{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1) - \linE{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
   \end{equation*}
 
-  which follows from Proposition \ref{prop:ancestor_uncorrelated}.
+  which follows from Lemma \ref{lem:ancestor_uncorrelated}.
   Finally, for $k \in C_1(j)$ the case $k = i$ is immediate (since the
   error in estimating $\Phi(z)\B_{ii}(z)x_i(t)$ given
   $\H_{t - 1}^{(i)}$ is $0$), so suppose $k \ne i$.  We know from
@@ -952,7 +960,7 @@ In this section and the next we will seek to understand when converse
 statements of Proposition \ref{prop:ancestor_properties} \textit{do}
 hold.  One possibility is to restrict the coefficients of the system
 matrix, e.g. by requiring that $B_{ij}(\tau) \ge 0$.  Instead,
-we think it is more meaningful to focus on the defining feature of
+we think it more meaningful to focus on the defining feature of
 time series networks, that is, the topology of $\gcg$.
 
 \begin{definition}[Strongly Causal]
@@ -1619,8 +1627,7 @@ number of steps.
   For our present purposes we will define the \textit{depth} $d(j)$ of
   a node $j$ in $\gcg$ to be the length of the \textit{longest} path
   from a node in $P_0$ to $j$, where $d(j) = 0$ if $j \in P_0$.  It is
-  apparent (\hl{right?}) that such a path will always exist in a
-  strongly causal graph.  For example, in Figure
+  apparent that such a path will always exist.  For example, in Figure
   \ref{fig:example_fig3} we have $d(3) = 1$ and $d(4) = 2$.
 \end{definition}
 
@@ -1897,6 +1904,15 @@ It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, an
 A complete estimation procedure for a sparse filter $\widehat{\B}(z)$
 used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{alg:Bz_estimate}.
 
+\begin{proposition}
+  The error sequence in Algorithm \ref{alg:Bz_estimate} is a zero mean
+  WSS process $\E\epsilon^{(m)}(t) = 0$ with monotonically decreasing
+  variance: $\E|\epsilon^{(m + 1)}(t)|^2 \le \E|\epsilon^{(m)}(t)|^2$.
+\end{proposition}
+\begin{proof}
+  \hl{TODO -- this is probably not even true}
+\end{proof}
+
 \begin{algorithm}
   \SetKwInOut{Input}{input}
   \SetKwInOut{Output}{output}
@@ -1949,7 +1965,7 @@ used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{al
   \BlankLine
   \caption{Filter Estimator}
   \label{alg:Bz_estimate}
-  \Input{Wide sense stationary process $x(t)$\\
+  \Input{$T$ samples from a WSS process $x: \{x(t)\}_{t = 1}^T$\\
     Maximum iterations $M$\\
     Sparsity parameters $\{(\delta_m\, b_m, R_m)\}_{m = 1}^M$}
   \Output{Linear one-step-ahead estimator $\widehat{\B}(z)$}
@@ -1960,7 +1976,7 @@ used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{al
     $F \leftarrow \mathsf{pwgc}(\epsilon^{(m - 1)}(t))$ \texttt{\# estimate pairwise Granger-causality statistics}\\
     $\widehat{\gcg}_m \leftarrow \mathsf{pw\_scg}(F, \delta_m, b_m, R_m)$ \texttt{\# graph estimate (Algorithm \ref{alg:pwgr_heuristic})}\\
     $\widehat{\B}^{(m)}(z) \leftarrow \mathsf{estimate\_B}(\epsilon^{(m - 1)}(t), \widehat{\gcg}_m)$ \texttt{\# Estimate filter with topology} $\widehat{\gcg}_m$\\
-    $\epsilon^{(m)} \leftarrow \epsilon^{(m - 1)}(t) - \widehat{\B}^{(m)}(z)\epsilon^{(m - 1)}(t)$ \texttt{\# updated error process}\\
+    $\epsilon^{(m)}(t) \leftarrow \epsilon^{(m - 1)}(t) - \widehat{\B}^{(m)}(z)\epsilon^{(m - 1)}(t)$ \texttt{\# updated error process}\\
   }
   \BlankLine
   $\widehat{\B}(z) \leftarrow \widehat{\B}^{(M)}(z) \prod_{k = 1}^{M - 1}\big(I - \widehat{\B}^{(M - k)}(z)\big)$ \texttt{\# compute total filter}\\
@@ -1968,7 +1984,10 @@ used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{al
 \end{algorithm}
 
 \section{Application}
+\label{sec:application}
 \section{Conclusion}
+\label{sec:conclusion}
+Extensions to transfer entropy?.  Case of time varying statistics?.  Develop sparse estimators for SS models (\cite{barnett2015granger})?.  Apply MIO for the Whittle relaxation?
 
 \printbibliography
 \end{document}
