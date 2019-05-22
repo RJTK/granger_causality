@@ -90,7 +90,6 @@ def estimate_B(X, G, max_lag=10):
         b = estimate_b_lasso(X_i, y_i)
     return
 
-
 def example_graph():
     N = list(range(1, 7))
     E = [(1, 3), (2, 4), (3, 4), (3, 5), (4, 6)]

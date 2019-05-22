@@ -12,3 +12,7 @@ auto/
 *.blg
 *.pdf
 *.fmt
+*.csv
+*data/
+*ETFs/
+*Stocks/
