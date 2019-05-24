@@ -7,7 +7,7 @@ from scipy.linalg import solve_discrete_lyapunov
 # TODO: It would probably be wise to do this with scipy sparse matrices!
 
 
-def gcg_to_var(G, filter_attr="b(z)"):
+def gcg_to_var(G, filter_attr="b(z)", assert_stable=True, p=None):
     """
     Convert a GCG to a VAR system.
 
@@ -22,7 +22,9 @@ def gcg_to_var(G, filter_attr="b(z)"):
     """
     nodes = G.nodes
     n = len(nodes)
-    p = G.graph["max_lag"]
+    if p is None:
+        i, j = next(iter(G.edges))
+        p = len(G[i][j][filter_attr])
 
     # Number the nodes
     node_map = {node_i: i for i, node_i in enumerate(nodes)}
@@ -50,10 +52,12 @@ def gcg_to_var(G, filter_attr="b(z)"):
 
     B = [B[:, :, tau] for tau in range(p)]
     var = VAR(B)
+    if assert_stable:
+        assert var.is_stable()
     return var
 
 
-def random_gnp_dag(n_nodes, p_lags):
+def random_gnp_dag(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
     """
     Produces a random DAG on n nodes and populates the edge b(z)
     attributes with random AR(p) filters.
@@ -61,15 +65,15 @@ def random_gnp_dag(n_nodes, p_lags):
     we have a graph on n_nodes with s_edges and p_lags for the AR
     systems.
     """
-    G = nx.gnp_random_graph(n_nodes, p=0.3, directed=True)
+    G = nx.gnp_random_graph(n_nodes, p=edge_prob, directed=True)
 
     def get_bz():
-        return -random_arma(p=p_lags, q=0, k=1, p_radius=0.95)[1][1:]
+        return -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
 
     G = nx.DiGraph([(u, v, {"b(z)": get_bz()})
                     for (u, v) in G.edges() if u < v])
     [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]
-    G.graph["max_lag"] = p_lags
+    G.graph["true_lags"] = p_lags
     assert nx.is_directed_acyclic_graph(G)
 
     # Add self-loops
@@ -78,7 +82,51 @@ def random_gnp_dag(n_nodes, p_lags):
     return G
 
 
-def drive_gcg(G, T, sigma2_v):
+def get_node_property_vector(G, prop):
+    """
+    Returns a numpy array containing G.nodes[i][prop] in order by
+    G.nodes.
+    """
+    try:
+        data = np.array([G.nodes[i][prop] for i in G.nodes])
+    except KeyError as e:
+        raise KeyError("Caught KeyError({}) -- does G have "
+                       "{} attached to it's nodes?"
+                       "".format(e, prop))
+    return data
+
+
+def get_edge_property_dict(G, prop):
+    """
+    Returns a dict {(i, j): G[i][j][prop]}
+    """
+    try:
+        return {(i, j): G[i][j][prop] for (i, j) in G.edges}
+    except KeyError as e:
+        raise KeyError("Caught KeyError({}) -- does G have "
+                       "{} attached to it's edges?"
+                       "".format(e, prop))
+
+
+def get_errors(G):
+    return get_node_property_vector(G, "sv^2_hat")
+
+
+def get_estimation_errors(G):
+    b = get_edge_property_dict(G, "b(z)")
+    b_hat = get_edge_property_dict(G, "b_hat(z)")
+
+    def match_len_sub(x, y):
+        len_max = max(len(x), len(y))
+        s = np.zeros(len_max)
+        s[:len(x)] = x
+        s[:len(y)] = s[:len(y)] - y
+        return s
+
+    return [match_len_sub(b[(i, j)], b_hat[(i, j)]) for (i, j) in G.edges]
+
+
+def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
     """
     Drives the gcg G with T samples of Gaussian noise.  sigma_v should
     be a sequence of variances for the noise.
@@ -88,11 +136,12 @@ def drive_gcg(G, T, sigma2_v):
     """
     n = len(G.nodes)
     V = np.random.normal(size=(T, n)) * np.sqrt(sigma2_v)
-    var = gcg_to_var(G)
+    var = gcg_to_var(G, filter_attr=filter_attr)
     X = var.drive(V)
 
     for i, node_i in enumerate(G.nodes):
         G.nodes[node_i]["x"] = X[:, i]
+        G.nodes[node_i]["sv2"] = sigma2_v[i]
     return G
 
 
