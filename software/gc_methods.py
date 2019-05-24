@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression, LassoLarsIC
 
 from itertools import product
+from math import ceil
 
 def estimate_b_lstsqr(X, y):
     """
@@ -124,7 +125,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
     return G
 
 
-def pw_scg(F, delta, b, R):
+def pw_scg(F, delta=None, b=None, R=None):
     """
     Graph recovery heuristic
 
@@ -133,16 +134,76 @@ def pw_scg(F, delta, b, R):
 
     delta is a thresholding parameter, b is a "branching" parameter,
     and R is the number of root nodes.
-    """
-    n = F.shape[0]
 
-    # List of candidate edges
-    W_set = {(i, j) for (i, j) in product(range(n), range(n))
+    We return an nx.DiGraph
+
+    Defaults: R = log(n)
+              b = sqrt(n)
+              delta = median(F)
+    """
+    def arg_select_min_N(I, N):
+        arg_sorted = sorted(I.keys(), key=lambda k: I[k])
+        return set(arg_sorted[:N])
+
+    def compute_incident_strength(F, S):
+        return {i: sum(F[i, j] for j in W_pred[i]) for i in S}
+
+    def sort_edges_by_F(P_kr, P_k, F):
+        return sorted(zip(P_kr, P_k), key=lambda ij: F[ij], reverse=True)
+
+    def has_path(G, i, j):
+        try:
+            next(iter(nx.algorithms.simple_paths.all_simple_paths(G, i, j)))
+        except StopIteration:
+            return False
+        else:
+            return True
+
+    n = F.shape[0]
+    S = set(range(n))
+
+    if R is None:
+        R = ceil(np.log(n))
+    if b is None:
+        b = ceil(np.sqrt(n))
+    if delta is None:
+        delta = np.median(F)
+
+    # Graph to return
+    G = nx.DiGraph()
+    G.add_nodes_from(S)
+
+    # ------------- Initialization -------------
+    # Set of candidate edges
+    W_set = {(i, j) for (i, j) in product(S, S)
          if F[j, i] > F[i, j]}
 
-    S = list(range(n))
-    I = []
-    return
+    # Predecessor edges of a node, i.e. W[i] = {j | (j, i) \in W}
+    W_pred = {i: [j for j in S if (j, i) in W_set ]
+              for i in S}
+
+    # incident strength of each node
+    I = compute_incident_strength(F, S)
+    P = [arg_select_min_N(I, N=R)]  # P_0, P_1, ...
+
+    # ------------ Iterations -------------------
+    k = 1
+    while len(S) != 0:
+        S = S - P[k - 1]
+        I = compute_incident_strength(F, S)
+        P = P + [arg_select_min_N(I, N=b)]
+
+        for r in range(1, k + 1):
+            for i, j in sort_edges_by_F(P[k - r], P[k], F):
+                if not has_path(G, i, j):
+                    G.add_edge(i, j)
+        k = k + 1
+
+        if k > 10 * n ** 2:  # Clearly stuck
+            raise AssertionError("pw_scg has failed to terminate after {} iterations.  "
+                                 "S = {}, P = {}".format(k, S, P))
+    
+    return G
 
 
 def example_graph():
