@@ -125,6 +125,58 @@ def estimate_B(G, max_lag=10, copy_G=False,
     return G
 
 
+# NOTE: forming the Xy matrices consumes only microseconds
+def univariate_AR_error(x, max_lag=10, criterion="bic"):
+    X, y = form_Xy(X_raw=x[:, None], y_raw=x, p=max_lag)
+    w = estimate_b_lasso(X, y, criterion=criterion)
+    return np.var(y - X @ w)
+
+
+def bivariate_AR_error(y, x, max_lag=10, criterion="bic"):
+    X, y =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
+                    y_raw=y)
+    w = estimate_b_lasso(X, y, criterion=criterion)
+    return np.var(y - X @ w)
+
+
+def compute_AR_error(X, y, criterion="bic"):
+    w = estimate_b_lasso(X, y, criterion=criterion)
+    return np.var((y - X @ w)**2)
+
+
+def compute_pairwise_gc(X, max_lag=10, criterion="bic"):
+    T, n = X.shape
+
+    # expanded_data_matrices = {i: form_Xy(X[:, i][:, None], X[:, i],
+    #                                      p=max_lag)
+    #                           for i in range(n)}
+    # xi_i = np.array([compute_AR_error(*expanded_data_matrices[i],
+    #                                   criterion=criterion)
+    #                  for i in range(n)])
+
+    xi_i = np.array([univariate_AR_error(X[:, i], max_lag=max_lag,
+                                      criterion=criterion)
+                     for i in range(n)])
+
+    # Error estimating from j into i (conditional on i)
+    xi_ij = [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
+                                 criterion=criterion)
+              if j != i else xi_i[i] for j in range(n)]
+             for i in range(n)]
+
+    F = -np.log(xi_ij / xi_i[:, None])
+    F[F < 0] = 0.0
+    return F
+
+
+def sort_X_by_nodes(G, X):
+    nodes = list(G.nodes)
+    nodes_inv = [nodes.index(i) for i in range(len(nodes))]
+    X_inv = X[:, nodes_inv]
+    assert np.all(X_inv[:, 0] == G.nodes[0]["x"])
+    return X_inv
+
+
 def pw_scg(F, delta=None, b=None, R=None):
     """
     Graph recovery heuristic
@@ -139,17 +191,18 @@ def pw_scg(F, delta=None, b=None, R=None):
 
     Defaults: R = log(n)
               b = sqrt(n)
-              delta = median(F)
+              delta = median(F)  # NOTE: this will often be 0
     """
     def arg_select_min_N(I, N):
         arg_sorted = sorted(I.keys(), key=lambda k: I[k])
         return set(arg_sorted[:N])
 
-    def compute_incident_strength(F, S):
+    def compute_incident_strength(F, S, W_pred):
         return {i: sum(F[i, j] for j in W_pred[i]) for i in S}
 
-    def sort_edges_by_F(P_kr, P_k, F):
-        return sorted(zip(P_kr, P_k), key=lambda ij: F[ij], reverse=True)
+    def sort_edges_by_F(P_kr, P_k, F, W):
+        return sorted([(i, j) for (i, j) in W if (i in P_kr and j in P_k)],
+                      key=lambda ij: F[ij[1], ij[0]], reverse=True)
 
     def has_path(G, i, j):
         try:
@@ -176,28 +229,27 @@ def pw_scg(F, delta=None, b=None, R=None):
     # ------------- Initialization -------------
     # Set of candidate edges
     W_set = {(i, j) for (i, j) in product(S, S)
-         if F[j, i] > F[i, j]}
+             if (F[j, i] > F[i, j] and F[j, i] > delta)}
 
     # Predecessor edges of a node, i.e. W[i] = {j | (j, i) \in W}
     W_pred = {i: [j for j in S if (j, i) in W_set ]
               for i in S}
 
     # incident strength of each node
-    I = compute_incident_strength(F, S)
-    P = [arg_select_min_N(I, N=R)]  # P_0, P_1, ...
+    I = compute_incident_strength(F, S, W_pred)
+    P = arg_select_min_N(I, N=R)
+    P_k = P
 
     # ------------ Iterations -------------------
-    k = 1
     while len(S) != 0:
-        S = S - P[k - 1]
-        I = compute_incident_strength(F, S)
-        P = P + [arg_select_min_N(I, N=b)]
+        S = S - P_k
+        I = compute_incident_strength(F, S, W_pred)
+        P_k = arg_select_min_N(I, N=b)
 
-        for r in range(1, k + 1):
-            for i, j in sort_edges_by_F(P[k - r], P[k], F):
-                if not has_path(G, i, j):
-                    G.add_edge(i, j)
-        k = k + 1
+        for i, j in sort_edges_by_F(P, P_k, F, W_set):
+            if not has_path(G, i, j):
+                G.add_edge(i, j)
+        P = P | P_k
 
         if k > 10 * n ** 2:  # Clearly stuck
             raise AssertionError("pw_scg has failed to terminate after {} iterations.  "
