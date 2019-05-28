@@ -1,7 +1,9 @@
 import networkx as nx
 import numpy as np
+from scipy import linalg
 
 from sklearn.linear_model import LinearRegression, LassoLarsIC
+from multiprocessing import Pool
 
 from itertools import product
 from math import ceil
@@ -14,7 +16,7 @@ def estimate_b_lstsqr(X, y):
     X: np.array (T x s)
     """
     lr = LinearRegression(fit_intercept=False, normalize=False,
-                          copy_X=False)
+                          copy_X=False, n_jobs=1)
     lr.fit(X, y)
     return lr.coef_
 
@@ -27,10 +29,11 @@ def estimate_b_lasso(X, y, criterion="bic"):
     X: np.array (T x s)
     """
     lasso = LassoLarsIC(criterion=criterion, fit_intercept=False,
-                        normalize=False)
+                        normalize=False, precompute=True)
     lr = LinearRegression(fit_intercept=False, normalize=False,
                           copy_X=False)
 
+    # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
     lasso.fit(X, y)
     w = lasso.coef_
     if np.all(w == 0):
@@ -104,13 +107,15 @@ def estimate_B(G, max_lag=10, copy_G=False,
     # TODO: There is an insane amount of repeated work here
 
     for i in G.nodes:
-        a_i = list(G.predecessors(i))  # Inputs to i
-        if len(a_i) == 0:
-            continue
-
         # Form an "un-lagged" data matrix
-        X_raw = np.hstack([G.nodes[j]["x"][:, None] for j in a_i])
+        a_i = list(G.predecessors(i))  # Inputs to i
         y_raw = G.nodes[i]["x"]
+
+        if len(a_i) == 0:
+            G.nodes[i]["sv^2_hat"] = np.var(y_raw)
+            continue
+        else:
+            X_raw = np.hstack([G.nodes[j]["x"][:, None] for j in a_i])
 
         # Form linear regression matrices
         X, y = form_Xy(X_raw, y_raw, p=max_lag)
@@ -126,55 +131,78 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
 
 # NOTE: forming the Xy matrices consumes only microseconds
-def univariate_AR_error(x, max_lag=10, criterion="bic"):
+def univariate_AR_error(x, max_lag=10, criterion="bic",
+                        method="lasso"):
     X, y = form_Xy(X_raw=x[:, None], y_raw=x, p=max_lag)
-    w = estimate_b_lasso(X, y, criterion=criterion)
-    return np.var(y - X @ w)
+    return _compute_AR_error(X, y, criterion, method)
 
 
-def bivariate_AR_error(y, x, max_lag=10, criterion="bic"):
+def bivariate_AR_error(y, x, max_lag=10, criterion="bic",
+                       method="lasso"):
     X, y =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
                     y_raw=y)
-    w = estimate_b_lasso(X, y, criterion=criterion)
-    return np.var(y - X @ w)
+    return _compute_AR_error(X, y, criterion, method)
 
 
-def compute_AR_error(X, y, criterion="bic"):
-    w = estimate_b_lasso(X, y, criterion=criterion)
-    return np.var((y - X @ w)**2)
+def multi_bivariate_AR_error(y, x_list, max_lag=10, criteroin="bic",
+                             method="lasso"):
+    return [bivariate_AR_error(y, x, max_lag=max_lag,
+                               criterion=criterion, method=method)
+                               for x in x_list]
 
 
-def compute_pairwise_gc(X, max_lag=10, criterion="bic"):
+def _compute_AR_error(X, y, criterion="bic", method="lasso"):
+    if method == "lasso":
+        w = estimate_b_lasso(X, y, criterion=criterion)
+        return np.var(y - X @ w)
+    elif method == "lstsqr":
+        # With scipy
+        # w = estimate_b_lstsqr(X, y)
+
+        # linalg.lstsq
+        # _, r, _, _ = lstsq(X, y, check_finite=False,
+        #                    lapack_driver="gelsy")
+        # return r / X.shape[0]
+
+        # scipy.linalg cholesky solve -- by far the fastest
+        w = linalg.cho_solve(linalg.cho_factor(X.T @ X), X.T @ y)
+        return np.var(y - X @ w)
+    else:
+        raise ValueError("Method {} not available!".format(method))
+    
+
+def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso",
+                        n_jobs=1):
     T, n = X.shape
 
-    # expanded_data_matrices = {i: form_Xy(X[:, i][:, None], X[:, i],
-    #                                      p=max_lag)
-    #                           for i in range(n)}
-    # xi_i = np.array([compute_AR_error(*expanded_data_matrices[i],
-    #                                   criterion=criterion)
-    #                  for i in range(n)])
+    # NOTE: Since sklearn uses multiple cores, this method already does make
+    # NOTE: reasonably efficient use of available processors.
 
     xi_i = np.array([univariate_AR_error(X[:, i], max_lag=max_lag,
-                                      criterion=criterion)
+                                         criterion=criterion, method=method)
                      for i in range(n)])
 
-    # Error estimating from j into i (conditional on i)
+    # if n_jobs > 1:
+    #     pool = Pool(2)
+    #     # xi_i = np.array(
+    #     #     pool.starmap(univariate_AR_error,
+    #     #                  [(X[:, i], max_lag, criterion, method)
+    #     #                   for i in range(n)]))
+    #     xi_ij = np.array(pool.starmap(multi_bivariate_AR_error,
+    #                                   [(X[:, i], [X[:, j] for j in range(n)],
+    #                                     max_lag, criterion, method)
+    #                                    for i in range(n)]))
+    #     xi_ij[range(n), range(n)] = xi_i
+
+    # else:
     xi_ij = [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
-                                 criterion=criterion)
+                                 criterion=criterion, method=method)
               if j != i else xi_i[i] for j in range(n)]
              for i in range(n)]
 
     F = -np.log(xi_ij / xi_i[:, None])
     F[F < 0] = 0.0
     return F
-
-
-def sort_X_by_nodes(G, X):
-    nodes = list(G.nodes)
-    nodes_inv = [nodes.index(i) for i in range(len(nodes))]
-    X_inv = X[:, nodes_inv]
-    assert np.all(X_inv[:, 0] == G.nodes[0]["x"])
-    return X_inv
 
 
 def pw_scg(F, delta=None, b=None, R=None):
@@ -215,6 +243,7 @@ def pw_scg(F, delta=None, b=None, R=None):
     n = F.shape[0]
     S = set(range(n))
 
+    # These are really bad ways to choose parameters
     if R is None:
         R = ceil(np.log(n))
     if b is None:
@@ -235,6 +264,8 @@ def pw_scg(F, delta=None, b=None, R=None):
     W_pred = {i: [j for j in S if (j, i) in W_set ]
               for i in S}
 
+    k = 1  # Counter purely for detecting infinite loops
+
     # incident strength of each node
     I = compute_incident_strength(F, S, W_pred)
     P = arg_select_min_N(I, N=R)
@@ -247,15 +278,59 @@ def pw_scg(F, delta=None, b=None, R=None):
         P_k = arg_select_min_N(I, N=b)
 
         for i, j in sort_edges_by_F(P, P_k, F, W_set):
-            if not has_path(G, i, j):
+            if not any((has_path(G, a, j) for a in G.predecessors(i))):
                 G.add_edge(i, j)
         P = P | P_k
 
         if k > 10 * n ** 2:  # Clearly stuck
             raise AssertionError("pw_scg has failed to terminate after {} iterations.  "
                                  "S = {}, P = {}".format(k, S, P))
-    
+        k = k + 1
+
     return G
+
+
+def estimate_graph(X, criterion="bic", max_lags=10):
+    F = compute_pairwise_gc(X, max_lag=max_lags,
+                            criterion=criterion,
+                            method="lstsqr")
+
+    G_hat = pw_scg(F, R=None, b=None, delta=np.median(F))
+    G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
+    G_hat = add_self_loops(G_hat, copy_G=False)
+    G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
+                       ic="bic")
+    G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
+    return G_hat
+
+
+def compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
+    P = N_edges  # Positives
+    TP = N_intersect_edges  # True positives
+    FP = N_hat_edges - N_intersect_edges  # False positives
+    TPR = TP / P  # True positive rate (Sensitivity)
+
+    N = n_nodes**2 - N_edges  # Negatives
+    FN = N_edges - N_intersect_edges  # False negatives
+    TN = N - FN  # True negatives
+    TNR = TN / N  # True negative rate
+    return TP, TN, FP, FN
+
+
+def compute_F1_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
+    TP, TN, FP, FN = compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges,
+                                   n_nodes)
+
+    F1 = (2 * TP) / (2 * TP + FP + FN)  # F1 score
+    return F1
+
+
+def compute_MCC_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
+    TP, TN, FP, FN = compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges,
+                                   n_nodes)
+    MCC = (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) *
+                                        (TN + FP) * (TN + FN))
+    return MCC
 
 
 def example_graph():
@@ -270,3 +345,4 @@ def example_graph():
     # set(nx.ancestors(G, i)): set of ancestors of i in G
     # A = nx.adjacency_matrix(G).todense(): Find adj matrix
     return
+

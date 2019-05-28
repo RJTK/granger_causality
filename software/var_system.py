@@ -57,8 +57,36 @@ def gcg_to_var(G, filter_attr="b(z)", assert_stable=True, p=None):
     return var
 
 
+def _graph_to_dag(G):
+    """
+    Takes in a networkx graph (directed or undirected) and turns it
+    into a directed DAG.  We ensure the resulting graph is acyclic
+    simply by enforcing a topological sort i.e. we only keep edges (u,
+    v) s.t. u < v.
+    """
+    n_nodes = len(G.nodes)
+    G = nx.DiGraph([(u, v)
+                    for (u, v) in G.edges() if u < v])
+    [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]    
+    assert nx.is_directed_acyclic_graph(G)
+    return G
+
+
+def _attach_edge_properties(G, gen_func):
+    """
+    attaches (prop, value) = gen_func() to each of G's edges
+    as G[u][v][prop] = value
+    """
+    for u, v in G.edges:
+        prop, value = gen_func()
+        G[u][v][prop] = value
+    return G
+
+
 def random_gnp_dag(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
     """
+    NOT STRONGLY CAUSAL
+
     Produces a random DAG on n nodes and populates the edge b(z)
     attributes with random AR(p) filters.
 
@@ -67,19 +95,112 @@ def random_gnp_dag(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
     """
     G = nx.gnp_random_graph(n_nodes, p=edge_prob, directed=True)
 
-    def get_bz():
-        return -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
+    def get_edge():
+        return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
 
-    G = nx.DiGraph([(u, v, {"b(z)": get_bz()})
-                    for (u, v) in G.edges() if u < v])
-    [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]
+    G = _graph_to_dag(G)
+    G = add_self_loops(G, copy_G=False)
+    G = _attach_edge_properties(G, get_edge)
+    
     G.graph["true_lags"] = p_lags
-    assert nx.is_directed_acyclic_graph(G)
-
-    # Add self-loops
-    for i in G.nodes:
-        G.add_edge(i, i, **{"b(z)": get_bz()})
     return G
+
+
+def random_gnp(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
+    """
+    NOT Acyclic or Strongly Causal
+
+    Produces a random gnp graph and populates the edge b(z) attribute
+    with random AR(p) filters.
+
+    we have a graph on n_nodes with s_edges and p_lags for the AR
+    systems.
+    """
+    G = nx.gnp_random_graph(n_nodes, p=edge_prob, directed=True)
+
+    def get_edge():
+        return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
+
+    # Add self loops only with probability edge_prob
+    self_loops = np.random.binomial(n=1, p=edge_prob,
+                                    size=len(G.nodes))
+    for add, i in zip(self_loops, G.nodes):
+        if add:
+            G.add_edge(i, i)
+    G = _attach_edge_properties(G, get_edge)
+    
+    G.graph["true_lags"] = p_lags
+    return G
+
+
+def random_tree_dag(n_nodes, p_lags, pole_rad=0.95):
+    """
+    I THINK STRONGLY CAUSAL
+
+    Produces a random directed tree with random ARMA filters having
+    pole radius `pole_rad` on the edges.  The tree will have `n_nodes`
+    nodes and each node will have `r_degree` children.
+
+    # NOTE: This will always have the same number of edges (why?)
+    """
+    tree = nx.generators.trees.random_tree(n=n_nodes)
+
+    def get_edge():
+        return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
+
+    G = _graph_to_dag(tree)
+    G = add_self_loops(G, copy_G=False)
+    G = _attach_edge_properties(G, get_edge)
+    G.graph["true_lags"] = p_lags
+    return G
+
+
+def sort_X_by_nodes(G, X):
+    nodes = list(G.nodes)
+    nodes_inv = [nodes.index(i) for i in range(len(nodes))]
+    X_inv = X[:, nodes_inv]
+    assert np.all(X_inv[:, 0] == G.nodes[0]["x"])
+    return X_inv
+
+
+def get_X(G, prop="x"):
+    X = get_node_property_vector(G, prop).T
+    X = sort_X_by_nodes(G, X)
+    return X
+
+
+def attach_node_prop(G_attach, G_from, prop_attach="x", prop_from="x"):
+    assert set(G_attach.nodes) == set(G_from.nodes)
+    nx.set_node_attributes(G_attach,
+                           {i: {prop_attach: G_from.nodes[i][prop_from]}
+                            for i in G_from.nodes})
+    return G_attach
+
+
+def remove_zero_filters(G, prop="b_hat(z)", copy_G=True):
+    """
+    Deletes edges where b_hat(z) = 0
+    """
+    if copy_G:
+        G_cp = G.copy()
+    else:
+        G_cp = G
+
+    for i, j in set(G_cp.edges):
+        if np.all(G_cp[i][j][prop] == 0):
+            G_cp.remove_edge(i, j)
+    return G_cp
+
+
+def add_self_loops(G, copy_G=True):
+    if copy_G:
+        G_cp = G.copy()
+    else:
+        G_cp = G
+
+    for i in G_cp.nodes:
+        G_cp.add_edge(i, i)
+    return G_cp
 
 
 def get_node_property_vector(G, prop):
@@ -126,7 +247,31 @@ def get_estimation_errors(G):
     return [match_len_sub(b[(i, j)], b_hat[(i, j)]) for (i, j) in G.edges]
 
 
-def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
+def get_estimation_errors(G, G_hat):
+    b = get_edge_property_dict(G, "b(z)")
+    b_hat = get_edge_property_dict(G_hat, "b_hat(z)")
+
+    def match_len_sub(x, y):
+        len_max = max(len(x), len(y))
+        s = np.zeros(len_max)
+        s[:len(x)] = x
+        s[:len(y)] = s[:len(y)] - y
+        return s
+
+    def get_edge(b_dict, e):
+        # i, j = e
+        try:
+            return b_dict[e]
+        except KeyError:
+            return np.zeros(1)
+
+    all_edges = set(b) | set(b_hat)
+    return [match_len_sub(get_edge(b, e), get_edge(b_hat, e))
+            for e in all_edges]
+
+
+def drive_gcg(G, T, sigma2_v, filter_attr="b(z)",
+              stabilize=0.80):
     """
     Drives the gcg G with T samples of Gaussian noise.  sigma_v should
     be a sequence of variances for the noise.
@@ -136,7 +281,9 @@ def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
     """
     n = len(G.nodes)
     V = np.random.normal(size=(T, n)) * np.sqrt(sigma2_v)
-    var = gcg_to_var(G, filter_attr=filter_attr)
+    var = gcg_to_var(G, filter_attr=filter_attr, assert_stable=False)
+    if stabilize:
+        var.ad_hoc_stabilize(rho=stabilize)
     X = var.drive(V)
 
     for i, node_i in enumerate(G.nodes):
@@ -204,6 +351,16 @@ class VAR:
         C = np.vstack((np.hstack((B_tau for B_tau in self.B)),  # top row
                        C))
         return C
+
+    def ad_hoc_stabilize(self, rho=0.95):
+        """
+        Stabilizes the system by iteratively dividing down all the
+        constituent coefficients.
+        """
+        while not self.is_stable(margin=1 - rho):
+            i = np.random.choice(range(self.p))
+            self.B[i] /= 1.25
+        return
 
     def is_stable(self, margin=1e-6):
         '''Check whether the system is stable.  See also self.get_rho().
