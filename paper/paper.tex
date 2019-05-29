@@ -11,8 +11,9 @@
 \usepackage[backend=bibtex,sorting=none]{biblatex}
 \usepackage{enumitem}
 \usepackage{etex,etoolbox}
-\bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
 \usepackage{hyperref}
+\usepackage{todonotes}
+\bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
 
 \def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
 \def\ngc{\overset{\text{GC}}{\nrightarrow}}  % Negated Granger causality arrow
@@ -1894,24 +1895,24 @@ Minimize the sparsity promoting regularized least squares problem and choose the
 \subsection{Layered Strongly Causal Graphs}
 It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, and cannot be applied directly to real data.  Instead, we convert the algorithm into an heuristic and observe it's performance experimentally.  We first consider the heuristic version of Algorithm \ref{alg:pwgr} in Algorithm \ref{alg:pwgr_heuristic} and show that is a well defined procedure:
 
-\begin{proposition}
-  Algorithm \ref{alg:pwgr_heuristic} terminates in at most $n$ iterations and returns a strongly causal graph $\widehat{\gcg}$.
-\end{proposition}
-\begin{proof}
-  \hl{TODO}
-\end{proof}
+% \begin{proposition}
+%   Algorithm \ref{alg:pwgr_heuristic} terminates in at most $n$ iterations and returns a strongly causal graph $\widehat{\gcg}$.
+% \end{proposition}
+% \begin{proof}
+%   \hl{TODO}
+% \end{proof}
 
-A complete estimation procedure for a sparse filter $\widehat{\B}(z)$
-used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{alg:Bz_estimate}.
+% A complete estimation procedure for a sparse filter $\widehat{\B}(z)$
+% used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{alg:Bz_estimate}.
 
-\begin{proposition}
-  The error sequence in Algorithm \ref{alg:Bz_estimate} is a zero mean
-  WSS process $\E\epsilon^{(m)}(t) = 0$ with monotonically decreasing
-  variance: $\E|\epsilon^{(m + 1)}(t)|^2 \le \E|\epsilon^{(m)}(t)|^2$.
-\end{proposition}
-\begin{proof}
-  \hl{TODO -- this is probably not even true}
-\end{proof}
+% \begin{proposition}
+%   The error sequence in Algorithm \ref{alg:Bz_estimate} is a zero mean
+%   WSS process $\E\epsilon^{(m)}(t) = 0$ with monotonically decreasing
+%   variance: $\E|\epsilon^{(m + 1)}(t)|^2 \le \E|\epsilon^{(m)}(t)|^2$.
+% \end{proposition}
+% \begin{proof}
+%   \hl{TODO -- this is probably not even true}
+% \end{proof}
 
 \begin{algorithm}
   \SetKwInOut{Input}{input}
@@ -1946,7 +1947,7 @@ used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{al
     \For{$r = 1, \ldots, k$} 
     {
       \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in P_{k - r} \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$}{
-        \If{\textit{no }$\gcgpath{i}{j}$\textit{ path in }$E$}{
+        \If{no $\gcgpath{u}{j}$ path in $E$, for any $u \in \anc{i}$}{
           $E \leftarrow E \cup \{(i, j)\}$
         }
       }
@@ -1983,11 +1984,72 @@ used to estimate $x(t + 1)$ from $\H_{t - 1}$ is then given in Algorithm \ref{al
   \Return{$\widehat{\B}(z)$}
 \end{algorithm}
 
+\section{Empirical Evaluation}
+We have implemented simple empirical experiments in Python
+\cite{scipy}, in particular we leverage the LASSO implementation from
+\texttt{sklearn} \cite{sklearn} and the random graph generators from
+\texttt{networkx} \cite{networkx}.  We run the same experiment on
+three separate graph topologies having $n = 75$ nodes: a tree (which
+is strongly causal), a random directed acyclic graph, and an Erdos
+Renyi random graph with edge inclusion probability of $2 / n$.
+
+We populate each of the edges (including self loops) with random
+linear filters constructed by placing $5$ transfer function poles
+uniformly at random in a disc of radius $3 / 4$ (which guarantees
+stability for acyclic graphs).  The resulting system is driven by
+i.i.d. Gaussian random vectors, each component having random variance
+$\sigma_i^2 = 1/2 + r_i$ where $r_i \sim \text{exp}(1/2)$.  Results
+are obtained for $50$ random iterations per each of $6$ dataset
+lengths $T \in \{100, 500, 1000, 2500, 5000, 10000\}$.
+
+The pairwise causality function $\mathsf{pwgc}$ of Algorithm
+\ref{alg:Bz_estimate} are obtained via the residuals
+$\mathbf{\epsilon}_{ij}$ of the model
+$\mathbf{x}_i = \mathbf{X}_{ij}\widehat{\beta_{}} +
+\mathbf{\epsilon}_{ij}$ estimated via ordinary least squares, where
+$\mathbf{X}_{ij}$ includes $10$ lagged values of processes $i$ and
+$j$.
+
+The function $\mathsf{estimate_B}$ in Algorithm \ref{alg:Bz_estimate}
+is carried out via the LASSO \cite{tibshirani2015statistical}, with
+the regularization parameter being chosen to minimize the Bayesian
+information criteria, a more conservative heuristic than the AIC.
+
+\begin{figure}
+  \centering
+  \caption{Simulation Results and Representitive Random Graph Topologies}
+  \label{fig:simulation_results}
+
+  \begin{subfigure}[b]{0.30\textwidth}
+    \caption{Random Tree}
+    \includegraphics[width=\linewidth]{example_tree.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.30\textwidth}
+    \caption{Random DAG}
+    \includegraphics[width=\linewidth]{example_dag.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.30\textwidth}
+    \caption{Erdos-Renyi Graph}
+    \includegraphics[width=\linewidth]{example_gnp.pdf}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{random_tree_simulation.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{random_dag_simulation.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.30\textwidth}
+    % \includegraphics[width=\linewidth]{random_gnp_simulation.pdf}
+    \missingfigure{}
+  \end{subfigure}
+\end{figure}
+
 \section{Application}
 \label{sec:application}
 \section{Conclusion}
 \label{sec:conclusion}
-Extensions to transfer entropy?.  Case of time varying statistics?.  Develop sparse estimators for SS models (\cite{barnett2015granger})?.  Apply MIO for the Whittle relaxation?
+% Extensions to transfer entropy?.  Case of time varying statistics?.  Develop sparse estimators for SS models (\cite{barnett2015granger})?.  Apply MIO for the Whittle relaxation?
 
 \printbibliography
 \end{document}

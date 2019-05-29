@@ -1,12 +1,15 @@
 import networkx as nx
 import numpy as np
-from scipy import linalg
+import sympy as sp
 
+from scipy import linalg
 from sklearn.linear_model import LinearRegression, LassoLarsIC
-from multiprocessing import Pool
 
 from itertools import product
 from math import ceil
+
+from var_system import (attach_node_prop, add_self_loops,
+                        remove_zero_filters)
 
 def estimate_b_lstsqr(X, y):
     """
@@ -15,10 +18,8 @@ def estimate_b_lstsqr(X, y):
     y: np.array (T)
     X: np.array (T x s)
     """
-    lr = LinearRegression(fit_intercept=False, normalize=False,
-                          copy_X=False, n_jobs=1)
-    lr.fit(X, y)
-    return lr.coef_
+    w = linalg.cho_solve(linalg.cho_factor(X.T @ X), X.T @ y)
+    return w
 
 
 def estimate_b_lasso(X, y, criterion="bic"):
@@ -30,8 +31,6 @@ def estimate_b_lasso(X, y, criterion="bic"):
     """
     lasso = LassoLarsIC(criterion=criterion, fit_intercept=False,
                         normalize=False, precompute=True)
-    lr = LinearRegression(fit_intercept=False, normalize=False,
-                          copy_X=False)
 
     # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
     lasso.fit(X, y)
@@ -42,7 +41,7 @@ def estimate_b_lasso(X, y, criterion="bic"):
 
     # Use lasso only to select the support
     X_lasso = X[:, [i for i, wi in enumerate(w) if wi != 0]]
-    w_lr = lr.fit(X_lasso, y).coef_
+    w_lr = estimate_b_lstsqr(X_lasso, y)
     w[[i for i, wi in enumerate(w) if wi != 0]] = w_lr
     return w
 
@@ -123,10 +122,16 @@ def estimate_B(G, max_lag=10, copy_G=False,
         # Estimate
         b = estimate_b_lasso(X[:max_T], y[:max_T], criterion=ic)
 
+        # Compute residuals
+        r = y - X @ b
+
         # Add the filters as properties to G
         for grouping, j in enumerate(a_i):  # Edge j --b(z)--> i
             G[j][i]["b_hat(z)"] = b[grouping * max_lag: (grouping + 1) * max_lag]
-        G.nodes[i]["sv^2_hat"] = np.var(y - X @ b)
+
+        # As well as the residuals
+        G.nodes[i]["sv^2_hat"] = np.var(r)
+        G.nodes[i]["r"] = r
     return G
 
 
@@ -156,23 +161,13 @@ def _compute_AR_error(X, y, criterion="bic", method="lasso"):
         w = estimate_b_lasso(X, y, criterion=criterion)
         return np.var(y - X @ w)
     elif method == "lstsqr":
-        # With scipy
-        # w = estimate_b_lstsqr(X, y)
-
-        # linalg.lstsq
-        # _, r, _, _ = lstsq(X, y, check_finite=False,
-        #                    lapack_driver="gelsy")
-        # return r / X.shape[0]
-
-        # scipy.linalg cholesky solve -- by far the fastest
-        w = linalg.cho_solve(linalg.cho_factor(X.T @ X), X.T @ y)
+        w = estimate_b_lstsqr(X, y)
         return np.var(y - X @ w)
     else:
         raise ValueError("Method {} not available!".format(method))
     
 
-def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso",
-                        n_jobs=1):
+def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso"):
     T, n = X.shape
 
     # NOTE: Since sklearn uses multiple cores, this method already does make
@@ -182,19 +177,6 @@ def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso",
                                          criterion=criterion, method=method)
                      for i in range(n)])
 
-    # if n_jobs > 1:
-    #     pool = Pool(2)
-    #     # xi_i = np.array(
-    #     #     pool.starmap(univariate_AR_error,
-    #     #                  [(X[:, i], max_lag, criterion, method)
-    #     #                   for i in range(n)]))
-    #     xi_ij = np.array(pool.starmap(multi_bivariate_AR_error,
-    #                                   [(X[:, i], [X[:, j] for j in range(n)],
-    #                                     max_lag, criterion, method)
-    #                                    for i in range(n)]))
-    #     xi_ij[range(n), range(n)] = xi_i
-
-    # else:
     xi_ij = [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
                                  criterion=criterion, method=method)
               if j != i else xi_i[i] for j in range(n)]
@@ -290,7 +272,104 @@ def pw_scg(F, delta=None, b=None, R=None):
     return G
 
 
-def estimate_graph(X, criterion="bic", max_lags=10):
+def full_filter_estimator(G, criterion="bic", max_lags=10,
+                          M_passes=1):
+    # This can result in extremely long lag lengths
+    # when the final filter is built.
+
+    G_hats = []
+    G_hat = G.copy()
+
+    for m in range(M_passes):
+        X = get_X(G_hat)
+        G_hat = estimate_graph(X, G_hat, criterion, max_lags)
+        G_hats.append(G_hat)
+        G_hat = get_residual_graph(G_hat.copy())
+
+    G_hat = construct_complete_filter(G_hats)
+    return G_hat
+
+
+def construct_complete_filter(G_hat_list):
+    z = sp.Symbol("z")
+    filters = []
+    n = len(G_hat_list[0].nodes)
+
+    def construct_filter(G_hat):
+        var = gcg_to_var(G_hat, "b_hat(z)")
+        B = sp.Matrix(np.zeros((n, n)))
+
+        B_list = var.B
+        for tau, B_tau in enumerate(B_list):
+            B = B + (z ** (tau + 1)) * sp.Matrix(B_tau)
+        return B
+
+    B = construct_filter(G_hat_list[-1])
+    for G_hat in G_hat_list[:-1]:
+        B_i = sp.Matrix(np.eye(n)) - construct_filter(G_hat)
+        B = B * B_i
+    B = sp.expand(B)
+
+    def get_poly_coefs(b):
+        try:
+            return b.as_poly().all_coeffs()[::-1]
+        except sp.GeneratorsNeeded:
+            return [0]
+
+    def get_B(coefs, tau):
+        n = len(coefs)
+        B = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                bij = coefs[i][j]
+                try:
+                    B[i, j] = bij[tau]
+                except IndexError:
+                    pass
+        return B
+
+    coef_lists = [[get_coefs(B[i, j]) for j in range(n)]
+                  for i in range(n)]
+    # TODO: Can actually create G directly from here.
+
+    p_max = max(map(max, [map(len, coefs) for coefs in coef_lists]))
+    B_list = [get_B(coef_lists, tau) for tau in range(p_max)]
+    return B
+
+
+# plt.plot(np.log(np.sort(get_node_property_vector(G, "sv2"))),
+#          color="b", linewidth=2, label="$\\sigma_v^2$")
+# for m, G_hat in enumerate(G_hats):
+#     plt.plot(np.log(np.sort(get_node_property_vector(G_hat, "sv^2_hat"))),
+#              label="pass {}".format(m))
+# plt.legend()
+# plt.show()
+
+# sv = ([np.sum(get_node_property_vector(G_hat, "sv^2_hat")) for G_hat in G_hats] +
+#       [np.sum(get_node_property_vector(G, "sv2"))])
+# plt.bar(range(len(sv)), sv)
+# plt.show()    
+
+def get_residual_graph(G_hat):
+    """
+    Essentially just replaces node properties "r" with "x".
+    """
+    for i in G_hat.nodes:
+        G_hat.nodes[i]["x"] = G_hat.nodes[i]["r"]
+        del G_hat.nodes[i]["r"]
+    return G_hat
+
+
+def estimate_graph(X, G, criterion="bic", max_lags=10):
+    """
+    Produce an estimated graph from the data X.
+
+    This function suffers from poor design as I am also needing to
+    pass in a "true" graph G in order to attach the right data to
+    G_hat and calculate the estimate of sigma_v^2.
+
+    TODO: This probably needs to be fixed before doing any application
+    """
     F = compute_pairwise_gc(X, max_lag=max_lags,
                             criterion=criterion,
                             method="lstsqr")
@@ -298,7 +377,7 @@ def estimate_graph(X, criterion="bic", max_lags=10):
     G_hat = pw_scg(F, R=None, b=None, delta=np.median(F))
     G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
     G_hat = add_self_loops(G_hat, copy_G=False)
-    G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
+    G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
                        ic="bic")
     G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     return G_hat

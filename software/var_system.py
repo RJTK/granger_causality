@@ -1,7 +1,7 @@
 import numpy as np
 import networkx as nx
 from LSI_filters import random_arma
-
+from itertools import combinations
 from scipy.linalg import solve_discrete_lyapunov
 
 # TODO: It would probably be wise to do this with scipy sparse matrices!
@@ -270,8 +270,7 @@ def get_estimation_errors(G, G_hat):
             for e in all_edges]
 
 
-def drive_gcg(G, T, sigma2_v, filter_attr="b(z)",
-              stabilize=0.80):
+def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
     """
     Drives the gcg G with T samples of Gaussian noise.  sigma_v should
     be a sequence of variances for the noise.
@@ -282,8 +281,6 @@ def drive_gcg(G, T, sigma2_v, filter_attr="b(z)",
     n = len(G.nodes)
     V = np.random.normal(size=(T, n)) * np.sqrt(sigma2_v)
     var = gcg_to_var(G, filter_attr=filter_attr, assert_stable=False)
-    if stabilize:
-        var.ad_hoc_stabilize(rho=stabilize)
     X = var.drive(V)
 
     for i, node_i in enumerate(G.nodes):
@@ -357,9 +354,12 @@ class VAR:
         Stabilizes the system by iteratively dividing down all the
         constituent coefficients.
         """
-        while not self.is_stable(margin=1 - rho):
-            i = np.random.choice(range(self.p))
-            self.B[i] /= 1.25
+        # This doesn't work
+        # while not self.is_stable(margin=1 - rho):
+        #     i = np.random.choice(range(self.p))
+        #     self.B[i] /= 1.25
+
+        self.B = rho * (self.B / (self.get_rho()))
         return
 
     def is_stable(self, margin=1e-6):
@@ -510,3 +510,39 @@ class VAR:
             self._z[:n] = y
         self.x = self._z[:n]  # System output
         return Y
+
+
+def _symmetric_sum(A_list, k):
+    """
+    Calculates a symmetric sum of square matrices in A
+    e_k(A) = sum_{1 <= i1 <= i2 <= ... <= ik <= p} A[i1]A[i2]...A[ik]
+    where p = len(A_list)
+    """
+    p = len(A_list)
+    n = A_list[0].shape[0]
+    A = np.zeros((n, n))
+
+    if k == 1:
+        for j in range(p):
+            A = A + A_list[j]
+    else:
+        for ix in combinations(range(p), k):
+            A = A + np.linalg.multi_dot([A_list[j] for j in ix])
+    return A
+
+
+def A_list_to_B_list(A_list):
+    """
+    From a list [A1, A2, ..., Ap] of matrices, we return a list
+    [B1, B2, ..., Bp] of matrices where Bk = e_k(A), the k'th
+    symmetric sum.  This is useful essentially for expanding the
+    matrix roots of matrix polynomials
+    """
+    p = len(A_list)
+    return [_symmetric_sum(A_list, tau) for tau in range(1, p + 1)]
+
+
+def stabilize(A, rho):
+    G = np.max(np.abs(np.linalg.eigvals(A)))
+    A = rho * A / G
+    return A
