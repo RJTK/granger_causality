@@ -280,8 +280,10 @@ def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
     """
     n = len(G.nodes)
     V = np.random.normal(size=(T, n)) * np.sqrt(sigma2_v)
+    W = np.random.normal(size=(int(np.sqrt(T)), n)) * np.sqrt(sigma2_v)
     var = gcg_to_var(G, filter_attr=filter_attr, assert_stable=False)
-    X = var.drive(V)
+    var.drive(W)  # Burn in 
+    X = var.drive(V)  # Actual output
 
     for i, node_i in enumerate(G.nodes):
         G.nodes[node_i]["x"] = X[:, i]

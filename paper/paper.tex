@@ -347,17 +347,19 @@ of conditional orthogonality is used throughout.
 \end{theorem}
 
 \begin{proof}
-  The equivalence $(1) \iff (3)$ is essentially a restatement of the
-  definition, but is in line with the seminal work of Geweke
-  \cite{geweke1982measurement}, \cite{geweke1984}.
+  % Geweke uses the log of the ratio of the determinants of the residual variances
+  % 
+  % The equivalence $(1) \iff (3)$ is essentially a restatement of the
+  % definition, but is in line with the seminal work of Geweke
+  % \cite{geweke1982measurement}, \cite{geweke1984}.
 
-  The equivalence $(3) \iff (5)$ is also immediate from the
+  $(1) \iff (3)$ is a tautology, and $(3) \iff (5)$ is immediate from the
   definitions i.e. the projections are equal if and only if the errors
-  are equal.
+  are equal.  We have $(4) \iff (5)$ as a result of Lemma
+  \ref{lem:conditional_orthogonality_equivalence}
 
-  We have $(4) \iff (5)$ as a result of Lemma
-  \ref{lem:conditional_orthogonality_equivalence}, the additional
-  equivalence in $(4)$ is apparent since $\H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$.
+% , the additional
+%   equivalence in $(4)$ is apparent since $\H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$.
 
   $(1) \Rightarrow (2)$: The projection for $x_i(t)$ onto $\H_{t - 1}$ is
   (by definition) given by a form similar to equation

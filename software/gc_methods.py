@@ -3,13 +3,14 @@ import numpy as np
 import sympy as sp
 
 from scipy import linalg
+from scipy.linalg import toeplitz
 from sklearn.linear_model import LinearRegression, LassoLarsIC
 
 from itertools import product
 from math import ceil
 
 from var_system import (attach_node_prop, add_self_loops,
-                        remove_zero_filters)
+                        remove_zero_filters, get_X)
 
 def estimate_b_lstsqr(X, y):
     """
@@ -20,6 +21,15 @@ def estimate_b_lstsqr(X, y):
     """
     w = linalg.cho_solve(linalg.cho_factor(X.T @ X), X.T @ y)
     return w
+
+
+def estimate_b_lstsqr_cov(R, r):
+    try:
+        return linalg.cho_solve(linalg.cho_factor(R), r)
+    except linalg.LinAlgError:
+        # print("WARNING: R matrix is not PSD!  lambda_min(R) = {}"
+        #       "".format(np.min(linalg.eigvals(R))))
+        return linalg.solve(R, r, check_finite=True, lower=True)
 
 
 def estimate_b_lasso(X, y, criterion="bic"):
@@ -75,6 +85,21 @@ def form_Xy(X_raw, y_raw, p=10):
     assert X.shape == (T - p, s * p), "Wrong _X shape!"
     assert len(y) == T - p, "wrong y shape!"
     return X, y
+
+
+def block_toeplitz(left_col, top_row=None):
+    p = len(left_col)
+    assert len(top_row) == p
+    assert np.allclose(left_col[0], top_row[0])
+    if top_row is None:
+        top_row = left_col
+
+    f = left_col + top_row[::-1][:-1]
+
+    # return np.block([top_list] +
+    #                 [left_list[tau::-1] +
+    #                  top_list[tau:] for tau in range(1, p)])
+    return np.block([[f[i - j] for j in range(p)] for i in range(p)])
 
 
 def estimate_B(G, max_lag=10, copy_G=False,
@@ -145,15 +170,17 @@ def univariate_AR_error(x, max_lag=10, criterion="bic",
 def bivariate_AR_error(y, x, max_lag=10, criterion="bic",
                        method="lasso"):
     X, y =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
-                    y_raw=y)
+                    y_raw=y, p=max_lag)
     return _compute_AR_error(X, y, criterion, method)
 
 
-def multi_bivariate_AR_error(y, x_list, max_lag=10, criteroin="bic",
-                             method="lasso"):
-    return [bivariate_AR_error(y, x, max_lag=max_lag,
-                               criterion=criterion, method=method)
-                               for x in x_list]
+def compute_covariances(X, p, symmetrize=False):
+    T = X.shape[0]
+    R = np.dstack(
+        [X[p:, :].T @ X[p:, :]] + 
+        [X[p:, :].T @ X[p - tau: -tau, :]
+         for tau in range(1, p + 1)]) / (T - p + 1)
+    return R
 
 
 def _compute_AR_error(X, y, criterion="bic", method="lasso"):
@@ -167,24 +194,74 @@ def _compute_AR_error(X, y, criterion="bic", method="lasso"):
         raise ValueError("Method {} not available!".format(method))
     
 
-def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso"):
-    T, n = X.shape
+def _fast_compute_AR_error(R, r):
+    w = estimate_b_lstsqr_cov(R, r)
+    return max(0, R[0, 0] - w @ r)
 
-    # NOTE: Since sklearn uses multiple cores, this method already does make
-    # NOTE: reasonably efficient use of available processors.
 
+def compute_gc_score(xi_i, xi_ij):
+    F = -np.log(xi_ij / xi_i[:, None])
+    F[F < 0] = 0.0
+    F[np.isnan(F)] = 0.0
+    return F
+
+
+def compute_xi(X, max_lag, criterion="bic", method="lstsqr"):
+    n = X.shape[1]
     xi_i = np.array([univariate_AR_error(X[:, i], max_lag=max_lag,
                                          criterion=criterion, method=method)
                      for i in range(n)])
+    xi_ij = np.array([[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
+                                          criterion=criterion, method=method)
+                       if j != i else xi_i[i] for j in range(n)]
+                      for i in range(n)])
+    return xi_i, xi_ij
 
-    xi_ij = [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
-                                 criterion=criterion, method=method)
-              if j != i else xi_i[i] for j in range(n)]
-             for i in range(n)]
 
-    F = -np.log(xi_ij / xi_i[:, None])
-    F[F < 0] = 0.0
-    return F
+def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
+    T, n = X.shape
+    R = compute_covariances(X, max_lag)
+
+    xi_i = np.array([_fast_compute_AR_error(
+        toeplitz(R[i, i, :-1]), R[i, i, 1:])
+                     for i in range(n)])
+
+    # TODO: Most of the time is now spent forming toeplitz matrices.
+
+    # TODO:
+    # due to inaccurate estimates of covariance, these matrices
+    # are not actually guaranteed to be positive definite.
+    # We fallback on linalg.solve in those cases, but it might
+    # be reasonable instead to fallback onto form_Xy and direct
+    # least squares.
+    def form_Rrij(R, i, j):
+        C = toeplitz(R[j, i, :-1], R[i, j, :-1])  # Left column then top row!
+        Rij = np.block([[toeplitz(R[i, i, :-1]), C],
+                        [C.T, toeplitz(R[j, j, :-1])]])
+        rij = np.concatenate((R[i, i, 1:], R[i, j, 1:]))
+        Rij = Rij + reg_delta * np.eye(Rij.shape[0])
+        return Rij, rij
+
+    xi_ij = np.array([[_fast_compute_AR_error(*form_Rrij(R, i, j))
+                       if j != i else xi_i[i] for j in range(n)]
+                      for i in range(n)])
+    return xi_i, xi_ij
+
+
+def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso"):
+    xi_i, xi_ij = compute_xi(X, max_lag, criterion, method)
+    return compute_gc_score(xi_i, xi_ij)
+
+
+def fast_compute_pairwise_gc(X, max_lag=10):
+    """
+    This is /dramatically/ faster than compute_pairwise_gc,
+    only difference is that it handles just plain least squares.
+
+    TODO: However there are significant discrepancies!
+    """
+    xi_i, xi_ij = fast_compute_xi(X, max_lag)
+    return compute_gc_score(xi_i, xi_ij)
 
 
 def pw_scg(F, delta=None, b=None, R=None):
@@ -227,6 +304,7 @@ def pw_scg(F, delta=None, b=None, R=None):
 
     # These are really bad ways to choose parameters
     if R is None:
+
         R = ceil(np.log(n))
     if b is None:
         b = ceil(np.sqrt(n))
@@ -257,7 +335,7 @@ def pw_scg(F, delta=None, b=None, R=None):
     while len(S) != 0:
         S = S - P_k
         I = compute_incident_strength(F, S, W_pred)
-        P_k = arg_select_min_N(I, N=b)
+        P_k = arg_select_min_N(I, N=b * len(P))
 
         for i, j in sort_edges_by_F(P, P_k, F, W_set):
             if not any((has_path(G, a, j) for a in G.predecessors(i))):
@@ -286,69 +364,73 @@ def full_filter_estimator(G, criterion="bic", max_lags=10,
         G_hats.append(G_hat)
         G_hat = get_residual_graph(G_hat.copy())
 
-    G_hat = construct_complete_filter(G_hats)
+    # G_hat = construct_complete_filter(G_hats)
+    G_hat = combine_graphs(G_hats)
+    G_hat = attach_node_prop(G_hat, G, "x", "x")
+    G_hat = estimate_B(G_hat, max_lags, ic="bic")
+    G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     return G_hat
 
 
-def construct_complete_filter(G_hat_list):
-    z = sp.Symbol("z")
-    filters = []
-    n = len(G_hat_list[0].nodes)
+def combine_graphs(G_hat_list):
+    G_hat = nx.DiGraph()
+    G_hat.add_nodes_from(G_hat_list[0].nodes)
 
-    def construct_filter(G_hat):
-        var = gcg_to_var(G_hat, "b_hat(z)")
-        B = sp.Matrix(np.zeros((n, n)))
-
-        B_list = var.B
-        for tau, B_tau in enumerate(B_list):
-            B = B + (z ** (tau + 1)) * sp.Matrix(B_tau)
-        return B
-
-    B = construct_filter(G_hat_list[-1])
-    for G_hat in G_hat_list[:-1]:
-        B_i = sp.Matrix(np.eye(n)) - construct_filter(G_hat)
-        B = B * B_i
-    B = sp.expand(B)
-
-    def get_poly_coefs(b):
-        try:
-            return b.as_poly().all_coeffs()[::-1]
-        except sp.GeneratorsNeeded:
-            return [0]
-
-    def get_B(coefs, tau):
-        n = len(coefs)
-        B = np.zeros((n, n))
-        for i in range(n):
-            for j in range(n):
-                bij = coefs[i][j]
-                try:
-                    B[i, j] = bij[tau]
-                except IndexError:
-                    pass
-        return B
-
-    coef_lists = [[get_coefs(B[i, j]) for j in range(n)]
-                  for i in range(n)]
-    # TODO: Can actually create G directly from here.
-
-    p_max = max(map(max, [map(len, coefs) for coefs in coef_lists]))
-    B_list = [get_B(coef_lists, tau) for tau in range(p_max)]
-    return B
+    for G_i in G_hat_list:
+        G_hat.add_edges_from(list(G_i.edges))
+    return G_hat
 
 
-# plt.plot(np.log(np.sort(get_node_property_vector(G, "sv2"))),
-#          color="b", linewidth=2, label="$\\sigma_v^2$")
-# for m, G_hat in enumerate(G_hats):
-#     plt.plot(np.log(np.sort(get_node_property_vector(G_hat, "sv^2_hat"))),
-#              label="pass {}".format(m))
-# plt.legend()
-# plt.show()
+# def construct_complete_filter(G_hat_list):
+#     z = sp.Symbol("z")
+#     filters = []
+#     n = len(G_hat_list[0].nodes)
 
-# sv = ([np.sum(get_node_property_vector(G_hat, "sv^2_hat")) for G_hat in G_hats] +
-#       [np.sum(get_node_property_vector(G, "sv2"))])
-# plt.bar(range(len(sv)), sv)
-# plt.show()    
+#     def construct_filter(G_hat):
+#         var = gcg_to_var(G_hat, "b_hat(z)")
+#         B = sp.Matrix(np.zeros((n, n)))
+
+#         B_list = var.B
+#         for tau, B_tau in enumerate(B_list):
+#             B = B + (z ** (tau + 1)) * sp.Matrix(B_tau)
+#         return B
+
+#     B = construct_filter(G_hat_list[-1])
+#     for G_hat in G_hat_list[:-1]:
+#         B_i = sp.Matrix(np.eye(n)) - construct_filter(G_hat)
+#         B = B * B_i
+#     B = sp.expand(B)
+
+#     def get_poly_coefs(b):
+#         try:
+#             return b.as_poly().all_coeffs()[::-1]
+#         except sp.GeneratorsNeeded:
+#             return [0]
+
+#     def get_B(coefs, tau):
+#         n = len(coefs)
+#         B = np.zeros((n, n))
+#         for i in range(n):
+#             for j in range(n):
+#                 bij = coefs[i][j]
+#                 try:
+#                     B[i, j] = bij[tau]
+#                 except IndexError:
+#                     pass
+#         return B
+
+#     coef_lists = [[get_poly_coefs(B[i, j]) for j in range(n)]
+#                   for i in range(n)]
+#     # TODO: Can actually create G directly from here.
+
+#     p_max = max(map(max, [map(len, coefs) for coefs in coef_lists]))
+#     B_list = [get_B(coef_lists, tau) for tau in range(p_max)]
+#     B = np.dstack(B_list)
+
+#     G_hat = nx.DiGraph()
+
+#     for i in range(n)
+#     return B
 
 def get_residual_graph(G_hat):
     """
@@ -374,11 +456,14 @@ def estimate_graph(X, G, criterion="bic", max_lags=10):
                             criterion=criterion,
                             method="lstsqr")
 
-    G_hat = pw_scg(F, R=None, b=None, delta=np.median(F))
+    # F = fast_compute_pairwise_gc(X, max_lag=max_lags)
+
+    T, n = X.shape
+    G_hat = pw_scg(F, R=1 + int(np.log(n)), b=1, delta=np.median(F))
     G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
     G_hat = add_self_loops(G_hat, copy_G=False)
     G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
-                       ic="bic")
+                       ic=criterion)
     G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     return G_hat
 

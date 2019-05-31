@@ -228,14 +228,19 @@ def plot_filter_pz(b, a):
     return
 
 
-def plot_filter(b, a, dB = True, plot_gd = False):
+def plot_filter(b, a, dB=True, plot_gd=False, ret_fig=False,
+                ax_fig=None):
     """
     Plots a filter's response
     """
     w, h = freqz(b, a)
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1,1,1)
-    ax1.set_title("frequency response")
+
+    if ax_fig:
+        ax1, fig = ax_fig
+    else:
+        fig = plt.figure()
+        ax1 = fig.add_subplot(1,1,1)
+        ax1.set_title("frequency response")
 
     if dB:
         ax1.plot(w, 20*np.log10(abs(h)), "b", linewidth = 2)
@@ -253,8 +258,11 @@ def plot_filter(b, a, dB = True, plot_gd = False):
         ax2.plot(w, gd, "g", linewidth = 2)
         ax2.set_ylabel("Group Delay [s]", color = "g")
 
-    fig.show()
-    return
+    if ret_fig:
+        return ax1, fig
+    else:
+        fig.show()
+        return
 
 #-------------------------------------------------------------------------------
 def plot_filter_PSD(b, a, dB = True, title = "PSD"):
