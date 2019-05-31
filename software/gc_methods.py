@@ -199,11 +199,17 @@ def _fast_compute_AR_error(R, r):
     return max(0, R[0, 0] - w @ r)
 
 
-def compute_gc_score(xi_i, xi_ij):
-    F = -np.log(xi_ij / xi_i[:, None])
-    F[F < 0] = 0.0
-    F[np.isnan(F)] = 0.0
+def compute_gc_score(xi_i, xi_ij, T, p_lags):
+    assert T > 1 + 2 * p_lags,\
+        "T = {} is too small for p_lags = {}".format(T, p_lags)
+    F = T * (xi_i[:, None] / xi_ij - 1)  # This is chi2(p) under the null
+    # F = F * (T - 2 * p_lags - 1) / p_lags
     return F
+
+    # F = -np.log(xi_ij / xi_i[:, None])
+    # F[F < 0] = 0.0
+    # F[np.isnan(F)] = 0.0
+    # return F
 
 
 def compute_xi(X, max_lag, criterion="bic", method="lstsqr"):
@@ -249,8 +255,14 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 
 
 def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso"):
+    T, _, p = *X.shape, max_lag
     xi_i, xi_ij = compute_xi(X, max_lag, criterion, method)
-    return compute_gc_score(xi_i, xi_ij)
+    return compute_gc_score(xi_i, xi_ij, T, p)
+
+
+def normalize_gc_score(F, p):
+    F = sps.chi2.cdf(F, p)
+    return F
 
 
 def fast_compute_pairwise_gc(X, max_lag=10):
@@ -261,8 +273,9 @@ def fast_compute_pairwise_gc(X, max_lag=10):
     TODO: However there are significant discrepancies!
     TODO: There is something clearly wrong about this implementation.
     """
+    T, _, p = *X.shape, max_lag
     xi_i, xi_ij = fast_compute_xi(X, max_lag)
-    return compute_gc_score(xi_i, xi_ij)
+    return compute_gc_score(xi_i, xi_ij, T, p)
 
 
 def pw_scg(F, delta=None, b=None, R=None):
@@ -286,7 +299,7 @@ def pw_scg(F, delta=None, b=None, R=None):
         return set(arg_sorted[:N])
 
     def compute_incident_strength(F, S, W_pred):
-        return {i: sum(F[i, j] for j in W_pred[i]) for i in S}
+        return {i: sum(F[i, j] for j in S & set(W_pred[i])) for i in S}
 
     def sort_edges_by_F(P_kr, P_k, F, W):
         return sorted([(i, j) for (i, j) in W if (i in P_kr and j in P_k)],
@@ -318,16 +331,23 @@ def pw_scg(F, delta=None, b=None, R=None):
         """
         Whether adding edge i, j to G maintains strong causality.
         """
-        common_ancestors = len(nx.ancestors(G, i) & nx.ancestors(G, j))
-        common_descendants = len(nx.descendants(G, i) & nx.descendants(G, j))
-        return common_ancestors == 0 and common_descendants == 0
+        if i == j:
+            return False
+        anc_j = nx.ancestors(G, j)
+        anc_i = nx.ancestors(G, i)
+        if (i in anc_j) or (j in anc_i):
+            return False
+        if len(anc_i & anc_j):  # Common ancestors
+            return False
+        if len(nx.descendants(G, i) & nx.descendants(G, j)):  # Common descendants
+            return False
+        return True
 
     n = F.shape[0]
     S = set(range(n))
 
     # These are really bad ways to choose parameters
     if R is None:
-
         R = ceil(np.log(n))
     if b is None:
         b = ceil(np.sqrt(n))
@@ -351,14 +371,27 @@ def pw_scg(F, delta=None, b=None, R=None):
 
     # incident strength of each node
     I = compute_incident_strength(F, S, W_pred)
-    P = arg_select_min_N(I, N=R)
+    # P = arg_select_min_N(I, N=R)
+
+    # TODO: Ensure non-empty
+    P = arg_select_min_N(I, N=sum(I[i] < ceil(min(I.values())) for i in I))
+    if len(P) == 0:
+        P = arg_select_min_N(I, N=sum(I[i] <= ceil(min(I.values())) for i in I))
     P_k = [P]
 
     # ------------ Iterations -------------------
     while len(S) != 0:
         S = S - P_k[-1]
         I = compute_incident_strength(F, S, W_pred)
-        P_k_next = arg_select_min_N(I, N=b * len(P_k[-1]))
+        # P_k_next = arg_select_min_N(I, N=b * len(P_k[-1]))
+
+        # TODO: Ensure non-empty
+        P_k_next = arg_select_min_N(
+            I, N=sum(I[i] < ceil(min(I.values())) for i in I))
+        if len(P_k_next) == 0:
+            P_k_next = arg_select_min_N(
+                I, N=sum(I[i] <= ceil(min(I.values())) for i in I))
+
         P_k.append(P_k_next)
 
         for r in range(1, k + 1):
@@ -483,12 +516,13 @@ def estimate_graph(X, G, criterion="bic", max_lags=10):
     F = compute_pairwise_gc(X, max_lag=max_lags,
                             criterion=criterion,
                             method="lstsqr")
+    F = normalize_gc_score(F)
 
     # F = fast_compute_pairwise_gc(X, max_lag=max_lags)
 
-
     T, n = X.shape
-    G_hat = pw_scg(F, R=1 + int(np.log(n)), b=2, delta=0.05)
+    G_hat = pw_scg(F, R=5, b=2, delta=delta)
+    draw_graph_estimates(G, G_hat)
     G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
     G_hat = add_self_loops(G_hat, copy_G=False)
     # draw_graph_estimates(G, G_hat)
@@ -496,7 +530,7 @@ def estimate_graph(X, G, criterion="bic", max_lags=10):
     G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
                        ic=criterion)
     G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
-    # draw_graph_estimates(G, G_hat)
+    draw_graph_estimates(G, G_hat)
     return G_hat
 
 

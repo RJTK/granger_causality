@@ -1842,6 +1842,41 @@ number of steps.
   graph clearly remains pairwise recoverable.
 \end{example}
 
+\section{Finite Sample Graph Recovery}
+\label{sec:structure_learning}
+\hl{TODO: Citation for this scheme}
+In performing pairwise estimates $x_j \pwgc x_i$ we follow the simple
+scheme of estimating the following two linear models via ordinary
+least squares:
+
+\begin{align}
+  H_0:&\ \widehat{x}_i^{(i)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau),\\
+  H_1:&\ \widehat{x}_i^{(i, j)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_j}b_{ij}(\tau)x_j(t - \tau).
+\end{align}
+
+Under the null hypothesis $H_0$ we can form the asymptotically
+$\chi^2(p_j)$ distributed test statistic
+
+\begin{equation}
+  F_{ij} = \frac{T}{p_j}\Big(\frac{\xi_i}{\xi_{ij}} - 1\Big),
+\end{equation}
+
+where $\xi_i$ is the sample mean square of the residuals $x_i(t) - \widehat{x}^{(i)}_i(t)$, and similarly for $\xi_{ij}$.  Given additional assumptions on $x(t)$ (\hl{TODO: What assumptions?}) we have the convergence (\hl{a.s. or in P?})
+
+\begin{equation}
+  \underset{T \rightarrow \infty}{\text{lim }}F_{ij} =
+  \left\{
+    \begin{array}{ll}
+      0;\ x_j \npwgc x_i\\
+      \infty;\ x_j \pwgc x_i
+    \end{array}
+  \right.
+\end{equation}
+
+Therefore, we can make the statement that Algorithm \ref{alg:pwgr_heuristic} asymptotically implements Algorithm \ref{alg:pwgr}.  \hl{TODO: Modify Algorithm 2 to make this true.}
+
+It is known (\hl{citation}) that $F_{ij}$ is sensitive to the choice of $p_i$ and $p_j$.
+
 \section{Structure Learning}
 \label{sec:structure_learning}
 \subsection{Local Search Heuristics}
