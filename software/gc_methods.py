@@ -259,6 +259,7 @@ def fast_compute_pairwise_gc(X, max_lag=10):
     only difference is that it handles just plain least squares.
 
     TODO: However there are significant discrepancies!
+    TODO: There is something clearly wrong about this implementation.
     """
     xi_i, xi_ij = fast_compute_xi(X, max_lag)
     return compute_gc_score(xi_i, xi_ij)
@@ -299,6 +300,28 @@ def pw_scg(F, delta=None, b=None, R=None):
         else:
             return True
 
+    def get_paths(G, i, j):
+        return list(nx.algorithms.simple_paths.all_simple_paths(G, i, j))
+
+    def is_strongly_causal(G):
+        for j in G.nodes:
+            for i in nx.ancestors(G, j):
+                num_paths = len(get_paths(G, i, j))
+                if num_paths == 0:
+                    raise AssertionError("{} is not an ancestor of {}!"
+                                         "".format(i, j))
+                elif num_paths > 1:
+                    return False
+        return True
+
+    def maintains_strong_causality(G, i, j):
+        """
+        Whether adding edge i, j to G maintains strong causality.
+        """
+        common_ancestors = len(nx.ancestors(G, i) & nx.ancestors(G, j))
+        common_descendants = len(nx.descendants(G, i) & nx.descendants(G, j))
+        return common_ancestors == 0 and common_descendants == 0
+
     n = F.shape[0]
     S = set(range(n))
 
@@ -329,37 +352,42 @@ def pw_scg(F, delta=None, b=None, R=None):
     # incident strength of each node
     I = compute_incident_strength(F, S, W_pred)
     P = arg_select_min_N(I, N=R)
-    P_k = P
+    P_k = [P]
 
     # ------------ Iterations -------------------
     while len(S) != 0:
-        S = S - P_k
+        S = S - P_k[-1]
         I = compute_incident_strength(F, S, W_pred)
-        P_k = arg_select_min_N(I, N=b * len(P))
+        P_k_next = arg_select_min_N(I, N=b * len(P_k[-1]))
+        P_k.append(P_k_next)
 
-        for i, j in sort_edges_by_F(P, P_k, F, W_set):
-            if not any((has_path(G, a, j) for a in G.predecessors(i))):
-                G.add_edge(i, j)
-        P = P | P_k
+        for r in range(1, k + 1):
+            for i, j in sort_edges_by_F(P_k[-1 - r], P_k[-1], F, W_set):
+                if maintains_strong_causality(G, i, j):
+                    G.add_edge(i, j)
+        P = P | P_k[-1]
 
         if k > 10 * n ** 2:  # Clearly stuck
             raise AssertionError("pw_scg has failed to terminate after {} iterations.  "
                                  "S = {}, P = {}".format(k, S, P))
         k = k + 1
 
+    assert is_strongly_causal(G), "G is not strongly causal!"
     return G
 
 
 def full_filter_estimator(G, criterion="bic", max_lags=10,
-                          M_passes=1):
+                          M_passes=1, T_max=None):
     # This can result in extremely long lag lengths
     # when the final filter is built.
 
     G_hats = []
     G_hat = G.copy()
+    if T_max is None:
+        T_max = len(G.nodes[0]["x"])
 
     for m in range(M_passes):
-        X = get_X(G_hat)
+        X = get_X(G_hat)[:T_max]
         G_hat = estimate_graph(X, G_hat, criterion, max_lags)
         G_hats.append(G_hat)
         G_hat = get_residual_graph(G_hat.copy())
@@ -458,13 +486,17 @@ def estimate_graph(X, G, criterion="bic", max_lags=10):
 
     # F = fast_compute_pairwise_gc(X, max_lag=max_lags)
 
+
     T, n = X.shape
-    G_hat = pw_scg(F, R=1 + int(np.log(n)), b=1, delta=np.median(F))
+    G_hat = pw_scg(F, R=1 + int(np.log(n)), b=2, delta=0.05)
     G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
     G_hat = add_self_loops(G_hat, copy_G=False)
+    # draw_graph_estimates(G, G_hat)
+
     G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
                        ic=criterion)
     G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
+    # draw_graph_estimates(G, G_hat)
     return G_hat
 
 
