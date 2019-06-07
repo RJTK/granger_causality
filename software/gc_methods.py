@@ -183,6 +183,29 @@ def compute_covariances(X, p, symmetrize=False):
     return R
 
 
+# TODO: This is roughly the idea, compute covariances by inverse fft
+# TODO: on the spectral estimate.  Not sure why there is 1 / 2 scaling
+# TODO: needed.  Results for the cross density is also pretty far off.
+# TODO: In any case, we get positive definiteness guarantees (right?)
+# TODO: I think there will only be a PSD guarantee if S(w) is PSD for
+# TODO: every w.  However, this may not be the case if I estimate the
+# TODO: elements of S(w) separately, which brings us back to the original
+# TODO: problem.
+# x0 = X[:T, 0]
+# x1 = X[:T, 1]
+# _, S0 = signal.welch(x0, scaling="density")
+# _, S1 = signal.welch(x1, scaling="density")
+# _, P01 = signal.csd(x0, x1, scaling="density", window="rect",
+#                     return_onesided=False)
+# _, P10 = signal.csd(x1, x0, scaling="density")
+
+# _, S0 = signal.welch(X[:T, 0], scaling="density")
+# r0 = np.real(np.fft.ifft(np.append(S0, S0[1:][::-1])))
+# R0_spec = toeplitz(r0[:p]) / 2
+
+# r01 = np.real(np.fft.ifft(P01)) / 2
+# R01_spec = toeplitz(r01[:p])
+
 def _compute_AR_error(X, y, criterion="bic", method="lasso"):
     if method == "lasso":
         w = estimate_b_lasso(X, y, criterion=criterion)
@@ -254,6 +277,11 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
     return xi_i, xi_ij
 
 
+# TODO: Use the criterion for selecting lag lengths
+# TODO: There are actually a few ways I could determine edge prescense
+# TODO: (1) for scarce data, use sklearn ARD or possibly LASSO
+# TODO: (2) when data is abundant stick with OLS and chi2 tests
+# TODO: -- However, still need to select number of parameters!
 def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso"):
     T, _, p = *X.shape, max_lag
     xi_i, xi_ij = compute_xi(X, max_lag, criterion, method)
@@ -278,21 +306,18 @@ def fast_compute_pairwise_gc(X, max_lag=10):
     return compute_gc_score(xi_i, xi_ij, T, p)
 
 
-def pw_scg(F, delta=None, b=None, R=None):
+def pw_scg(F, p_j, alpha=0.05):
     """
     Graph recovery heuristic
 
-    F should be an n x n array where each entry is given by F_ij =
-    log(xi_ij / xi_i) i.e. the normalized (pairwise) GC statistic.
+    F should be an n x n array where each entry is given by
 
-    delta is a thresholding parameter, b is a "branching" parameter,
-    and R is the number of root nodes.
+    F_ij = (T / p_j) * [(xi_i / xi_ij) - 1] i.e. chi2(p_j) test statistic.
+
+    alpha is a significance level, and p_j is the number of lags for
+    the x_j process (usuall the same as p_i, or just 'p').
 
     We return an nx.DiGraph
-
-    Defaults: R = log(n)
-              b = sqrt(n)
-              delta = median(F)  # NOTE: this will often be 0
     """
     def arg_select_min_N(I, N):
         arg_sorted = sorted(I.keys(), key=lambda k: I[k])
@@ -345,14 +370,9 @@ def pw_scg(F, delta=None, b=None, R=None):
 
     n = F.shape[0]
     S = set(range(n))
-
-    # These are really bad ways to choose parameters
-    if R is None:
-        R = ceil(np.log(n))
-    if b is None:
-        b = ceil(np.sqrt(n))
-    if delta is None:
-        delta = np.median(F)
+    # Larger value means more confident about an edge
+    P_edge = sps.chi2.cdf(F, p_j)
+    P_edge[P_edge < 1 - alpha] = 0
 
     # Graph to return
     G = nx.DiGraph()
@@ -361,7 +381,7 @@ def pw_scg(F, delta=None, b=None, R=None):
     # ------------- Initialization -------------
     # Set of candidate edges
     W_set = {(i, j) for (i, j) in product(S, S)
-             if (F[j, i] > F[i, j] and F[j, i] > delta)}
+             if (F[j, i] >= F[i, j] and P_edge[j, i] > 0)}
 
     # Predecessor edges of a node, i.e. W[i] = {j | (j, i) \in W}
     W_pred = {i: [j for j in S if (j, i) in W_set ]
@@ -371,33 +391,43 @@ def pw_scg(F, delta=None, b=None, R=None):
 
     # incident strength of each node
     I = compute_incident_strength(F, S, W_pred)
-    # P = arg_select_min_N(I, N=R)
 
-    # TODO: Ensure non-empty
-    P = arg_select_min_N(I, N=sum(I[i] < ceil(min(I.values())) for i in I))
+    # Probability sum of input edges  (roughly an incident edge count)
+    C = compute_incident_strength(P_edge, S, W_pred)
+
+    # Choose the next layer based on the number of incident edges,
+    # and ensure that we choose at least 1.
+    P = arg_select_min_N(C, N=sum(C[i] < ceil(min(C.values())) for i in C))
     if len(P) == 0:
-        P = arg_select_min_N(I, N=sum(I[i] <= ceil(min(I.values())) for i in I))
+        P = arg_select_min_N(C, N=sum(C[i] <= ceil(min(C.values())) for i in C))
     P_k = [P]
 
     # ------------ Iterations -------------------
     while len(S) != 0:
+        print(P_k[-1])
+
         S = S - P_k[-1]
         I = compute_incident_strength(F, S, W_pred)
-        # P_k_next = arg_select_min_N(I, N=b * len(P_k[-1]))
+        C = compute_incident_strength(P_edge, S, W_pred)
 
-        # TODO: Ensure non-empty
         P_k_next = arg_select_min_N(
-            I, N=sum(I[i] < ceil(min(I.values())) for i in I))
+            C, N=sum(C[i] < ceil(min(C.values())) for i in C))
         if len(P_k_next) == 0:
             P_k_next = arg_select_min_N(
-                I, N=sum(I[i] <= ceil(min(I.values())) for i in I))
+                C, N=sum(C[i] <= ceil(min(C.values())) for i in C))
 
         P_k.append(P_k_next)
 
-        for r in range(1, k + 1):
-            for i, j in sort_edges_by_F(P_k[-1 - r], P_k[-1], F, W_set):
-                if maintains_strong_causality(G, i, j):
-                    G.add_edge(i, j)
+        # Append new edges in order of test statistic magnitude
+        # for r in range(1, k + 1):
+        # NOTE: It appears that sorting on F on all of the previous P_k sets
+        # NOTE: works pretty well.  We should expect that "real" edges will
+        # NOTE: have larger F values.  In the "theoretical" algorithm, we can
+        # NOTE: only check yes/no, and for that reason we need to apply backwards
+        # TODO: We still end up with a lot of false positives here though
+        for i, j in sort_edges_by_F(reduce(set.union, P_k[:-1]), P_k[-1], F, W_set):
+            if maintains_strong_causality(G, i, j):
+                G.add_edge(i, j)
         P = P | P_k[-1]
 
         if k > 10 * n ** 2:  # Clearly stuck
