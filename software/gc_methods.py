@@ -204,11 +204,14 @@ def bivariate_AR_error(y, x, max_lag=10):
 
 
 def compute_covariances(X, p, symmetrize=False):
+    # We do not do any normalizing
+    # I believe this should ensure positive-definite ness.
+    # We are effectively /windowing/ the signal.
     T = X.shape[0]
     R = np.dstack(
         [X[p:, :].T @ X[p:, :]] + 
         [X[p:, :].T @ X[p - tau: -tau, :]
-         for tau in range(1, p + 1)]) / (T - p + 1)
+         for tau in range(1, p + 1)])
     return R
 
 
