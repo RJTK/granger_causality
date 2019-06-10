@@ -169,8 +169,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
 
 # NOTE: forming the Xy matrices consumes only microseconds
-def univariate_AR_error(x, max_lag=10, criterion="bic",
-                        method="lasso", ret_p_opt=False):
+def univariate_AR_error(x, max_lag=10, criterion="bic"):
     # Try larger model orders until we don't increase the BIC
     if criterion != "bic":
         raise NotImplementedError("Only BIC criterion is supported")
@@ -179,8 +178,7 @@ def univariate_AR_error(x, max_lag=10, criterion="bic",
     T = len(x)
     for p in range(1, max_lag + 1):
         X_, y_ = form_Xy(X_raw=x[:, None], y_raw=x, p=p)
-        sv2_p = _compute_AR_error(X_, y_, criterion="bic",
-                                  method="lstsqr")
+        sv2_p = _compute_AR_error(X_, y_, criterion="bic")
         bic_p = -(T - p - 1) * np.log(sv2_p) - p * np.log(T - p - 1)
         if bic_p > bic:
             bic = bic_p
@@ -188,14 +186,10 @@ def univariate_AR_error(x, max_lag=10, criterion="bic",
         else:
             p = p - 1
             break
-    if ret_p_opt:
-        return sv2_p, p
-    else:
-        return sv2_p
+    return sv2_p, p
 
 
-def bivariate_AR_error(y, x, max_lag=10, criterion="bic",
-                       method="lstsqr", ret_p_opt=False):
+def bivariate_AR_error(y, x, max_lag=10, criterion="bic"):
     if criterion != "bic":
         raise NotImplementedError("Only BIC criterion is supported")
 
@@ -204,7 +198,7 @@ def bivariate_AR_error(y, x, max_lag=10, criterion="bic",
     for p in range(1, max_lag + 1):
         X_, y_ =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
                           y_raw=y, p=p)
-        sv2_p = _compute_AR_error(X_, y_, criterion="bic", method="lstsqr")
+        sv2_p = _compute_AR_error(X_, y_, criterion="bic")
         bic_p = -(T - p - 1) * np.log(sv2_p) - 2 * p * np.log(T - p - 1)
         if bic_p > bic:
             bic = bic_p
@@ -212,10 +206,7 @@ def bivariate_AR_error(y, x, max_lag=10, criterion="bic",
         else:
             p = p - 1
             break
-    if ret_p_opt:
-        return sv2_p, p
-    else:
-        return sv2_p
+    return sv2_p, p
 
 
 def compute_covariances(X, p, symmetrize=False):
@@ -250,15 +241,9 @@ def compute_covariances(X, p, symmetrize=False):
 # r01 = np.real(np.fft.ifft(P01)) / 2
 # R01_spec = toeplitz(r01[:p])
 
-def _compute_AR_error(X, y, criterion="bic", method="lasso"):
-    if method == "lasso":
-        w = estimate_b_lasso(X, y, criterion=criterion)
-        return np.var(y - X @ w)
-    elif method == "lstsqr":
-        w = estimate_b_lstsqr(X, y)
-        return np.var(y - X @ w)
-    else:
-        raise ValueError("Method {} not available!".format(method))
+def _compute_AR_error(X, y, criterion="bic"):
+    w = estimate_b_lstsqr(X, y)
+    return np.var(y - X @ w)
     
 
 def _fast_compute_AR_error(R, r):
@@ -267,53 +252,37 @@ def _fast_compute_AR_error(R, r):
 
 
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
-    assert T > 1 + 2 * p_lags,\
-        "T = {} is too small for p_lags = {}".format(T, p_lags)
-    F = T * (xi_i[:, None] / xi_ij - 1)  # This is chi2(p) under the null
+    assert T > 1 + 2 * np.max(p_lags),\
+        "T = {} is too small for max(p_lags) = {}".format(T, np.max(p_lags))
+    # TODO: Should this be T / p_j ??
+    F = T * (xi_i[:, None] / xi_ij - 1) / p_lags # This is chi2(p) under the null
     # F = F * (T - 2 * p_lags - 1) / p_lags
     return F
 
-    # F = -np.log(xi_ij / xi_i[:, None])
-    # F[F < 0] = 0.0
-    # F[np.isnan(F)] = 0.0
-    # return F
 
-
-def compute_xi(X, max_lag, criterion="bic", method="lstsqr",
-               ret_p_opt=False):
+def compute_xi(X, max_lag, criterion="bic"):
     """
-    Calculates xi_i and xi_ij, the errors for uni-  and bi- variate
-    AR models.  
+    Calculates xi_i and xi_ij, the errors for uni- and bi- variate
+    AR models.  We return xi_i (array), xi_ij (matrix), p_i (array),
+    p_ij (matrix)
+
+    p_i and p_ij are lag lengths estimated via BIC.
     """
     n = X.shape[1]
-    if ret_p_opt:
-        xi_p_i = np.array(
-            [univariate_AR_error(X[:, i], max_lag=max_lag,
-                                 criterion=criterion, method=method,
-                                 ret_p_opt=True)
-             for i in range(n)])
-        xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
+    xi_p_i = np.array(
+        [univariate_AR_error(X[:, i], max_lag=max_lag,
+                             criterion=criterion)
+         for i in range(n)])
+    xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
 
-        xi_p_ij = np.array(
-            [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
-                                 criterion=criterion, method=method,
-                                 ret_p_opt=True)
-              if j != i else xi_p_i[i] for j in range(n)]
-             for i in range(n)])
-        xi_ij, p_ij = xi_p_ij[:, :, 0], xi_p_ij[:, :, 1]
-        return xi_i, xi_ij, p_i, p_ij
+    xi_p_ij = np.array(
+        [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
+                             criterion=criterion)
+          if j != i else xi_p_i[i] for j in range(n)]
+         for i in range(n)])
+    xi_ij, p_ij = xi_p_ij[:, :, 0], xi_p_ij[:, :, 1]
+    return xi_i, xi_ij, p_i, p_ij
         
-    else:
-        xi_i = np.array(
-            [univariate_AR_error(X[:, i], max_lag=max_lag,
-                                 criterion=criterion, method=method)
-             for i in range(n)])
-        xi_ij = np.array(
-            [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
-                                 criterion=criterion, method=method)
-              if j != i else xi_i[i] for j in range(n)]
-             for i in range(n)])
-        return xi_i, xi_ij
 
 
 def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
@@ -352,18 +321,12 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 # TODO: (1) for scarce data, use sklearn ARD or possibly LASSO
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
-def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso",
-                        ret_p_opt=False):
+def compute_pairwise_gc(X, max_lag=10, criterion="bic"):
     T, _, p = *X.shape, max_lag
-    if ret_p_opt:
-        xi_i, xi_ij, p_i, p_ij = compute_xi(X, max_lag,
-                                            criterion=criterion,
-                                            method=method, ret_p_opt=True)
-        F = compute_gc_score(xi_i, xi_ij, T, p)
-        return F, p_ij  # p_i is actually irrelevant.
-    else:
-        xi_i, xi_ij = compute_xi(X, max_lag, criterion, method)
-    return compute_gc_score(xi_i, xi_ij, T, p)
+    xi_i, xi_ij, p_i, p_ij = compute_xi(
+        X, max_lag, criterion=criterion)
+    F = compute_gc_score(xi_i, xi_ij, T, p_ij)
+    return F, p_ij  # p_i is actually irrelevant.
 
 
 def normalize_gc_score(F, p):
@@ -628,9 +591,7 @@ def estimate_graph(X, G, criterion="bic", max_lags=10,
 
     # Compute the pairwise errors and filter sizes
     F, P = compute_pairwise_gc(X, max_lag=max_lags,
-                               criterion=criterion,
-                               method="lstsqr",
-                               ret_p_opt=True)
+                               criterion=criterion)
 
     # Screen edges via benjamini hochberg criterion
     P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
@@ -653,7 +614,7 @@ def estimate_graph(X, G, criterion="bic", max_lags=10,
 
     if method == "lasso":
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
-                           ic=criterion)
+                           ic=criterion, method=method)
         G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     elif method == "lstsqr":
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
