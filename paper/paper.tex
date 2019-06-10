@@ -238,6 +238,7 @@ We formally state our setup to conclude this section:
 \subsection{Granger Causality}
 
 \begin{definition}[Granger Causality]
+  \label{def:granger_causality}
   For the WSS series $x(t)$ we say that component $x_j$
   \textit{Granger-Causes} (GC) component $x_i$ (with respect to $x$)
   and write $x_j \gc x_i$ if given Hilbert spaces
@@ -1844,24 +1845,49 @@ number of steps.
 
 \section{Finite Sample Graph Recovery}
 \label{sec:structure_learning}
-\hl{TODO: Citation for this scheme}
-In performing pairwise estimates $x_j \pwgc x_i$ we follow the simple
-scheme of estimating the following two linear models via ordinary
-least squares:
+In this section we provide a review of our methods for implementing
+Algorithm 1 given a \textit{finite} sample of $T$ data points.  We
+apply the simplest reasonable methods in order to maintain a focus on
+our main contributions (i.e. Algorithm \ref{alg:pwgr}), more
+sophisticated schemes can only serve to improve the results.  Textbook
+reviews of the following concepts are provided e.g. by
+\cite{all_of_statistics}, \cite{murphy_mlp}, and elsewhere.
+
+We proceed first by defining pairwise Granger-causality hypothesis
+tests, second a model order selection criteria, and finally the method
+for choosing a $P-$value cutoff.
+
+\subsection{Hypothesis Testing}
+In performing pairwise checks for Granger-causality $x_j \pwgc x_i$ we
+follow the simple scheme of estimating the two linear models via
+ordinary least squares:
 
 \begin{align}
-  H_0:&\ \widehat{x}_i^{(i)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau),\\
-  H_1:&\ \widehat{x}_i^{(i, j)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_j}b_{ij}(\tau)x_j(t - \tau).
+  H_0:&\ \widehat{x}_i^{(p_i)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau),\\
+  H_1:&\ \widehat{x}_i^{(p_i, p_j)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_j}b_{ij}(\tau)x_j(t - \tau).
 \end{align}
 
-Under the null hypothesis $H_0$ we can form the asymptotically
-$\chi^2(p_j)$ distributed test statistic
+Under the null hypothesis $H_0$ (i.e. that $x_j \npwgc x_i$) we can
+form the asymptotically $\chi^2(p_j)$ distributed test statistic
+(\hl{TODO: Citation that this is chi2})
 
 \begin{equation}
-  F_{ij} = \frac{T}{p_j}\Big(\frac{\xi_i}{\xi_{ij}} - 1\Big),
+  \label{eqn:gc_statistics}
+  F_{ij}(p_i, p_j) = \frac{T}{p_j}\Big(\frac{\xi_i(p_i)}{\xi_{ij}(p_i, p_j))} - 1\Big),
 \end{equation}
 
-where $\xi_i$ is the sample mean square of the residuals $x_i(t) - \widehat{x}^{(i)}_i(t)$, and similarly for $\xi_{ij}$.  Given additional assumptions on $x(t)$ (\hl{TODO: What assumptions?}) we have the convergence (\hl{a.s. or in P?})
+where $\xi_i(p_i)$ is the sample mean square of the residuals\footnote{This
+  quantity is often denoted $\widehat{\sigma}$, but we maintain
+  notation from Definition \ref{def:granger_causality}.}
+$x_i(t) - \widehat{x}^{(p_i)}_i(t)$
+
+\begin{equation*}
+  \xi_i(p_i) = \frac{1}{T - p_i}\sum_{t = p_i + 1}^T (x_i(t) - \widehat{x}_i^{(p_i)}(t))^2
+\end{equation*}
+
+Given additional assumptions on $x(t)$ (\hl{TODO: What assumptions? --
+  this must also depend on choice of $p_i, p_j$}) we have the
+convergence (\hl{a.s. or in P?  -- I think in P})
 
 \begin{equation}
   \underset{T \rightarrow \infty}{\text{lim }}F_{ij} =
@@ -1873,9 +1899,106 @@ where $\xi_i$ is the sample mean square of the residuals $x_i(t) - \widehat{x}^{
   \right.
 \end{equation}
 
-Therefore, we can make the statement that Algorithm \ref{alg:pwgr_heuristic} asymptotically implements Algorithm \ref{alg:pwgr}.  \hl{TODO: Modify Algorithm 2 to make this true.}
+Therefore, we can make the statement that Algorithm
+\ref{alg:pwgr_heuristic} asymptotically implements Algorithm
+\ref{alg:pwgr}.  \hl{TODO: Modify Algorithm 2 to make this true.}
+\hl{TODO: Enclose this into a theorem}
 
-It is known (\hl{citation}) that $F_{ij}$ is sensitive to the choice of $p_i$ and $p_j$.
+\subsection{Model Order Selection}
+\label{sec:model_order_selection}
+There are a variety of methods to choose the filter orders $p_i$ and
+$p_j$ \hl{TODO: cite some more}, we will focus in particular on the
+Bayesian Information Criteria (BIC).  The BIC is substantially more
+conservative than the Akaiake Information Criteria, and since we are
+searching for \textit{sparse graphs}, we therefore prefer the BIC. For
+the bivariate case we focus for simplicity on $p_i = p_j$ and write
+simply\footnote{We use the same $p$ for the bivariate case, but this
+  need not be the same as the corresponding univariate estimate}
+$x_{ij}^{(p)}$, in which case the BIC, which we seek to
+\textit{maximize} over $p$ is given by:
+
+\begin{equation}
+  \label{eqn:bic}
+  \begin{aligned}
+    BIC_{\text{univariate}}(p) &= -(T - p - 1) \ln \xi_i(p) - p\ln T,\\
+    BIC_{\text{bivariate}}(p) &= -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln T.\\
+  \end{aligned}
+\end{equation}
+
+We carry this out via the forward search described in Algorithm
+\ref{alg:maximize_bic}.  Since $BIC(p)$ need not be a convex function,
+this scheme is not guaranteed to find the true maximum of the BIC, but
+this approximation suffices for our purposes \hl{TODO: is this
+  sufficient?  A full search is not so much harder.}
+
+\begin{algorithm}
+  \caption{BIC Model Selection Algorithm}
+  \label{alg:maximize_bic}
+
+  \SetKwInOut{Input}{input}
+  \SetKwInOut{Output}{output}
+  \SetKwInOut{Initialize}{initialize}
+  \DontPrintSemicolon
+
+  \BlankLine
+  \Input{$T$ samples of WSS processes $x_i(t), x_j(t)$.  A maximum possible lag $p_{\text{max}}$.}
+  \Output{Model orders $p_i$ and $p$ for models in Hypotheses $H_0$ and $H_1$ respectively.}
+  \Initialize{
+    $BIC_{\text{univariate}} = -\infty$\\
+    $BIC_{\text{bivariate}} = -\infty$\\
+  }
+
+  \# \texttt{Find $p_i$}\\
+  \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
+    $\xi_i(p) = $\ \texttt{fit\_univariate}$(x_i(t), p)$ \texttt{ \# Fit model for $H_0$}\\
+    $bic_p = -(T - p - 1) \ln \xi_i(p) - p\ln(T - p - 1)$\\
+    \If{$bic_p > BIC_{\text{univariate}}$}{
+      $BIC_{\text{univariate}} = bic_p$\\
+      \texttt{continue}\\
+    } \Else{
+      $p_i = p - 1$\\
+      \texttt{break}\\
+    }
+  }
+
+  \BlankLine
+  \# \texttt{Find $p$}\\
+  \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
+    $\xi_{ij}(p) = $\ \texttt{fit\_biivariate}$(x_i(t), x_j(t), p)$ \texttt{ \# Fit model for $H_1$}\\
+    $bic_p = -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln(T - p - 1)$\\
+    \If{$bic_p > BIC_{\text{bivariate}}$}{
+      $BIC_{\text{biivariate}} = bic_p$\\
+      \texttt{continue}\\
+    }\Else{
+      $p = p - 1$\\
+      \texttt{break}\\
+    }
+  }
+    \Return{$p_i, p$}
+\end{algorithm}
+
+\subsection{Edge Probabilities and Error Rate Controls}
+Denote $F_{ij}$ the Granger-causality statistic of equation
+\ref{eqn:gc_statistics} with model orders chosen by the methods of
+Section \ref{sec:model_order_selection}.  Note that this statistic is
+asymptotically $\chi^2(p)$ distributed, and denote by $G$ the
+$\chi^2(p)$ cumulative distribution function.  We will define the matrix
+
+\begin{equation}
+  \label{eqn:edge_inclusion_probability}
+  P_{ij} = G(F_{ij}),
+\end{equation}
+
+to be the matrix of pairwise edge inclusion probabilities.  This is
+motivated by the hypothesis test where the hypothesis $H_0$ will be
+rejected (and thence we will conclude that $x_j \pwgc x_i$) if
+$P_{ij} > 1 - \delta$.
+
+The value $\delta$ can be chosen by a variety of methods, in our case
+we apply the Benjamini Hochberg criteria \cite{benjamini_hochberg}
+\cite{all_of_statistics} to control the false discovery rate of
+pairwise edges to a level $\alpha$ (where we generally take
+$\alpha = 0.05$).
 
 \section{Structure Learning}
 \label{sec:structure_learning}
@@ -1925,7 +2048,7 @@ Minimize the sparsity promoting regularized least squares problem and choose the
 % \end{enumerate}
 
 \subsection{Layered Strongly Causal Graphs}
-It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, and cannot be applied directly to real data.  Instead, we convert the algorithm into an heuristic and observe it's performance experimentally.  We first consider the heuristic version of Algorithm \ref{alg:pwgr} in Algorithm \ref{alg:pwgr_heuristic} and show that is a well defined procedure:
+It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, and cannot be applied directly to real data.  Instead, we convert the algorithm into an heuristic and observe it's performance experimentally.  We first consider the heuristic version of Algorithm \ref{alg:pwgr} in Algorithm \ref{alg:pwgr_heuristic} and show that is a well defined procedure (note that $\ceil{x}$ denotes the integer ceiling function):
 
 % \begin{proposition}
 %   Algorithm \ref{alg:pwgr_heuristic} terminates in at most $n$ iterations and returns a strongly causal graph $\widehat{\gcg}$.
@@ -1953,11 +2076,9 @@ It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, an
   \DontPrintSemicolon
 
   \BlankLine
-  \caption{Graph Recovery Heuristic $\mathsf{pw\_scg}(F, \delta, b, R)$}
+  \caption{Graph Recovery Heuristic $\mathsf{pw\_scg}(F, P, \alpha)$}
   \label{alg:pwgr_heuristic}
-  % \TitleOfAlgo{Pairwise Graph Recovery}
-  \Input{Estimates of pairwise Granger-causaltiy statistics $F_{ij} = \ln \frac{\xi_{ij}}{\xi_i}$\\
-    Sparsity parameters ($\delta, b, R$)}
+  \Input{Estimates of pairwise Granger-causaltiy statistics $F_{ij}$ (eqn \ref{eqn:gc_statistics}), Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}), threshold $\delta$.}
   \Output{A strongly causal graph $\widehat{\gcg}$}
   \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
     $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
@@ -1965,26 +2086,31 @@ It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, an
 
   \BlankLine
 
-  $W_\delta \leftarrow \{(i, j)\ |\ F_{ji} \ge \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
-  $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total incident strength for each node}\\
-  $P_0 \leftarrow \mathsf{arg\_select\_min\_N}(\mathcal{I}_0, N=R)$  \texttt{\# select} $R$ \texttt{root nodes}\\
+  $W_\delta \leftarrow \{(i, j)\ |\ P_{ji} > 1 - \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
+  $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total node incident probability}\\
+  $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) < \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Nodes with fewest incident edges}\\
+  \If{$P_0 = \emptyset$}{
+    $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) \le \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Ensure non-empty}
+  }
   \BlankLine
 
   \While{$S \ne \emptyset$}{
     $S \leftarrow S \setminus P_{k - 1}$ \texttt{\# remove processed nodes}\\
-    $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
-    $P_k \leftarrow \mathsf{arg\_select\_min\_N}(\mathcal{I}_k, N=b)$  \texttt{\# select} $b$ \texttt{branching nodes}\\
+    % $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
+    $\mathcal{I}_k \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$\\
+    $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) < \ceil{\text{min}(\mathcal{I}_k)}\}$\\
+    \If{$P_k = \emptyset$}{
+      $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) \le \ceil{\text{min}(\mathcal{I}_k)}\}$
+    }
     \;
-    \texttt{\# add strongest} $P_{k - r} \rightarrow P_k$ \texttt{edges and maintain strong causality}\\
-    \For{$r = 1, \ldots, k$} 
-    {
-      \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in P_{k - r} \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$}{
-        \If{no $\gcgpath{u}{j}$ path in $E$, for any $u \in \anc{i}$}{
-          $E \leftarrow E \cup \{(i, j)\}$
-        }
+    \texttt{\# add strongest edges, maintaining strong causality}\\
+    $U_k \leftarrow \bigcup_{r = 1}^k P_{k - r}$ \texttt{\# Include all forward edges}\\
+    \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in U_k \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$} {
+      \If{$\mathsf{is\_strongly\_causal}(E \cup \{(i, j)\})$} {
+        $E \leftarrow E \cup \{(i, j)\}$
       }
     }
-    $k \leftarrow k + 1$
+    $k \leftarrow k + 1$\\
   }
   \Return{$([n], E)$}
 \end{algorithm}

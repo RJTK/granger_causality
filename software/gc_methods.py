@@ -3,14 +3,17 @@ import numpy as np
 import sympy as sp
 
 from scipy import linalg
+from scipy import stats as sps
 from scipy.linalg import toeplitz
 from sklearn.linear_model import LinearRegression, LassoLarsIC
 
 from itertools import product
+from functools import reduce
 from math import ceil
 
 from var_system import (attach_node_prop, add_self_loops,
                         remove_zero_filters, get_X)
+from stat_util import benjamini_hochberg
 
 def estimate_b_lstsqr(X, y):
     """
@@ -103,7 +106,7 @@ def block_toeplitz(left_col, top_row=None):
 
 
 def estimate_B(G, max_lag=10, copy_G=False,
-               max_T=None, ic="bic"):
+               max_T=None, ic="bic", method="lasso"):
     """
     Estimate x(t) = B(z)x(t) respecting the topology of G.
 
@@ -145,7 +148,12 @@ def estimate_B(G, max_lag=10, copy_G=False,
         X, y = form_Xy(X_raw, y_raw, p=max_lag)
 
         # Estimate
-        b = estimate_b_lasso(X[:max_T], y[:max_T], criterion=ic)
+        if method == "lasso":
+            b = estimate_b_lasso(X[:max_T], y[:max_T], criterion=ic)
+        elif method == "lstsqr":
+            b = estimate_b_lstsqr(X[:max_T], y[:max_T])
+        else:
+            raise AssertionError("Bad method but should deal with it earlier!")
 
         # Compute residuals
         r = y - X @ b
@@ -162,16 +170,52 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
 # NOTE: forming the Xy matrices consumes only microseconds
 def univariate_AR_error(x, max_lag=10, criterion="bic",
-                        method="lasso"):
-    X, y = form_Xy(X_raw=x[:, None], y_raw=x, p=max_lag)
-    return _compute_AR_error(X, y, criterion, method)
+                        method="lasso", ret_p_opt=False):
+    # Try larger model orders until we don't increase the BIC
+    if criterion != "bic":
+        raise NotImplementedError("Only BIC criterion is supported")
+
+    bic = -np.infty
+    T = len(x)
+    for p in range(1, max_lag + 1):
+        X_, y_ = form_Xy(X_raw=x[:, None], y_raw=x, p=p)
+        sv2_p = _compute_AR_error(X_, y_, criterion="bic",
+                                  method="lstsqr")
+        bic_p = -(T - p - 1) * np.log(sv2_p) - p * np.log(T - p - 1)
+        if bic_p > bic:
+            bic = bic_p
+            continue
+        else:
+            p = p - 1
+            break
+    if ret_p_opt:
+        return sv2_p, p
+    else:
+        return sv2_p
 
 
 def bivariate_AR_error(y, x, max_lag=10, criterion="bic",
-                       method="lasso"):
-    X, y =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
-                    y_raw=y, p=max_lag)
-    return _compute_AR_error(X, y, criterion, method)
+                       method="lstsqr", ret_p_opt=False):
+    if criterion != "bic":
+        raise NotImplementedError("Only BIC criterion is supported")
+
+    bic = -np.infty
+    T = len(x)
+    for p in range(1, max_lag + 1):
+        X_, y_ =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
+                          y_raw=y, p=p)
+        sv2_p = _compute_AR_error(X_, y_, criterion="bic", method="lstsqr")
+        bic_p = -(T - p - 1) * np.log(sv2_p) - 2 * p * np.log(T - p - 1)
+        if bic_p > bic:
+            bic = bic_p
+            continue
+        else:
+            p = p - 1
+            break
+    if ret_p_opt:
+        return sv2_p, p
+    else:
+        return sv2_p
 
 
 def compute_covariances(X, p, symmetrize=False):
@@ -235,16 +279,41 @@ def compute_gc_score(xi_i, xi_ij, T, p_lags):
     # return F
 
 
-def compute_xi(X, max_lag, criterion="bic", method="lstsqr"):
+def compute_xi(X, max_lag, criterion="bic", method="lstsqr",
+               ret_p_opt=False):
+    """
+    Calculates xi_i and xi_ij, the errors for uni-  and bi- variate
+    AR models.  
+    """
     n = X.shape[1]
-    xi_i = np.array([univariate_AR_error(X[:, i], max_lag=max_lag,
-                                         criterion=criterion, method=method)
-                     for i in range(n)])
-    xi_ij = np.array([[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
-                                          criterion=criterion, method=method)
-                       if j != i else xi_i[i] for j in range(n)]
-                      for i in range(n)])
-    return xi_i, xi_ij
+    if ret_p_opt:
+        xi_p_i = np.array(
+            [univariate_AR_error(X[:, i], max_lag=max_lag,
+                                 criterion=criterion, method=method,
+                                 ret_p_opt=True)
+             for i in range(n)])
+        xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
+
+        xi_p_ij = np.array(
+            [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
+                                 criterion=criterion, method=method,
+                                 ret_p_opt=True)
+              if j != i else xi_p_i[i] for j in range(n)]
+             for i in range(n)])
+        xi_ij, p_ij = xi_p_ij[:, :, 0], xi_p_ij[:, :, 1]
+        return xi_i, xi_ij, p_i, p_ij
+        
+    else:
+        xi_i = np.array(
+            [univariate_AR_error(X[:, i], max_lag=max_lag,
+                                 criterion=criterion, method=method)
+             for i in range(n)])
+        xi_ij = np.array(
+            [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
+                                 criterion=criterion, method=method)
+              if j != i else xi_i[i] for j in range(n)]
+             for i in range(n)])
+        return xi_i, xi_ij
 
 
 def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
@@ -256,6 +325,7 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
                      for i in range(n)])
 
     # TODO: Most of the time is now spent forming toeplitz matrices.
+    # TODO: Include BIC calculations
 
     # TODO:
     # due to inaccurate estimates of covariance, these matrices
@@ -282,9 +352,17 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 # TODO: (1) for scarce data, use sklearn ARD or possibly LASSO
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
-def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso"):
+def compute_pairwise_gc(X, max_lag=10, criterion="bic", method="lasso",
+                        ret_p_opt=False):
     T, _, p = *X.shape, max_lag
-    xi_i, xi_ij = compute_xi(X, max_lag, criterion, method)
+    if ret_p_opt:
+        xi_i, xi_ij, p_i, p_ij = compute_xi(X, max_lag,
+                                            criterion=criterion,
+                                            method=method, ret_p_opt=True)
+        F = compute_gc_score(xi_i, xi_ij, T, p)
+        return F, p_ij  # p_i is actually irrelevant.
+    else:
+        xi_i, xi_ij = compute_xi(X, max_lag, criterion, method)
     return compute_gc_score(xi_i, xi_ij, T, p)
 
 
@@ -306,7 +384,9 @@ def fast_compute_pairwise_gc(X, max_lag=10):
     return compute_gc_score(xi_i, xi_ij, T, p)
 
 
-def pw_scg(F, p_j, alpha=0.05):
+# TODO: P_j should be an n x n array
+# TODO: Tune alpha by Benjamini Hochberg criterion
+def pw_scg(F, P_edge, alpha):
     """
     Graph recovery heuristic
 
@@ -314,8 +394,10 @@ def pw_scg(F, p_j, alpha=0.05):
 
     F_ij = (T / p_j) * [(xi_i / xi_ij) - 1] i.e. chi2(p_j) test statistic.
 
-    alpha is a significance level, and p_j is the number of lags for
-    the x_j process (usuall the same as p_i, or just 'p').
+    P_edge is the edge probabilities (i.e. 1 - P_value) with the same
+    shape as F, and alpha is a test level (i.e. from
+    Benjamini-Hochberg) s.t. we will say an edge is present if P_edge
+    >= 1 - alpha.
 
     We return an nx.DiGraph
     """
@@ -371,7 +453,6 @@ def pw_scg(F, p_j, alpha=0.05):
     n = F.shape[0]
     S = set(range(n))
     # Larger value means more confident about an edge
-    P_edge = sps.chi2.cdf(F, p_j)
     P_edge[P_edge < 1 - alpha] = 0
 
     # Graph to return
@@ -390,7 +471,7 @@ def pw_scg(F, p_j, alpha=0.05):
     k = 1  # Counter purely for detecting infinite loops
 
     # incident strength of each node
-    I = compute_incident_strength(F, S, W_pred)
+    # I = compute_incident_strength(F, S, W_pred)
 
     # Probability sum of input edges  (roughly an incident edge count)
     C = compute_incident_strength(P_edge, S, W_pred)
@@ -404,10 +485,8 @@ def pw_scg(F, p_j, alpha=0.05):
 
     # ------------ Iterations -------------------
     while len(S) != 0:
-        print(P_k[-1])
-
         S = S - P_k[-1]
-        I = compute_incident_strength(F, S, W_pred)
+        # I = compute_incident_strength(F, S, W_pred)
         C = compute_incident_strength(P_edge, S, W_pred)
 
         P_k_next = arg_select_min_N(
@@ -424,7 +503,6 @@ def pw_scg(F, p_j, alpha=0.05):
         # NOTE: works pretty well.  We should expect that "real" edges will
         # NOTE: have larger F values.  In the "theoretical" algorithm, we can
         # NOTE: only check yes/no, and for that reason we need to apply backwards
-        # TODO: We still end up with a lot of false positives here though
         for i, j in sort_edges_by_F(reduce(set.union, P_k[:-1]), P_k[-1], F, W_set):
             if maintains_strong_causality(G, i, j):
                 G.add_edge(i, j)
@@ -443,6 +521,8 @@ def full_filter_estimator(G, criterion="bic", max_lags=10,
                           M_passes=1, T_max=None):
     # This can result in extremely long lag lengths
     # when the final filter is built.
+
+    raise NotImplementedError("Review this -- I also think it's a bad idea.")
 
     G_hats = []
     G_hat = G.copy()
@@ -533,7 +613,8 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
-def estimate_graph(X, G, criterion="bic", max_lags=10):
+def estimate_graph(X, G, criterion="bic", max_lags=10,
+                   method="lasso"):
     """
     Produce an estimated graph from the data X.
 
@@ -543,24 +624,44 @@ def estimate_graph(X, G, criterion="bic", max_lags=10):
 
     TODO: This probably needs to be fixed before doing any application
     """
-    F = compute_pairwise_gc(X, max_lag=max_lags,
-                            criterion=criterion,
-                            method="lstsqr")
-    F = normalize_gc_score(F)
+    T, n = X.shape
+
+    # Compute the pairwise errors and filter sizes
+    F, P = compute_pairwise_gc(X, max_lag=max_lags,
+                               criterion=criterion,
+                               method="lstsqr",
+                               ret_p_opt=True)
+
+    # Screen edges via benjamini hochberg criterion
+    P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
+    P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
+    t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
 
     # F = fast_compute_pairwise_gc(X, max_lag=max_lags)
 
-    T, n = X.shape
-    G_hat = pw_scg(F, R=5, b=2, delta=delta)
-    draw_graph_estimates(G, G_hat)
+    # Estimate a strongly causal graph
+    G_hat = pw_scg(F, P_edges, t_bh)
+    # draw_graph_estimates(G, G_hat)
     G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
     G_hat = add_self_loops(G_hat, copy_G=False)
     # draw_graph_estimates(G, G_hat)
 
-    G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
-                       ic=criterion)
-    G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
-    draw_graph_estimates(G, G_hat)
+    # Restimates the full graph via the LASSO procedure -- this tends
+    # to remove many of the false positive edges, but also at the expense
+    # of true positives.
+    # TODO: Improve upon this step
+
+    if method == "lasso":
+        G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
+                           ic=criterion)
+        G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
+    elif method == "lstsqr":
+        G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
+                           ic=criterion, method=method)
+    else:
+        raise NotImplementedError("The fitting method {} is not available!"
+                                  "".format(method))
+    # draw_graph_estimates(G, G_hat)
     return G_hat
 
 
