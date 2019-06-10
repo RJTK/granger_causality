@@ -35,14 +35,14 @@ def estimate_b_lstsqr_cov(R, r):
         return linalg.solve(R, r, check_finite=True, lower=True)
 
 
-def estimate_b_lasso(X, y, criterion="bic"):
+def estimate_b_lasso(X, y):
     """
     Estimate y_hat = Xb via LASSO and using BIC to choose regularizers.
 
     y: np.array (T)
     X: np.array (T x s)
     """
-    lasso = LassoLarsIC(criterion=criterion, fit_intercept=False,
+    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
                         normalize=False, precompute=True)
 
     # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
@@ -106,7 +106,7 @@ def block_toeplitz(left_col, top_row=None):
 
 
 def estimate_B(G, max_lag=10, copy_G=False,
-               max_T=None, ic="bic", method="lasso"):
+               max_T=None, method="lasso"):
     """
     Estimate x(t) = B(z)x(t) respecting the topology of G.
 
@@ -149,7 +149,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
         # Estimate
         if method == "lasso":
-            b = estimate_b_lasso(X[:max_T], y[:max_T], criterion=ic)
+            b = estimate_b_lasso(X[:max_T], y[:max_T])
         elif method == "lstsqr":
             b = estimate_b_lstsqr(X[:max_T], y[:max_T])
         else:
@@ -169,16 +169,13 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
 
 # NOTE: forming the Xy matrices consumes only microseconds
-def univariate_AR_error(x, max_lag=10, criterion="bic"):
+def univariate_AR_error(x, max_lag=10):
     # Try larger model orders until we don't increase the BIC
-    if criterion != "bic":
-        raise NotImplementedError("Only BIC criterion is supported")
-
     bic = -np.infty
     T = len(x)
     for p in range(1, max_lag + 1):
         X_, y_ = form_Xy(X_raw=x[:, None], y_raw=x, p=p)
-        sv2_p = _compute_AR_error(X_, y_, criterion="bic")
+        sv2_p = _compute_AR_error(X_, y_)
         bic_p = -(T - p - 1) * np.log(sv2_p) - p * np.log(T - p - 1)
         if bic_p > bic:
             bic = bic_p
@@ -189,16 +186,13 @@ def univariate_AR_error(x, max_lag=10, criterion="bic"):
     return sv2_p, p
 
 
-def bivariate_AR_error(y, x, max_lag=10, criterion="bic"):
-    if criterion != "bic":
-        raise NotImplementedError("Only BIC criterion is supported")
-
+def bivariate_AR_error(y, x, max_lag=10):
     bic = -np.infty
     T = len(x)
     for p in range(1, max_lag + 1):
         X_, y_ =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
                           y_raw=y, p=p)
-        sv2_p = _compute_AR_error(X_, y_, criterion="bic")
+        sv2_p = _compute_AR_error(X_, y_)
         bic_p = -(T - p - 1) * np.log(sv2_p) - 2 * p * np.log(T - p - 1)
         if bic_p > bic:
             bic = bic_p
@@ -241,7 +235,7 @@ def compute_covariances(X, p, symmetrize=False):
 # r01 = np.real(np.fft.ifft(P01)) / 2
 # R01_spec = toeplitz(r01[:p])
 
-def _compute_AR_error(X, y, criterion="bic"):
+def _compute_AR_error(X, y):
     w = estimate_b_lstsqr(X, y)
     return np.var(y - X @ w)
     
@@ -260,7 +254,7 @@ def compute_gc_score(xi_i, xi_ij, T, p_lags):
     return F
 
 
-def compute_xi(X, max_lag, criterion="bic"):
+def compute_xi(X, max_lag):
     """
     Calculates xi_i and xi_ij, the errors for uni- and bi- variate
     AR models.  We return xi_i (array), xi_ij (matrix), p_i (array),
@@ -270,14 +264,12 @@ def compute_xi(X, max_lag, criterion="bic"):
     """
     n = X.shape[1]
     xi_p_i = np.array(
-        [univariate_AR_error(X[:, i], max_lag=max_lag,
-                             criterion=criterion)
+        [univariate_AR_error(X[:, i], max_lag=max_lag)
          for i in range(n)])
     xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
 
     xi_p_ij = np.array(
-        [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag,
-                             criterion=criterion)
+        [[bivariate_AR_error(X[:, i], X[:, j], max_lag=max_lag)
           if j != i else xi_p_i[i] for j in range(n)]
          for i in range(n)])
     xi_ij, p_ij = xi_p_ij[:, :, 0], xi_p_ij[:, :, 1]
@@ -321,10 +313,10 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 # TODO: (1) for scarce data, use sklearn ARD or possibly LASSO
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
-def compute_pairwise_gc(X, max_lag=10, criterion="bic"):
+def compute_pairwise_gc(X, max_lag=10):
     T, _, p = *X.shape, max_lag
     xi_i, xi_ij, p_i, p_ij = compute_xi(
-        X, max_lag, criterion=criterion)
+        X, max_lag)
     F = compute_gc_score(xi_i, xi_ij, T, p_ij)
     return F, p_ij  # p_i is actually irrelevant.
 
@@ -480,7 +472,7 @@ def pw_scg(F, P_edge, alpha):
     return G
 
 
-def full_filter_estimator(G, criterion="bic", max_lags=10,
+def full_filter_estimator(G, max_lags=10,
                           M_passes=1, T_max=None):
     # This can result in extremely long lag lengths
     # when the final filter is built.
@@ -494,14 +486,14 @@ def full_filter_estimator(G, criterion="bic", max_lags=10,
 
     for m in range(M_passes):
         X = get_X(G_hat)[:T_max]
-        G_hat = estimate_graph(X, G_hat, criterion, max_lags)
+        G_hat = estimate_graph(X, G_hat, max_lags=max_lags)
         G_hats.append(G_hat)
         G_hat = get_residual_graph(G_hat.copy())
 
     # G_hat = construct_complete_filter(G_hats)
     G_hat = combine_graphs(G_hats)
     G_hat = attach_node_prop(G_hat, G, "x", "x")
-    G_hat = estimate_B(G_hat, max_lags, ic="bic")
+    G_hat = estimate_B(G_hat, max_lags)
     G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     return G_hat
 
@@ -576,8 +568,7 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
-def estimate_graph(X, G, criterion="bic", max_lags=10,
-                   method="lasso"):
+def estimate_graph(X, G, max_lags=10, method="lasso"):
     """
     Produce an estimated graph from the data X.
 
@@ -590,8 +581,7 @@ def estimate_graph(X, G, criterion="bic", max_lags=10,
     T, n = X.shape
 
     # Compute the pairwise errors and filter sizes
-    F, P = compute_pairwise_gc(X, max_lag=max_lags,
-                               criterion=criterion)
+    F, P = compute_pairwise_gc(X, max_lag=max_lags)
 
     # Screen edges via benjamini hochberg criterion
     P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
@@ -614,11 +604,11 @@ def estimate_graph(X, G, criterion="bic", max_lags=10,
 
     if method == "lasso":
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
-                           ic=criterion, method=method)
+                           method=method)
         G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     elif method == "lstsqr":
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
-                           ic=criterion, method=method)
+                           method=method)
     else:
         raise NotImplementedError("The fitting method {} is not available!"
                                   "".format(method))
