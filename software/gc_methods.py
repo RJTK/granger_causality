@@ -253,6 +253,9 @@ def _fast_compute_AR_error(R, r):
 
 def _fast_univariate_AR_error(r, T):
     # TODO: Apply levinson recursion
+    # TODO: How to import the levinson project?
+    # _, _, eps = lev_durb(r)
+
     p_max = len(r) - 1
     eps = np.nan * np.zeros(p_max + 1)
     eps[0] = r[0]
