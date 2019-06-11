@@ -9,6 +9,7 @@
 \usepackage{hyperref}
 \usepackage{todonotes}
 \bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
+% \bibliography{\string~global_bib.bib}
 
 \def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
 \def\ngc{\overset{\text{GC}}{\nrightarrow}}  % Negated Granger causality arrow
@@ -34,6 +35,7 @@
 \newcommand{\gcgpath}[2]{#1 \rightarrow \cdots \rightarrow #2}  % A shorter path command
 
 \input{\string~/Documents/academics/global_academics/latex_preamble}
+% \input{\string~latex_preamble}
 
 \graphicspath{{../figures/}}
 
@@ -1925,57 +1927,96 @@ $x_{ij}^{(p)}$, in which case the BIC, which we seek to
   \end{aligned}
 \end{equation}
 
-We carry this out via the forward search described in Algorithm
-\ref{alg:maximize_bic}.  Since $BIC(p)$ need not be a convex function,
-this scheme is not guaranteed to find the true maximum of the BIC, but
-this approximation suffices for our purposes \hl{TODO: is this
-  sufficient?  A full search is not so much harder.}
+We carry this out by a simple direct search on each model order
+between $1$ and some prescribed $p_\text{max}$.  In practice it is
+sufficient to pick $p_\text{max}$ ad-hoc or via some simple heuristic
+(e.g. plotting the sequence $BIC(p)$ over $p$), and we will review in
+Section \ref{sec:efficient_model_estimation} an algorithm to carry out
+this search efficiently.
 
-\begin{algorithm}
-  \caption{BIC Model Selection Algorithm}
-  \label{alg:maximize_bic}
+% \begin{algorithm}
+%   \caption{BIC Model Selection Algorithm}
+%   \label{alg:maximize_bic}
 
-  \SetKwInOut{Input}{input}
-  \SetKwInOut{Output}{output}
-  \SetKwInOut{Initialize}{initialize}
-  \DontPrintSemicolon
+%   \SetKwInOut{Input}{input}
+%   \SetKwInOut{Output}{output}
+%   \SetKwInOut{Initialize}{initialize}
+%   \DontPrintSemicolon
 
-  \BlankLine
-  \Input{$T$ samples of WSS processes $x_i(t), x_j(t)$.  A maximum possible lag $p_{\text{max}}$.}
-  \Output{Model orders $p_i$ and $p$ for models in Hypotheses $H_0$ and $H_1$ respectively.}
-  \Initialize{
-    $BIC_{\text{univariate}} = -\infty$\\
-    $BIC_{\text{bivariate}} = -\infty$\\
-  }
+%   \BlankLine
+%   \Input{$T$ samples of WSS processes $x_i(t), x_j(t)$.  A maximum possible lag $p_{\text{max}}$.}
+%   \Output{Model orders $p_i$ and $p$ for models in Hypotheses $H_0$ and $H_1$ respectively.}
+%   \Initialize{
+%     $BIC_{\text{univariate}} = -\infty$\\
+%     $BIC_{\text{bivariate}} = -\infty$\\
+%   }
 
-  \# \texttt{Find $p_i$}\\
-  \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
-    $\xi_i(p) = $\ \texttt{fit\_univariate}$(x_i(t), p)$ \texttt{ \# Fit model for $H_0$}\\
-    $bic_p = -(T - p - 1) \ln \xi_i(p) - p\ln(T - p - 1)$\\
-    \If{$bic_p > BIC_{\text{univariate}}$}{
-      $BIC_{\text{univariate}} = bic_p$\\
-      \texttt{continue}\\
-    } \Else{
-      $p_i = p - 1$\\
-      \texttt{break}\\
-    }
-  }
+%   \# \texttt{Find $p_i$}\\
+%   \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
+%     $\xi_i(p) = $\ \texttt{fit\_univariate}$(x_i(t), p)$ \texttt{ \# Fit model for $H_0$}\\
+%     $bic_p = -(T - p - 1) \ln \xi_i(p) - p\ln(T - p - 1)$\\
+%     \If{$bic_p > BIC_{\text{univariate}}$}{
+%       $BIC_{\text{univariate}} = bic_p$\\
+%       \texttt{continue}\\
+%     } \Else{
+%       $p_i = p - 1$\\
+%       \texttt{break}\\
+%     }
+%   }
 
-  \BlankLine
-  \# \texttt{Find $p$}\\
-  \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
-    $\xi_{ij}(p) = $\ \texttt{fit\_biivariate}$(x_i(t), x_j(t), p)$ \texttt{ \# Fit model for $H_1$}\\
-    $bic_p = -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln(T - p - 1)$\\
-    \If{$bic_p > BIC_{\text{bivariate}}$}{
-      $BIC_{\text{biivariate}} = bic_p$\\
-      \texttt{continue}\\
-    }\Else{
-      $p = p - 1$\\
-      \texttt{break}\\
-    }
-  }
-    \Return{$p_i, p$}
-\end{algorithm}
+%   \BlankLine
+%   \# \texttt{Find $p$}\\
+%   \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
+%     $\xi_{ij}(p) = $\ \texttt{fit\_biivariate}$(x_i(t), x_j(t), p)$ \texttt{ \# Fit model for $H_1$}\\
+%     $bic_p = -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln(T - p - 1)$\\
+%     \If{$bic_p > BIC_{\text{bivariate}}$}{
+%       $BIC_{\text{biivariate}} = bic_p$\\
+%       \texttt{continue}\\
+%     }\Else{
+%       $p = p - 1$\\
+%       \texttt{break}\\
+%     }
+%   }
+%     \Return{$p_i, p$}
+% \end{algorithm}
+
+\subsection{Efficient Model Estimation}
+\label{sec:efficient_model_estimation}
+In practice, the vast majority of computational effort involved in
+implementing our estimation algorithm is spent calculating the error
+estimates $\xi_i(p_i)$ and $\xi_{ij}(p, p)$.  This requires fitting a
+total of $n^2p_{\text{max}}$ autoregressive models, where the most
+naive algorithm (e.g. solving a least squares problem for each model)
+for this task will consume $O(n^2p_{\text{max}}^4T)$ time, it is
+possible to carry out this task in a much more modest
+$O(n^2p_{\text{max}}^2 ) + O(n^2p_{\text{max}}T)$ time.
+
+Firstly, we estimate the sequence of Covariance
+matrices\footnote{The particular indexing and normalization given in
+  equation \ref{eqn:covariance_estimate} is critical to ensure
+  $\widehat{R}$ is positive semidefinite.  The estimate can be viewed
+  as calculating the covariance sequence of a signal multiplied by a
+  rectangular window.}
+
+\begin{equation}
+  \label{eqn:covariance_estimate}
+  \widehat{R}_x(\tau) = \frac{1}{T}\sum_{t = \tau + 1}^T x(t) x(t - \tau)^\T;\ \tau = 0, \ldots, p_{\text{max}},
+\end{equation}
+
+an $O(n^2p_{\text{max}}T)$ operation.  Secondly, the variance
+estimates $\xi_i(p)$ for $p = 1, \ldots, p_{\text{max}}$ can be
+evaluated in $O(p_{\text{max}}^2)$ time each by applying the
+Levinson-Durbin recursion to $\widehat{R}_{ii}(tau)$, which
+effectively estimates a sequence of $AR$ models, producing $\xi_i(p)$
+as a side-effect (see
+\cite{hayes_statistical_digital_signal_processing} and
+\cite{levinson_durbin_recursion}).
+
+Similarly, the variance estimates $\xi_{ij}$ and $\xi_{ji}$ can be
+obtained by estimating $\frac{(n + 1)n}{2}$ bivariate AR models, again
+in $O(p_{\text{max}}^2)$ via Whittle's generalized LD recursion
+\cite{whittle_generalized_levinson_durbin}.
+
 
 \subsection{Edge Probabilities and Error Rate Controls}
 Denote $F_{ij}$ the Granger-causality statistic of equation
