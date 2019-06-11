@@ -209,8 +209,8 @@ def compute_covariances(X, p, symmetrize=False):
     # We are effectively /windowing/ the signal.
     T = X.shape[0]
     R = np.dstack(
-        [X[p:, :].T @ X[p:, :]] + 
-        [X[p:, :].T @ X[p - tau: -tau, :]
+        [X.T @ X] +
+        [X[tau:, :].T @ X[0: -tau, :]
          for tau in range(1, p + 1)])
     return R
 
