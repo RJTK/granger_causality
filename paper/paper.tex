@@ -1917,13 +1917,13 @@ the bivariate case we focus for simplicity on $p_i = p_j$ and write
 simply\footnote{We use the same $p$ for the bivariate case, but this
   need not be the same as the corresponding univariate estimate}
 $x_{ij}^{(p)}$, in which case the BIC, which we seek to
-\textit{maximize} over $p$ is given by:
+\textit{minimize} over $p$ is given by:
 
 \begin{equation}
   \label{eqn:bic}
   \begin{aligned}
-    BIC_{\text{univariate}}(p) &= -(T - p - 1) \ln \xi_i(p) - p\ln T,\\
-    BIC_{\text{bivariate}}(p) &= -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln T.\\
+    BIC_{\text{univariate}}(p) &= T \ln \xi_i(p) + p\ln T,\\
+    BIC_{\text{bivariate}}(p) &= T \ln \xi_{ij}(p) + 2p\ln T.\\
   \end{aligned}
 \end{equation}
 
