@@ -4,6 +4,8 @@ Methods which implement granger-causality computations.
 
 import networkx as nx
 import numpy as np
+import numba
+from levinson import (lev_durb, whittle_lev_durb)
 
 from scipy import linalg
 from scipy import stats as sps
@@ -14,12 +16,17 @@ from itertools import product
 from functools import reduce
 from math import ceil
 
-from var_system import (attach_node_prop, add_self_loops,
-                        remove_zero_filters, get_X)
+# TODO: What is the proper way to do this?  I want packaging,
+# TODO: but I also want to be able to C-c C-c this file into
+# TODO: ipython while I am working...
 try:
     from .stat_util import benjamini_hochberg
+    from .var_system import (attach_node_prop, add_self_loops,
+                             remove_zero_filters, get_X)
 except ImportError:
     from stat_util import benjamini_hochberg
+    from var_system import (attach_node_prop, add_self_loops,
+                            remove_zero_filters, get_X)
 
 
 def estimate_b_lstsqr(X, y):
@@ -180,6 +187,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
 
 # NOTE: forming the Xy matrices consumes only microseconds
+# NOTE: But is the majority of time spent...
 def univariate_AR_error(x, max_lag=10):
     # Try larger model orders until we don't increase the BIC
     bic = -np.infty
@@ -214,41 +222,23 @@ def bivariate_AR_error(y, x, max_lag=10):
     return sv2_p, p
 
 
-def compute_covariances(X, p, symmetrize=False):
-    # We do not do any normalizing
-    # I believe this should ensure positive-definite ness.
-    # We are effectively /windowing/ the signal.
-    T = X.shape[0]
-    R = np.stack(
-        [X.T @ X / T] +
-        [X[tau:, :].T @ X[: -tau, :] / T
-         for tau in range(1, p + 1)],
-        axis=0)
+@numba.jit(nopython=True, cache=True)
+def compute_covariances(X, p):
+    # Recall that we must ensure the result is positive definite --
+    # calculate the cov of a windowed signal.
+    T, n = X.shape
+    R = np.empty((p + 1, n, n))
+    X = X / np.sqrt(T)
+    R[0] = X.T @ X
+    for tau in range(1, p + 1):
+        R[tau] = X[tau:, :].T @ X[:-tau, :]
+    # R = np.stack(
+    #     [X.T @ X / T] +
+    #     [X[tau:, :].T @ X[: -tau, :] / T
+    #      for tau in range(1, p + 1)],
+    #     axis=0)
     return R
 
-
-# TODO: This is roughly the idea, compute covariances by inverse fft
-# TODO: on the spectral estimate.  Not sure why there is 1 / 2 scaling
-# TODO: needed.  Results for the cross density is also pretty far off.
-# TODO: In any case, we get positive definiteness guarantees (right?)
-# TODO: I think there will only be a PSD guarantee if S(w) is PSD for
-# TODO: every w.  However, this may not be the case if I estimate the
-# TODO: elements of S(w) separately, which brings us back to the original
-# TODO: problem.
-# x0 = X[:T, 0]
-# x1 = X[:T, 1]
-# _, S0 = signal.welch(x0, scaling="density")
-# _, S1 = signal.welch(x1, scaling="density")
-# _, P01 = signal.csd(x0, x1, scaling="density", window="rect",
-#                     return_onesided=False)
-# _, P10 = signal.csd(x1, x0, scaling="density")
-
-# _, S0 = signal.welch(X[:T, 0], scaling="density")
-# r0 = np.real(np.fft.ifft(np.append(S0, S0[1:][::-1])))
-# R0_spec = toeplitz(r0[:p]) / 2
-
-# r01 = np.real(np.fft.ifft(P01)) / 2
-# R01_spec = toeplitz(r01[:p])
 
 def _compute_AR_error(X, y):
     w = estimate_b_lstsqr(X, y)
@@ -260,33 +250,35 @@ def _fast_compute_AR_error(R, r):
     return max(0, R[0, 0] - w @ r)
 
 
+@numba.jit(nopython=True, cache=True)
 def _fast_univariate_AR_error(r, T):
-    # TODO: Apply levinson recursion
-    # TODO: How to import the levinson project?
-    # _, _, eps = lev_durb(r)
-
-    p_max = len(r) - 1
-    eps = np.nan * np.zeros(p_max + 1)
-    eps[0] = r[0]
-    for p in range(1, p_max + 1):
-        # R = toeplitz(r[:-1])
-        # _r = r[1:]
-        R = toeplitz(r[:p])
-        _r = r[1: p + 1]
-        w = estimate_b_lstsqr_cov(R, _r)
-        eps[p] = r[0] - w @ _r
-
+    _, _, eps = lev_durb(r)
     bic = compute_bic(eps, T, s=1)
     p_opt = np.argmax(bic)
     return eps[p_opt], p_opt
 
 
+@numba.jit(nopython=True, cache=True)
+def _fast_bivariate_AR_error(R, T):
+    _, _, S = whittle_lev_durb(R)
+    det_S = np.empty(len(S))
+    for k in range(len(S)):
+        det_S[k] = np.linalg.det(S[k])
+    bic = compute_bic(det_S, T, s=4)
+    p_opt = np.argmax(bic)
+    S_opt = S[p_opt]
+    return S_opt[0, 0], S_opt[1, 1], p_opt
+
+
+@numba.jit(nopython=True, cache=True)
 def compute_bic(eps, T, s=1):
     """
-    set s = 1 for univariate case and s = 2 for bivariate case.
+    set s = 1 for univariate case and s = 4 for bivariate case.
     """
-    bic = [-T * np.log(eps_p) - s * p * np.log(T)
-           for p, eps_p in enumerate(eps)]
+    bic = np.empty(len(eps))
+    logT = np.log(T)
+    for p, log_eps_p in enumerate(np.log(eps)):
+        bic[p] = -T * log_eps_p - s * p * logT
     return bic
 
 
@@ -298,6 +290,22 @@ def compute_gc_score(xi_i, xi_ij, T, p_lags):
     F = T * (xi_i[:, None] / xi_ij - 1) / p_lags
     # F = F * (T - 2 * p_lags - 1) / p_lags
     return F
+
+
+@numba.jit(nopython=True, cache=True)
+def form_bivariate_covariance(R, i, j):
+    """
+    Creates bivariate covariance sequence by pulling out R[:, i, j]
+    components.
+    """
+    # return R[:, [i, j], :][:, :, [i, j]]  # Only basic indexing for numba
+    p, _, _ = R.shape
+    Rij = np.empty((p, 2, 2))
+    Rij[:, 0, 0] = R[:, i, i]
+    Rij[:, 0, 1] = R[:, i, j]
+    Rij[:, 1, 0] = R[:, j, i]
+    Rij[:, 1, 1] = R[:, j, j]
+    return Rij
 
 
 def compute_xi(X, max_lag):
@@ -322,35 +330,29 @@ def compute_xi(X, max_lag):
     return xi_i, xi_ij, p_i, p_ij
 
 
-def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
+# Numba parallelism seems much slower unfortunately
+# @numba.jit(nopython=True, cache=True, parallel=True)
+@numba.jit(nopython=True, cache=True)
+def fast_compute_xi(X, max_lag=10):
     T, n = X.shape
     R = compute_covariances(X, max_lag)
 
-    xi_p_i = np.array([_fast_univariate_AR_error(R[:, i, i], T)
-                       for i in range(n)])
-    xi_i, _ = xi_p_i[:, 0], xi_p_i[:, 1]
+    xi_i, p_i = np.zeros(n), np.zeros(n)
+    xi_ij, p_ij = np.zeros((n, n)), np.zeros((n, n))
 
-    # TODO: Most of the time is now spent forming toeplitz matrices.
-    # TODO: Include BIC calculations
+    for i in range(n):
+        xi_i[i], p_i[i] = _fast_univariate_AR_error(R[:, i, i], T)
+        xi_ij[i, i] = xi_i[i]
 
-    # TODO:
-    # due to inaccurate estimates of covariance, these matrices
-    # are not actually guaranteed to be positive definite.
-    # We fallback on linalg.solve in those cases, but it might
-    # be reasonable instead to fallback onto form_Xy and direct
-    # least squares.
-    def form_Rrij(R, i, j):
-        C = toeplitz(R[:-1, j, i], R[:-1, i, j])  # Left column then top row!
-        Rij = np.block([[toeplitz(R[:-1, i, i]), C],
-                        [C.T, toeplitz(R[:-1, j, j])]])
-        rij = np.concatenate((R[1:, i, i], R[1:, i, j]))
-        Rij = Rij + reg_delta * np.eye(Rij.shape[0])
-        return Rij, rij
-
-    xi_ij = np.array([[_fast_compute_AR_error(*form_Rrij(R, i, j))
-                       if j != i else xi_i[i] for j in range(n)]
-                      for i in range(n)])
-    return xi_i, xi_ij
+    for i in numba.prange(n):
+        for j in range(i):
+            Rij = form_bivariate_covariance(R, i, j)
+            ei, ej, _p = _fast_bivariate_AR_error(Rij, T)
+            xi_ij[i, j] = ei
+            xi_ij[j, i] = ej
+            p_ij[i, j] = _p
+            p_ij[j, i] = _p
+    return xi_i, xi_ij, p_ij
 
 
 # TODO: Use the criterion for selecting lag lengths

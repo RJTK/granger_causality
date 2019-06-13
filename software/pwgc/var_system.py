@@ -1,8 +1,12 @@
 import numpy as np
 import networkx as nx
-from LSI_filters import random_arma
 from itertools import combinations
 from scipy.linalg import solve_discrete_lyapunov
+
+try:
+    from .LSI_filters import random_arma
+except ImportError:
+    from LSI_filters import random_arma
 
 # TODO: It would probably be wise to do this with scipy sparse matrices!
 
