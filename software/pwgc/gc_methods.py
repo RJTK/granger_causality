@@ -1,11 +1,14 @@
+"""
+Methods which implement granger-causality computations.
+"""
+
 import networkx as nx
 import numpy as np
-import sympy as sp
 
 from scipy import linalg
 from scipy import stats as sps
 from scipy.linalg import toeplitz
-from sklearn.linear_model import LinearRegression, LassoLarsIC
+from sklearn.linear_model import LassoLarsIC
 
 from itertools import product
 from functools import reduce
@@ -13,7 +16,11 @@ from math import ceil
 
 from var_system import (attach_node_prop, add_self_loops,
                         remove_zero_filters, get_X)
-from stat_util import benjamini_hochberg
+try:
+    from .stat_util import benjamini_hochberg
+except ImportError:
+    from stat_util import benjamini_hochberg
+
 
 def estimate_b_lstsqr(X, y):
     """
@@ -627,15 +634,15 @@ def estimate_graph(X, G, max_lags=10, method="lasso"):
 
 
 def compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
-    P = N_edges  # Positives
+    # P = N_edges  # Positives
     TP = N_intersect_edges  # True positives
     FP = N_hat_edges - N_intersect_edges  # False positives
-    TPR = TP / P  # True positive rate (Sensitivity)
+    # TPR = TP / P  # True positive rate (Sensitivity)
 
     N = n_nodes**2 - N_edges  # Negatives
     FN = N_edges - N_intersect_edges  # False negatives
     TN = N - FN  # True negatives
-    TNR = TN / N  # True negative rate
+    # TNR = TN / N  # True negative rate
     return TP, TN, FP, FN
 
 
@@ -667,4 +674,3 @@ def example_graph():
     # set(nx.ancestors(G, i)): set of ancestors of i in G
     # A = nx.adjacency_matrix(G).todense(): Find adj matrix
     return
-
