@@ -84,7 +84,8 @@ def form_Xy(X_raw, y_raw, p=10):
 
     # Stack together lags of the same variables
     X = np.hstack(
-        [np.hstack([X_raw[p - tau: -tau, j][:, None] for tau in range(1, p + 1)])
+        [np.hstack([X_raw[p - tau: -tau, j][:, None]
+                    for tau in range(1, p + 1)])
          for j in range(s)])
 
     assert X.shape == (T - p, s * p), "Wrong _X shape!"
@@ -169,7 +170,8 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
         # Add the filters as properties to G
         for grouping, j in enumerate(a_i):  # Edge j --b(z)--> i
-            G[j][i]["b_hat(z)"] = b[grouping * max_lag: (grouping + 1) * max_lag]
+            G[j][i]["b_hat(z)"] = b[grouping * max_lag:
+                                    (grouping + 1) * max_lag]
 
         # As well as the residuals
         G.nodes[i]["sv^2_hat"] = np.var(r)
@@ -199,8 +201,8 @@ def bivariate_AR_error(y, x, max_lag=10):
     bic = -np.infty
     T = len(x)
     for p in range(1, max_lag + 1):
-        X_, y_ =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
-                          y_raw=y, p=p)
+        X_, y_ = form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
+                         y_raw=y, p=p)
         sv2_p = _compute_AR_error(X_, y_)
         bic_p = -(T - p - 1) * np.log(sv2_p) - 2 * p * np.log(T - p - 1)
         if bic_p > bic:
@@ -221,7 +223,7 @@ def compute_covariances(X, p, symmetrize=False):
         [X.T @ X / T] +
         [X[tau:, :].T @ X[: -tau, :] / T
          for tau in range(1, p + 1)],
-         axis=0)
+        axis=0)
     return R
 
 
@@ -251,7 +253,7 @@ def compute_covariances(X, p, symmetrize=False):
 def _compute_AR_error(X, y):
     w = estimate_b_lstsqr(X, y)
     return np.var(y - X @ w)
-    
+
 
 def _fast_compute_AR_error(R, r):
     w = estimate_b_lstsqr_cov(R, r)
@@ -287,11 +289,13 @@ def compute_bic(eps, T, s=1):
            for p, eps_p in enumerate(eps)]
     return bic
 
+
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
     assert T > 1 + 2 * np.max(p_lags),\
         "T = {} is too small for max(p_lags) = {}".format(T, np.max(p_lags))
     # TODO: Should this be T / p_j ??
-    F = T * (xi_i[:, None] / xi_ij - 1) / p_lags # This is chi2(p) under the null
+    # F is is chi2(p) under the null
+    F = T * (xi_i[:, None] / xi_ij - 1) / p_lags
     # F = F * (T - 2 * p_lags - 1) / p_lags
     return F
 
@@ -316,7 +320,6 @@ def compute_xi(X, max_lag):
          for i in range(n)])
     xi_ij, p_ij = xi_p_ij[:, :, 0], xi_p_ij[:, :, 1]
     return xi_i, xi_ij, p_i, p_ij
-        
 
 
 def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
@@ -325,7 +328,7 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 
     xi_p_i = np.array([_fast_univariate_AR_error(R[:, i, i], T)
                        for i in range(n)])
-    xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
+    xi_i, _ = xi_p_i[:, 0], xi_p_i[:, 1]
 
     # TODO: Most of the time is now spent forming toeplitz matrices.
     # TODO: Include BIC calculations
@@ -356,7 +359,7 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
 def compute_pairwise_gc(X, max_lag=10):
-    T, _, p = *X.shape, max_lag
+    T, _, _ = *X.shape, max_lag
     xi_i, xi_ij, p_i, p_ij = compute_xi(
         X, max_lag)
     F = compute_gc_score(xi_i, xi_ij, T, p_ij)
@@ -441,9 +444,11 @@ def pw_scg(F, P_edge, alpha):
         anc_i = nx.ancestors(G, i)
         if (i in anc_j) or (j in anc_i):
             return False
-        if len(anc_i & anc_j):  # Common ancestors
+        if len(anc_i & anc_j):
+            # Common ancestors
             return False
-        if len(nx.descendants(G, i) & nx.descendants(G, j)):  # Common descendants
+        if len(nx.descendants(G, i) & nx.descendants(G, j)):
+            # Common descendants
             return False
         return True
 
@@ -462,7 +467,7 @@ def pw_scg(F, P_edge, alpha):
              if (F[j, i] >= F[i, j] and P_edge[j, i] > 0)}
 
     # Predecessor edges of a node, i.e. W[i] = {j | (j, i) \in W}
-    W_pred = {i: [j for j in S if (j, i) in W_set ]
+    W_pred = {i: [j for j in S if (j, i) in W_set]
               for i in S}
 
     k = 1  # Counter purely for detecting infinite loops
@@ -477,7 +482,8 @@ def pw_scg(F, P_edge, alpha):
     # and ensure that we choose at least 1.
     P = arg_select_min_N(C, N=sum(C[i] < ceil(min(C.values())) for i in C))
     if len(P) == 0:
-        P = arg_select_min_N(C, N=sum(C[i] <= ceil(min(C.values())) for i in C))
+        P = arg_select_min_N(
+            C, N=sum(C[i] <= ceil(min(C.values())) for i in C))
     P_k = [P]
 
     # ------------ Iterations -------------------
@@ -499,14 +505,16 @@ def pw_scg(F, P_edge, alpha):
         # NOTE: It appears that sorting on F on all of the previous P_k sets
         # NOTE: works pretty well.  We should expect that "real" edges will
         # NOTE: have larger F values.  In the "theoretical" algorithm, we can
-        # NOTE: only check yes/no, and for that reason we need to apply backwards
-        for i, j in sort_edges_by_F(reduce(set.union, P_k[:-1]), P_k[-1], F, W_set):
+        # NOTE: only check yes/no, for that reason we need to apply backwards
+        for i, j in sort_edges_by_F(reduce(
+                set.union, P_k[:-1]), P_k[-1], F, W_set):
             if maintains_strong_causality(G, i, j):
                 G.add_edge(i, j)
         P = P | P_k[-1]
 
         if k > 10 * n ** 2:  # Clearly stuck
-            raise AssertionError("pw_scg has failed to terminate after {} iterations.  "
+            raise AssertionError("pw_scg has failed to terminate after {} "
+                                 "iterations.  "
                                  "S = {}, P = {}".format(k, S, P))
         k = k + 1
 
@@ -610,7 +618,7 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
-def estimate_graph(X, G, max_lags=10, method="lasso"):
+def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     """
     Produce an estimated graph from the data X.
 

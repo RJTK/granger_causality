@@ -1,12 +1,10 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot as plt
 from matplotlib import rc as mpl_rc
-font = {"family" : "normal",
-        "weight" : "bold",
-        "size"   : 22}
+font = {"family": "normal",
+        "weight": "bold",
+        "size": 22}
 
 mpl_rc("font", **font)
 mpl_rc("text", usetex=False)
