@@ -34,12 +34,7 @@ def estimate_b_lstsqr(X, y):
 
 
 def estimate_b_lstsqr_cov(R, r):
-    try:
-        return linalg.cho_solve(linalg.cho_factor(R), r)
-    except linalg.LinAlgError:
-        # print("WARNING: R matrix is not PSD!  lambda_min(R) = {}"
-        #       "".format(np.min(linalg.eigvals(R))))
-        return linalg.solve(R, r, check_finite=True, lower=True)
+    return linalg.cho_solve(linalg.cho_factor(R), r)
 
 
 def estimate_b_lasso(X, y):
@@ -222,10 +217,11 @@ def compute_covariances(X, p, symmetrize=False):
     # I believe this should ensure positive-definite ness.
     # We are effectively /windowing/ the signal.
     T = X.shape[0]
-    R = np.dstack(
-        [X[p:, :].T @ X[p:, :]] + 
-        [X[p:, :].T @ X[p - tau: -tau, :]
-         for tau in range(1, p + 1)])
+    R = np.stack(
+        [X.T @ X / T] +
+        [X[tau:, :].T @ X[: -tau, :] / T
+         for tau in range(1, p + 1)],
+         axis=0)
     return R
 
 
@@ -261,6 +257,35 @@ def _fast_compute_AR_error(R, r):
     w = estimate_b_lstsqr_cov(R, r)
     return max(0, R[0, 0] - w @ r)
 
+
+def _fast_univariate_AR_error(r, T):
+    # TODO: Apply levinson recursion
+    # TODO: How to import the levinson project?
+    # _, _, eps = lev_durb(r)
+
+    p_max = len(r) - 1
+    eps = np.nan * np.zeros(p_max + 1)
+    eps[0] = r[0]
+    for p in range(1, p_max + 1):
+        # R = toeplitz(r[:-1])
+        # _r = r[1:]
+        R = toeplitz(r[:p])
+        _r = r[1: p + 1]
+        w = estimate_b_lstsqr_cov(R, _r)
+        eps[p] = r[0] - w @ _r
+
+    bic = compute_bic(eps, T, s=1)
+    p_opt = np.argmax(bic)
+    return eps[p_opt], p_opt
+
+
+def compute_bic(eps, T, s=1):
+    """
+    set s = 1 for univariate case and s = 2 for bivariate case.
+    """
+    bic = [-T * np.log(eps_p) - s * p * np.log(T)
+           for p, eps_p in enumerate(eps)]
+    return bic
 
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
     assert T > 1 + 2 * np.max(p_lags),\
@@ -298,9 +323,9 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
     T, n = X.shape
     R = compute_covariances(X, max_lag)
 
-    xi_i = np.array([_fast_compute_AR_error(
-        toeplitz(R[i, i, :-1]), R[i, i, 1:])
-                     for i in range(n)])
+    xi_p_i = np.array([_fast_univariate_AR_error(R[:, i, i], T)
+                       for i in range(n)])
+    xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
 
     # TODO: Most of the time is now spent forming toeplitz matrices.
     # TODO: Include BIC calculations
@@ -312,10 +337,10 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
     # be reasonable instead to fallback onto form_Xy and direct
     # least squares.
     def form_Rrij(R, i, j):
-        C = toeplitz(R[j, i, :-1], R[i, j, :-1])  # Left column then top row!
-        Rij = np.block([[toeplitz(R[i, i, :-1]), C],
-                        [C.T, toeplitz(R[j, j, :-1])]])
-        rij = np.concatenate((R[i, i, 1:], R[i, j, 1:]))
+        C = toeplitz(R[:-1, j, i], R[:-1, i, j])  # Left column then top row!
+        Rij = np.block([[toeplitz(R[:-1, i, i]), C],
+                        [C.T, toeplitz(R[:-1, j, j])]])
+        rij = np.concatenate((R[1:, i, i], R[1:, i, j]))
         Rij = Rij + reg_delta * np.eye(Rij.shape[0])
         return Rij, rij
 
