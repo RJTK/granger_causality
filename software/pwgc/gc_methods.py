@@ -1,19 +1,33 @@
+"""
+Methods which implement granger-causality computations.
+"""
+
 import networkx as nx
 import numpy as np
-import sympy as sp
+import numba
+from levinson import (lev_durb, whittle_lev_durb)
 
 from scipy import linalg
 from scipy import stats as sps
 from scipy.linalg import toeplitz
-from sklearn.linear_model import LinearRegression, LassoLarsIC
+from sklearn.linear_model import LassoLarsIC
 
 from itertools import product
 from functools import reduce
 from math import ceil
 
-from var_system import (attach_node_prop, add_self_loops,
-                        remove_zero_filters, get_X)
-from stat_util import benjamini_hochberg
+# TODO: What is the proper way to do this?  I want packaging,
+# TODO: but I also want to be able to C-c C-c this file into
+# TODO: ipython while I am working...
+try:
+    from .stat_util import benjamini_hochberg
+    from .var_system import (attach_node_prop, add_self_loops,
+                             remove_zero_filters, get_X)
+except ImportError:
+    from stat_util import benjamini_hochberg
+    from var_system import (attach_node_prop, add_self_loops,
+                            remove_zero_filters, get_X)
+
 
 def estimate_b_lstsqr(X, y):
     """
@@ -77,7 +91,8 @@ def form_Xy(X_raw, y_raw, p=10):
 
     # Stack together lags of the same variables
     X = np.hstack(
-        [np.hstack([X_raw[p - tau: -tau, j][:, None] for tau in range(1, p + 1)])
+        [np.hstack([X_raw[p - tau: -tau, j][:, None]
+                    for tau in range(1, p + 1)])
          for j in range(s)])
 
     assert X.shape == (T - p, s * p), "Wrong _X shape!"
@@ -162,7 +177,8 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
         # Add the filters as properties to G
         for grouping, j in enumerate(a_i):  # Edge j --b(z)--> i
-            G[j][i]["b_hat(z)"] = b[grouping * max_lag: (grouping + 1) * max_lag]
+            G[j][i]["b_hat(z)"] = b[grouping * max_lag:
+                                    (grouping + 1) * max_lag]
 
         # As well as the residuals
         G.nodes[i]["sv^2_hat"] = np.var(r)
@@ -171,6 +187,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
 
 # NOTE: forming the Xy matrices consumes only microseconds
+# NOTE: But is the majority of time spent...
 def univariate_AR_error(x, max_lag=10):
     # Try larger model orders until we don't increase the BIC
     bic = -np.infty
@@ -178,7 +195,7 @@ def univariate_AR_error(x, max_lag=10):
     for p in range(1, max_lag + 1):
         X_, y_ = form_Xy(X_raw=x[:, None], y_raw=x, p=p)
         sv2_p = _compute_AR_error(X_, y_)
-        bic_p = -(T - p - 1) * np.log(sv2_p) - p * np.log(T - p - 1)
+        bic_p = -T * np.log(sv2_p) - p * np.log(T)
         if bic_p > bic:
             bic = bic_p
             continue
@@ -192,10 +209,10 @@ def bivariate_AR_error(y, x, max_lag=10):
     bic = -np.infty
     T = len(x)
     for p in range(1, max_lag + 1):
-        X_, y_ =  form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
-                          y_raw=y, p=p)
+        X_, y_ = form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
+                         y_raw=y, p=p)
         sv2_p = _compute_AR_error(X_, y_)
-        bic_p = -(T - p - 1) * np.log(sv2_p) - 2 * p * np.log(T - p - 1)
+        bic_p = -T * np.log(sv2_p) - 4 * p * np.log(T)
         if bic_p > bic:
             bic = bic_p
             continue
@@ -205,88 +222,81 @@ def bivariate_AR_error(y, x, max_lag=10):
     return sv2_p, p
 
 
-def compute_covariances(X, p, symmetrize=False):
-    # We do not do any normalizing
-    # I believe this should ensure positive-definite ness.
-    # We are effectively /windowing/ the signal.
-    T = X.shape[0]
-    R = np.stack(
-        [X.T @ X / T] +
-        [X[tau:, :].T @ X[: -tau, :] / T
-         for tau in range(1, p + 1)],
-         axis=0)
+@numba.jit(nopython=True, cache=True)
+def compute_covariances(X, p):
+    # Recall that we must ensure the result is positive definite --
+    # calculate the cov of a windowed signal.
+    T, n = X.shape
+    R = np.empty((p + 1, n, n))
+    X = X / np.sqrt(T)
+    R[0] = X.T @ X
+    for tau in range(1, p + 1):
+        R[tau] = X[tau:, :].T @ X[:-tau, :]
     return R
 
-
-# TODO: This is roughly the idea, compute covariances by inverse fft
-# TODO: on the spectral estimate.  Not sure why there is 1 / 2 scaling
-# TODO: needed.  Results for the cross density is also pretty far off.
-# TODO: In any case, we get positive definiteness guarantees (right?)
-# TODO: I think there will only be a PSD guarantee if S(w) is PSD for
-# TODO: every w.  However, this may not be the case if I estimate the
-# TODO: elements of S(w) separately, which brings us back to the original
-# TODO: problem.
-# x0 = X[:T, 0]
-# x1 = X[:T, 1]
-# _, S0 = signal.welch(x0, scaling="density")
-# _, S1 = signal.welch(x1, scaling="density")
-# _, P01 = signal.csd(x0, x1, scaling="density", window="rect",
-#                     return_onesided=False)
-# _, P10 = signal.csd(x1, x0, scaling="density")
-
-# _, S0 = signal.welch(X[:T, 0], scaling="density")
-# r0 = np.real(np.fft.ifft(np.append(S0, S0[1:][::-1])))
-# R0_spec = toeplitz(r0[:p]) / 2
-
-# r01 = np.real(np.fft.ifft(P01)) / 2
-# R01_spec = toeplitz(r01[:p])
 
 def _compute_AR_error(X, y):
     w = estimate_b_lstsqr(X, y)
     return np.var(y - X @ w)
-    
+
 
 def _fast_compute_AR_error(R, r):
     w = estimate_b_lstsqr_cov(R, r)
     return max(0, R[0, 0] - w @ r)
 
 
+@numba.jit(nopython=True, cache=True)
 def _fast_univariate_AR_error(r, T):
-    # TODO: Apply levinson recursion
-    # TODO: How to import the levinson project?
-    # _, _, eps = lev_durb(r)
-
-    p_max = len(r) - 1
-    eps = np.nan * np.zeros(p_max + 1)
-    eps[0] = r[0]
-    for p in range(1, p_max + 1):
-        # R = toeplitz(r[:-1])
-        # _r = r[1:]
-        R = toeplitz(r[:p])
-        _r = r[1: p + 1]
-        w = estimate_b_lstsqr_cov(R, _r)
-        eps[p] = r[0] - w @ _r
-
+    _, _, eps = lev_durb(r)
     bic = compute_bic(eps, T, s=1)
     p_opt = np.argmax(bic)
     return eps[p_opt], p_opt
 
 
+@numba.jit(nopython=True, cache=True)
+def _fast_bivariate_AR_error(R, T):
+    _, _, S = whittle_lev_durb(R)
+    det_S = np.empty(len(S))
+    for k in range(len(S)):
+        det_S[k] = np.linalg.det(S[k])
+    bic = compute_bic(det_S, T, s=4)
+    p_opt = np.argmax(bic)
+    S_opt = S[p_opt]
+    return S_opt[0, 0], S_opt[1, 1], p_opt
+
+
+@numba.jit(nopython=True, cache=True)
 def compute_bic(eps, T, s=1):
     """
-    set s = 1 for univariate case and s = 2 for bivariate case.
+    set s = 1 for univariate case and s = 4 for bivariate case.
     """
-    bic = [-T * np.log(eps_p) - s * p * np.log(T)
-           for p, eps_p in enumerate(eps)]
+    bic = np.empty(len(eps))
+    logT = np.log(T)
+    for p, log_eps_p in enumerate(np.log(eps)):
+        bic[p] = -log_eps_p - s * p * logT / T
     return bic
 
+
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
-    assert T > 1 + 2 * np.max(p_lags),\
-        "T = {} is too small for max(p_lags) = {}".format(T, np.max(p_lags))
-    # TODO: Should this be T / p_j ??
-    F = T * (xi_i[:, None] / xi_ij - 1) / p_lags # This is chi2(p) under the null
-    # F = F * (T - 2 * p_lags - 1) / p_lags
+    F = T * (xi_i[:, None] / xi_ij - 1) / p_lags
+    F[p_lags == 0] = 0
     return F
+
+
+@numba.jit(nopython=True, cache=True)
+def form_bivariate_covariance(R, i, j):
+    """
+    Creates bivariate covariance sequence by pulling out R[:, i, j]
+    components.
+    """
+    # return R[:, [i, j], :][:, :, [i, j]]  # Only basic indexing for numba
+    p, _, _ = R.shape
+    Rij = np.empty((p, 2, 2))
+    Rij[:, 0, 0] = R[:, i, i]
+    Rij[:, 0, 1] = R[:, i, j]
+    Rij[:, 1, 0] = R[:, j, i]
+    Rij[:, 1, 1] = R[:, j, j]
+    return Rij
 
 
 def compute_xi(X, max_lag):
@@ -309,38 +319,32 @@ def compute_xi(X, max_lag):
          for i in range(n)])
     xi_ij, p_ij = xi_p_ij[:, :, 0], xi_p_ij[:, :, 1]
     return xi_i, xi_ij, p_i, p_ij
-        
 
 
-def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
+# Numba parallelism seems much slower unfortunately
+# @numba.jit(nopython=True, cache=True, parallel=True)
+@numba.jit(nopython=True, cache=True)
+def fast_compute_xi(X, max_lag=10):
     T, n = X.shape
     R = compute_covariances(X, max_lag)
 
-    xi_p_i = np.array([_fast_univariate_AR_error(R[:, i, i], T)
-                       for i in range(n)])
-    xi_i, p_i = xi_p_i[:, 0], xi_p_i[:, 1]
+    xi_i = np.zeros(n)
+    xi_ij, p_ij = np.zeros((n, n)), np.zeros((n, n))
 
-    # TODO: Most of the time is now spent forming toeplitz matrices.
-    # TODO: Include BIC calculations
+    for i in range(n):
+        xi_i[i], p_i = _fast_univariate_AR_error(R[:, i, i], T)
+        xi_ij[i, i] = xi_i[i]
+        p_ij[i, i] = p_i
 
-    # TODO:
-    # due to inaccurate estimates of covariance, these matrices
-    # are not actually guaranteed to be positive definite.
-    # We fallback on linalg.solve in those cases, but it might
-    # be reasonable instead to fallback onto form_Xy and direct
-    # least squares.
-    def form_Rrij(R, i, j):
-        C = toeplitz(R[:-1, j, i], R[:-1, i, j])  # Left column then top row!
-        Rij = np.block([[toeplitz(R[:-1, i, i]), C],
-                        [C.T, toeplitz(R[:-1, j, j])]])
-        rij = np.concatenate((R[1:, i, i], R[1:, i, j]))
-        Rij = Rij + reg_delta * np.eye(Rij.shape[0])
-        return Rij, rij
-
-    xi_ij = np.array([[_fast_compute_AR_error(*form_Rrij(R, i, j))
-                       if j != i else xi_i[i] for j in range(n)]
-                      for i in range(n)])
-    return xi_i, xi_ij
+    for i in numba.prange(n):
+        for j in range(i):
+            Rij = form_bivariate_covariance(R, i, j)
+            ei, ej, _p = _fast_bivariate_AR_error(Rij, T)
+            xi_ij[i, j] = ei
+            xi_ij[j, i] = ej
+            p_ij[i, j] = _p
+            p_ij[j, i] = _p
+    return xi_i, xi_ij, p_ij
 
 
 # TODO: Use the criterion for selecting lag lengths
@@ -349,7 +353,7 @@ def fast_compute_xi(X, max_lag=10, reg_delta=0.0):
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
 def compute_pairwise_gc(X, max_lag=10):
-    T, _, p = *X.shape, max_lag
+    T, _, _ = *X.shape, max_lag
     xi_i, xi_ij, p_i, p_ij = compute_xi(
         X, max_lag)
     F = compute_gc_score(xi_i, xi_ij, T, p_ij)
@@ -363,15 +367,14 @@ def normalize_gc_score(F, p):
 
 def fast_compute_pairwise_gc(X, max_lag=10):
     """
-    This is /dramatically/ faster than compute_pairwise_gc,
-    only difference is that it handles just plain least squares.
+    This is /dramatically/ faster than compute_pairwise_gc.
 
     TODO: However there are significant discrepancies!
     TODO: There is something clearly wrong about this implementation.
     """
-    T, _, p = *X.shape, max_lag
-    xi_i, xi_ij = fast_compute_xi(X, max_lag)
-    return compute_gc_score(xi_i, xi_ij, T, p)
+    T, _, = X.shape
+    xi_i, xi_ij, p_ij = fast_compute_xi(X, max_lag)
+    return compute_gc_score(xi_i, xi_ij, T, p_ij), p_ij
 
 
 # TODO: P_j should be an n x n array
@@ -434,9 +437,11 @@ def pw_scg(F, P_edge, alpha):
         anc_i = nx.ancestors(G, i)
         if (i in anc_j) or (j in anc_i):
             return False
-        if len(anc_i & anc_j):  # Common ancestors
+        if len(anc_i & anc_j):
+            # Common ancestors
             return False
-        if len(nx.descendants(G, i) & nx.descendants(G, j)):  # Common descendants
+        if len(nx.descendants(G, i) & nx.descendants(G, j)):
+            # Common descendants
             return False
         return True
 
@@ -455,7 +460,7 @@ def pw_scg(F, P_edge, alpha):
              if (F[j, i] >= F[i, j] and P_edge[j, i] > 0)}
 
     # Predecessor edges of a node, i.e. W[i] = {j | (j, i) \in W}
-    W_pred = {i: [j for j in S if (j, i) in W_set ]
+    W_pred = {i: [j for j in S if (j, i) in W_set]
               for i in S}
 
     k = 1  # Counter purely for detecting infinite loops
@@ -470,7 +475,8 @@ def pw_scg(F, P_edge, alpha):
     # and ensure that we choose at least 1.
     P = arg_select_min_N(C, N=sum(C[i] < ceil(min(C.values())) for i in C))
     if len(P) == 0:
-        P = arg_select_min_N(C, N=sum(C[i] <= ceil(min(C.values())) for i in C))
+        P = arg_select_min_N(
+            C, N=sum(C[i] <= ceil(min(C.values())) for i in C))
     P_k = [P]
 
     # ------------ Iterations -------------------
@@ -492,14 +498,16 @@ def pw_scg(F, P_edge, alpha):
         # NOTE: It appears that sorting on F on all of the previous P_k sets
         # NOTE: works pretty well.  We should expect that "real" edges will
         # NOTE: have larger F values.  In the "theoretical" algorithm, we can
-        # NOTE: only check yes/no, and for that reason we need to apply backwards
-        for i, j in sort_edges_by_F(reduce(set.union, P_k[:-1]), P_k[-1], F, W_set):
+        # NOTE: only check yes/no, for that reason we need to apply backwards
+        for i, j in sort_edges_by_F(reduce(
+                set.union, P_k[:-1]), P_k[-1], F, W_set):
             if maintains_strong_causality(G, i, j):
                 G.add_edge(i, j)
         P = P | P_k[-1]
 
         if k > 10 * n ** 2:  # Clearly stuck
-            raise AssertionError("pw_scg has failed to terminate after {} iterations.  "
+            raise AssertionError("pw_scg has failed to terminate after {} "
+                                 "iterations.  "
                                  "S = {}, P = {}".format(k, S, P))
         k = k + 1
 
@@ -603,7 +611,7 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
-def estimate_graph(X, G, max_lags=10, method="lasso"):
+def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     """
     Produce an estimated graph from the data X.
 
@@ -652,15 +660,15 @@ def estimate_graph(X, G, max_lags=10, method="lasso"):
 
 
 def compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
-    P = N_edges  # Positives
+    # P = N_edges  # Positives
     TP = N_intersect_edges  # True positives
     FP = N_hat_edges - N_intersect_edges  # False positives
-    TPR = TP / P  # True positive rate (Sensitivity)
+    # TPR = TP / P  # True positive rate (Sensitivity)
 
     N = n_nodes**2 - N_edges  # Negatives
     FN = N_edges - N_intersect_edges  # False negatives
     TN = N - FN  # True negatives
-    TNR = TN / N  # True negative rate
+    # TNR = TN / N  # True negative rate
     return TP, TN, FP, FN
 
 
@@ -692,4 +700,3 @@ def example_graph():
     # set(nx.ancestors(G, i)): set of ancestors of i in G
     # A = nx.adjacency_matrix(G).todense(): Find adj matrix
     return
-

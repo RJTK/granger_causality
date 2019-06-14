@@ -1,12 +1,10 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot as plt
 from matplotlib import rc as mpl_rc
-font = {"family" : "normal",
-        "weight" : "bold",
-        "size"   : 22}
+font = {"family": "normal",
+        "weight": "bold",
+        "size": 22}
 
 mpl_rc("font", **font)
 mpl_rc("text", usetex=False)
@@ -82,14 +80,22 @@ def test_pw_scg():
     X = get_X(G)
     X = X - np.mean(X, axis=0)[None, :]
 
-    # TODO: Use max_lags and compute lag length by bic
-    F, P = compute_pairwise_gc(X, max_lag=p_lags)
-    P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
-    P_values = 1 - P_edges[~np.eye(n_nodes, dtype=bool)].ravel()
-    t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
-    G_hat = pw_scg(F, P_edges, t_bh)
-    draw_graph_estimates(G, G_hat)
+    def est_graph(X, fast=False):
+        if fast:
+            F, P = fast_compute_pairwise_gc(X, p_lags)
+        else:
+            F, P = compute_pairwise_gc(X, max_lag=p_lags)
+
+        P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
+        P_values = 1 - P_edges[~np.eye(n_nodes, dtype=bool)].ravel()
+        t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
+        G_hat = pw_scg(F, P_edges, t_bh)
+        draw_graph_estimates(G, G_hat)
+        return
+
+    est_graph(X, False)
+    est_graph(X, True)
     return
 
 
-test_pw_scg()
+# test_pw_scg()
