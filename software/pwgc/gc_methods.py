@@ -195,7 +195,7 @@ def univariate_AR_error(x, max_lag=10):
     for p in range(1, max_lag + 1):
         X_, y_ = form_Xy(X_raw=x[:, None], y_raw=x, p=p)
         sv2_p = _compute_AR_error(X_, y_)
-        bic_p = -(T - p - 1) * np.log(sv2_p) - p * np.log(T - p - 1)
+        bic_p = -T * np.log(sv2_p) - p * np.log(T)
         if bic_p > bic:
             bic = bic_p
             continue
@@ -212,7 +212,7 @@ def bivariate_AR_error(y, x, max_lag=10):
         X_, y_ = form_Xy(X_raw=np.hstack((y[:, None], x[:, None])),
                          y_raw=y, p=p)
         sv2_p = _compute_AR_error(X_, y_)
-        bic_p = -(T - p - 1) * np.log(sv2_p) - 2 * p * np.log(T - p - 1)
+        bic_p = -T * np.log(sv2_p) - 4 * p * np.log(T)
         if bic_p > bic:
             bic = bic_p
             continue
@@ -232,11 +232,6 @@ def compute_covariances(X, p):
     R[0] = X.T @ X
     for tau in range(1, p + 1):
         R[tau] = X[tau:, :].T @ X[:-tau, :]
-    # R = np.stack(
-    #     [X.T @ X / T] +
-    #     [X[tau:, :].T @ X[: -tau, :] / T
-    #      for tau in range(1, p + 1)],
-    #     axis=0)
     return R
 
 
@@ -278,17 +273,13 @@ def compute_bic(eps, T, s=1):
     bic = np.empty(len(eps))
     logT = np.log(T)
     for p, log_eps_p in enumerate(np.log(eps)):
-        bic[p] = -T * log_eps_p - s * p * logT
+        bic[p] = -log_eps_p - s * p * logT / T
     return bic
 
 
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
-    assert T > 1 + 2 * np.max(p_lags),\
-        "T = {} is too small for max(p_lags) = {}".format(T, np.max(p_lags))
-    # TODO: Should this be T / p_j ??
-    # F is is chi2(p) under the null
     F = T * (xi_i[:, None] / xi_ij - 1) / p_lags
-    # F = F * (T - 2 * p_lags - 1) / p_lags
+    F[p_lags == 0] = 0
     return F
 
 
@@ -337,12 +328,13 @@ def fast_compute_xi(X, max_lag=10):
     T, n = X.shape
     R = compute_covariances(X, max_lag)
 
-    xi_i, p_i = np.zeros(n), np.zeros(n)
+    xi_i = np.zeros(n)
     xi_ij, p_ij = np.zeros((n, n)), np.zeros((n, n))
 
     for i in range(n):
-        xi_i[i], p_i[i] = _fast_univariate_AR_error(R[:, i, i], T)
+        xi_i[i], p_i = _fast_univariate_AR_error(R[:, i, i], T)
         xi_ij[i, i] = xi_i[i]
+        p_ij[i, i] = p_i
 
     for i in numba.prange(n):
         for j in range(i):
@@ -375,15 +367,14 @@ def normalize_gc_score(F, p):
 
 def fast_compute_pairwise_gc(X, max_lag=10):
     """
-    This is /dramatically/ faster than compute_pairwise_gc,
-    only difference is that it handles just plain least squares.
+    This is /dramatically/ faster than compute_pairwise_gc.
 
     TODO: However there are significant discrepancies!
     TODO: There is something clearly wrong about this implementation.
     """
-    T, _, p = *X.shape, max_lag
-    xi_i, xi_ij = fast_compute_xi(X, max_lag)
-    return compute_gc_score(xi_i, xi_ij, T, p)
+    T, _, = X.shape
+    xi_i, xi_ij, p_ij = fast_compute_xi(X, max_lag)
+    return compute_gc_score(xi_i, xi_ij, T, p_ij), p_ij
 
 
 # TODO: P_j should be an n x n array
