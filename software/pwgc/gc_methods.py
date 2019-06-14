@@ -278,7 +278,7 @@ def compute_bic(eps, T, s=1):
 
 
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
-    F = T * (xi_i[:, None] / xi_ij - 1) / p_lags
+    F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
     F[p_lags == 0] = 0
     return F
 
@@ -624,7 +624,8 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     T, n = X.shape
 
     # Compute the pairwise errors and filter sizes
-    F, P = compute_pairwise_gc(X, max_lag=max_lags)
+    # F, P = compute_pairwise_gc(X, max_lag=max_lags)
+    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags)
 
     # Screen edges via benjamini hochberg criterion
     P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F

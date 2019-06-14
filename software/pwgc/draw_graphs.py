@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 
-from var_system import (random_gnp_dag, random_tree_dag)
+from .var_system import (random_gnp_dag, random_scg)
+
 
 def draw_graph(G, file_name=None):
     pos = graphviz_layout(G, prog="dot")
@@ -93,23 +94,4 @@ def draw_graph_estimates(G, G_hat, file_name=None,
         else:  # Allow passing a list
             [plt.savefig(f) for f in file_name]
     plt.show()
-    return
-
-
-def draw_example_graphs():
-    n_nodes = 75
-    edge_prob = 2. / n_nodes
-
-    G_tree = random_tree_dag(n_nodes, p_lags, pole_rad=0.75)
-    G_dag = random_gnp_dag(n_nodes, p_lags, pole_rad=0.75,
-                           edge_prob=edge_prob)
-    G_gnp = random_gnp(n_nodes, p_lags, pole_rad=0.75,
-                       edge_prob=edge_prob)
-
-    draw_graph(G_tree, ["../figures/example_tree.pdf",
-                        "../figures/jpgs_pngs/example_tree.png"])
-    draw_graph(G_dag, ["../figures/example_dag.pdf",
-                       "../figures/jpgs_pngs/example_dag.png"])
-    draw_graph(G_gnp, ["../figures/example_gnp.pdf",
-                       "../figures/jpgs_pngs/example_gnp.png"])
     return

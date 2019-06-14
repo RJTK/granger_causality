@@ -71,6 +71,7 @@ def _graph_to_dag(G):
     n_nodes = len(G.nodes)
     G = nx.DiGraph([(u, v)
                     for (u, v) in G.edges() if u < v])
+
     [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]    
     assert nx.is_directed_acyclic_graph(G)
     return G
@@ -126,23 +127,21 @@ def random_gnp(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
         return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
 
     # Add self loops only with probability edge_prob
-    self_loops = np.random.binomial(n=1, p=edge_prob,
-                                    size=len(G.nodes))
-    for add, i in zip(self_loops, G.nodes):
-        if add:
-            G.add_edge(i, i)
+    G = add_self_loops(G, copy_G=False)
     G = _attach_edge_properties(G, get_edge)
+
+    stabilize_system(G)
     
     G.graph["true_lags"] = p_lags
     return G
 
 
-def random_tree_dag(n_nodes, p_lags, pole_rad=0.95):
+def random_scg(n_nodes, p_lags, pole_rad=0.95):
     """
     I THINK STRONGLY CAUSAL
 
-    Produces a random directed tree with random ARMA filters having
-    pole radius `pole_rad` on the edges.  The tree will have `n_nodes`
+    Produces a random strongly causal graph with random ARMA filters having
+    pole radius `pole_rad` on the edges.  The graph will have `n_nodes`
     nodes and each node will have `r_degree` children.
 
     # NOTE: This will always have the same number of edges (why?)
@@ -293,6 +292,11 @@ def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
         G.nodes[node_i]["x"] = X[:, i]
         G.nodes[node_i]["sv2"] = sigma2_v[i]
     return G
+
+
+def stabilize_system(G):
+    nx.simple_cycles(G)
+    return
 
 
 class VAR:

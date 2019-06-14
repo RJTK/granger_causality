@@ -65,10 +65,10 @@ def test_fast_computation():
 
 
 def test_pw_scg():
-    n_nodes, p_lags, max_lags = 50, 5, 10
+    n_nodes, p_lags, p_max = 50, 5, 15
     alpha = 0.05
 
-    T_max = 500
+    T_max = 5000
 
     random_graph = lambda: random_tree_dag(
         n_nodes, p_lags, pole_rad=0.75)

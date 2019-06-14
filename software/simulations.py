@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+import statsmodels.api as sm
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
+
+
 from matplotlib import rc as mpl_rc
 font = {"family" : "normal",
         "weight" : "bold",
@@ -11,33 +15,39 @@ font = {"family" : "normal",
 mpl_rc("font", **font)
 mpl_rc("text", usetex=True)
 
-from var_system import (random_gnp_dag, drive_gcg, get_errors,
-                        get_estimation_errors, random_tree_dag,
-                        get_X, attach_node_prop, gcg_to_var)
-from gc_methods import (compute_pairwise_gc, estimate_B, pw_scg,
-                        estimate_graph, full_filter_estimator,
-                        compute_MCC_score)
+from pwgc.var_system import (random_gnp_dag, drive_gcg, get_errors,
+                             get_estimation_errors, random_scg,
+                             get_X, attach_node_prop, gcg_to_var)
+from pwgc.gc_methods import (compute_pairwise_gc, estimate_B, pw_scg,
+                             estimate_graph, full_filter_estimator,
+                             compute_MCC_score)
 
 
-def full_single_pass_experiment(simulation_name, graph_type, M_passes=1):
-    n_nodes, p_lags, max_lags = 50, 5, 10
-    N_iters = 50
+def full_single_pass_experiment(simulation_name, graph_type):
+    np.random.seed(0)
+    n_nodes, p_lags, p_max = 50, 5, 20
+    alpha, N_iters = 0.05, 3
 
-    T_max = 11000
-    # T_iters = [100, 500, 1000, 2500, 5000, 10000]
-    T_iters = [100, 500, 1000, 2500, 10000]
+    T_iters = [50 + 50 * k for k in range(1, 99)]
+    T_max = T_iters[-1] + 100
 
-    if graph_type == "Tree":  # TODO: This doesn't actually produce trees!
-        random_graph = lambda: random_tree_dag(
+    # Tune the expected number of edges to match N_edges
+    N_edges = (len(random_scg(n_nodes, p_lags, pole_rad=0.75).edges) -
+               n_nodes)  # Due to self loops
+    edge_prob = 2 * N_edges / (n_nodes * (n_nodes - 1))
+
+    if graph_type == "SCG":
+        random_graph = lambda: random_scg(
             n_nodes, p_lags, pole_rad=0.75)
     elif graph_type == "DAG":
         random_graph = lambda: random_gnp_dag(
             n_nodes, p_lags, pole_rad=0.75,
-            edge_prob=2. / n_nodes)
+            edge_prob=edge_prob)
     elif graph_type == "ErdosRenyi":
+        # Tune the expected number of edges to match N_edges
         random_graph = lambda: random_gnp(
-            n_nodes, p_lags, pole_rad=0.50,
-            edge_prob=2. / n_nodes)
+            n_nodes, p_lags, pole_rad=0.75,
+            edge_prob=edge_prob)
     else:
         raise NotImplementedError("graph_type '{}' is not understood"
                                   "".format(graph_type))
@@ -63,10 +73,12 @@ def full_single_pass_experiment(simulation_name, graph_type, M_passes=1):
             drive_gcg(G, T_max, sv2_true, filter_attr="b(z)")
             X = get_X(G)
             X = X - np.mean(X, axis=0)[None, :]
+            X = X[:T]
 
             # TODO: I am using T_max samples on every run!
-            G_hat = estimate_graph(X, G, max_lags=10, method="lstsqr")
-            draw_graph_estimates(G, G_hat)
+            G_hat = estimate_graph(X, G, max_lags=p_max,
+                                   method="lstsqr", alpha=alpha)
+            # draw_graph_estimates(G, G_hat)
             # G_hat = full_filter_estimator(G, M_passes=1, T_max=T)
             # X = get_X(G, prop="x")
 
@@ -92,12 +104,13 @@ def full_single_pass_experiment(simulation_name, graph_type, M_passes=1):
             N_hat_cross_edges[N_iter, T_iter] = len(set(
                 (i, j) for i, j in G_hat.edges if i != j))
             N_cross_intersect_edges[N_iter, T_iter] = len(
-                (set(G.edges) & set(G_hat.edges)) - set((i, i) for i in G.nodes))
+                (set(G.edges) & set(G_hat.edges)) - set((i, i)
+                                                        for i in G.nodes))
 
     MCC = compute_MCC_score(N_cross_edges, N_hat_cross_edges,
                             N_cross_intersect_edges, n_nodes)
 
-    def to_pd(X, var_name=""):
+    def to_pd(X):
         D = pd.DataFrame(X, columns=["{}".format(T) for T in T_iters]).melt()
         return D
 
@@ -105,68 +118,68 @@ def full_single_pass_experiment(simulation_name, graph_type, M_passes=1):
     D_true_errs = to_pd(np.log(true_errs))
     D_MCC = to_pd(MCC)
 
-    for T_iter, c in zip(range(len(T_iters)), ["b", "r", "g", "y", "m", "lightblue"]):
-        for N_iter, _ in enumerate(range(N_iters)):
-            plt.plot(np.sort(errs_vec[:, T_iter, :], axis=0),
-                     color=c, linewidth=0.75, alpha=0.75)
-    plt.show()
-
     plot_results(
         D_MCC, D_errs, D_true_errs, T_iters,
-        title=("Test Errors against T (Random Tree graph on "
-               "$n = {}$ nodes)".format(n_nodes)))
+        title=("Test Errors against T (Random {} graph on "
+               "$n = {}$ nodes)".format(graph_type, n_nodes)),
+        save_file=["../figures/{}_simulation.pdf".format(simulation_name),
+                   "../figures/jpgs_pngs/"
+                   "{}_simulation.png".format(simulation_name)])
+    return
 
-    # plot_results(
-    #     D_MCC, D_errs, D_true_errs, T_iters,
-    #     title=("Test Errors against T (Random {} graph on "
-    #            "$n = {}$ nodes)".format(graph_type, n_nodes)),
-    #     save_file=["../figures/{}_simulation.pdf".format(simulation_name),
-    #                "../figures/jpgs_pngs/{}_simulation.png".format(simulation_name)])
+
+def _fit_sqrt_model(x, y):
+    X = np.vstack((np.ones_like(x), x, np.sqrt(x))).T
+    X = np.vstack((np.ones_like(x), np.sqrt(x), np.sqrt(x + np.median(x)))).T
+
+    fit = sm.OLS(endog=y, exog=X, hasconst=True)
+    fit_res = fit.fit()
+    y_hat = fit_res.fittedvalues
+    _, y_low, y_high = wls_prediction_std(fit_res, X, alpha=0.1)
+    return y_low, y_hat, y_high
+
+
+def _plot_sqrt_model(x, y, y_low, y_hat, y_high, ax, color="b",
+                     fill_between=True):
+    ax.scatter(x, y, color=color, marker="o")
+    ax.plot(x, y_hat, color=color, linewidth=2)
+    if fill_between:
+        ax.fill_between(x, y_low, y_high,
+                        color=color, alpha=0.5)
     return
 
 
 def plot_results(D_MCC, D_errs, D_true_errs, T_iters,
                  save_file=None, title=""):
+    t = np.array(D_MCC["variable"], dtype=float)
+    mcc = np.array(D_MCC["value"], dtype=float)
+    errs = np.array(D_errs["value"], dtype=float)
+    true_errs = np.array(D_true_errs["value"], dtype=float)
+
+    errs = errs / true_errs  # Error relative to noise floor
+
     fig, ax_mcc = plt.subplots(1, 1)
     ax_pred = ax_mcc.twinx()
     order = ["{}".format(T) for T in T_iters]
 
-    # MCC
-    sns.catplot(x="variable", y="value", data=D_MCC,
-                kind="point", ax=ax_mcc, color="b",
-                order=order, ci=None)
-    sns.catplot(x="variable", y="value", data=D_MCC,
-                kind="strip", ax=ax_mcc, color="b",
-                order=order)
-
-    # True Errors
-    sns.catplot(x="variable", y="value", data=D_true_errs,
-                kind="point", ax=ax_pred, color="k",
-                order=order, ci=None)
-
-    # Acheived Errors
-    sns.catplot(x="variable", y="value", data=D_errs,
-                kind="point", ax=ax_pred, color="r",
-                order=order, ci=None)
-    sns.catplot(x="variable", y="value", data=D_errs,
-                kind="strip", ax=ax_pred, color="r",
-                order=order)
+    _plot_sqrt_model(t, mcc, *_fit_sqrt_model(t, mcc),
+                     ax=ax_mcc, color="b", fill_between=False)
+    _plot_sqrt_model(t, errs, *np.exp(_fit_sqrt_model(t, np.log(errs))),
+                     ax=ax_pred, color="r", fill_between=False)
 
     ax_mcc.set_xlabel("Time Points $T$")
     ax_mcc.set_ylabel("Graph Recovery MCC Score")
-    ax_pred.set_ylabel("Log Prediction Error")
+    ax_pred.set_ylabel("Log Prediction Error Relative to Noise Floor")
     ax_pred.plot([], [], color="b", label="MCC")
     ax_pred.plot([], [], color="r", label="Prediction Error")
-    ax_pred.plot([], [], color="k", label="Noise Floor")
-    ax_pred.legend()
+    ax_pred.legend(loc="upper left")
     ax_pred.grid(False)
-
     ax_mcc.set_title(title)
 
     if save_file is not None:
         if isinstance(save_file, str):
             fig.savefig(save_file)
         else:  # Allow passing a list
-            [fig.savefig(f) for f in save_file]
+            _ = [fig.savefig(f) for f in save_file]
     plt.show()
     return
