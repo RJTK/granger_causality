@@ -1,7 +1,8 @@
+
 *.log
 *.out
 *~
-*.#
+*#
 *.xml
 *.aux
 *.prv
@@ -16,3 +17,8 @@ auto/
 *data/
 *ETFs/
 *Stocks/
+*.png
+*.jpg
+*.pyc
+*.dot
+*.prof
