@@ -22,11 +22,13 @@ from math import ceil
 try:
     from .stat_util import benjamini_hochberg
     from .var_system import (attach_node_prop, add_self_loops,
-                             remove_zero_filters, get_X)
+                             remove_zero_filters, get_X,
+                             make_complete_digraph, attach_X)
 except ImportError:
     from stat_util import benjamini_hochberg
     from var_system import (attach_node_prop, add_self_loops,
-                            remove_zero_filters, get_X)
+                            remove_zero_filters, get_X,
+                            make_complete_digraph, attach_X)
 
 
 def estimate_b_lstsqr(X, y):
@@ -611,12 +613,17 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
-def estimate_dense_graph(X, max_T=None, method="lasso"):
-    T, n = X.shape
-    G = nx.complete_graph(n)
-    G = attach_node_prop(
-    
-    return
+def estimate_dense_graph(X, max_lag=10,
+                         max_T=None, method="lasso"):
+    _, n = X.shape
+    G = make_complete_digraph(n)
+    G = attach_X(G, X)
+    assert np.all(X == get_X(G))
+
+    estimate_B(G, max_lag, copy_G=copy_G, max_T=max_T, method=method)
+    G = remove_zero_filters(G), "b_hat(z)", copy_G=False)
+    return G
+
 
 def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     """

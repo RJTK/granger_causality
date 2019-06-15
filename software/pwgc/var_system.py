@@ -72,7 +72,7 @@ def _graph_to_dag(G):
     G = nx.DiGraph([(u, v)
                     for (u, v) in G.edges() if u < v])
 
-    _ = [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]    
+    _ = [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]
     assert nx.is_directed_acyclic_graph(G)
     return G
 
@@ -181,6 +181,12 @@ def get_X(G, prop="x"):
     X = get_node_property_vector(G, prop).T
     X = sort_X_by_nodes(G, X)
     return X
+
+
+def attach_X(G, X, prop_name="x"):
+    for i in G.nodes:
+        G.nodes[i][prop_name] = X[:, i]
+    return G
 
 
 def attach_node_prop(G_attach, G_from, prop_attach="x", prop_from="x"):
@@ -296,7 +302,7 @@ def drive_gcg(G, T, sigma2_v, filter_attr="b(z)"):
     V = np.random.normal(size=(T, n)) * np.sqrt(sigma2_v)
     W = np.random.normal(size=(int(np.sqrt(T)), n)) * np.sqrt(sigma2_v)
     var = gcg_to_var(G, filter_attr=filter_attr, assert_stable=False)
-    var.drive(W)  # Burn in 
+    var.drive(W)  # Burn in
     X = var.drive(V)  # Actual output
 
     for i, node_i in enumerate(G.nodes):
