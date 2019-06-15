@@ -83,12 +83,6 @@ def full_single_pass_experiment(simulation_name, graph_type):
             # TODO: I am using T_max samples on every run!
             G_hat = estimate_graph(X, G, max_lags=p_max,
                                    method="lstsqr", alpha=alpha)
-            # draw_graph_estimates(G, G_hat)
-            # G_hat = full_filter_estimator(G, M_passes=1, T_max=T)
-            # X = get_X(G, prop="x")
-
-            # # We pass in G only to attach "x" to G_hat
-            # G_hat = estimate_graph(X[:T], G)
 
             b_err = np.mean(list(map(np.var, get_estimation_errors(G, G_hat))))
             err = np.sum(get_errors(G_hat))

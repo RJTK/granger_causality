@@ -611,6 +611,13 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
+def estimate_dense_graph(X, max_T=None, method="lasso"):
+    T, n = X.shape
+    G = nx.complete_graph(n)
+    G = attach_node_prop(
+    
+    return
+
 def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     """
     Produce an estimated graph from the data X.
@@ -632,31 +639,22 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
     t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
 
-    # F = fast_compute_pairwise_gc(X, max_lag=max_lags)
-
     # Estimate a strongly causal graph
     G_hat = pw_scg(F, P_edges, t_bh)
-    # draw_graph_estimates(G, G_hat)
     G_hat = attach_node_prop(G_hat, G, prop_attach="x", prop_from="x")
     G_hat = add_self_loops(G_hat, copy_G=False)
-    # draw_graph_estimates(G, G_hat)
 
-    # Restimates the full graph via the LASSO procedure -- this tends
-    # to remove many of the false positive edges, but also at the expense
-    # of true positives.
-    # TODO: Improve upon this step
-
+    # Restimate the coefficients
     if method == "lasso":
-        G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
+        G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
                            method=method)
         G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
     elif method == "lstsqr":
-        G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=X.shape[0],
+        G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
                            method=method)
     else:
         raise NotImplementedError("The fitting method {} is not available!"
                                   "".format(method))
-    # draw_graph_estimates(G, G_hat)
     return G_hat
 
 

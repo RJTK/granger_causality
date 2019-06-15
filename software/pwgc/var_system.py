@@ -72,7 +72,7 @@ def _graph_to_dag(G):
     G = nx.DiGraph([(u, v)
                     for (u, v) in G.edges() if u < v])
 
-    [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]    
+    _ = [G.add_node(v) for v in set(range(n_nodes)) - set(G.nodes)]    
     assert nx.is_directed_acyclic_graph(G)
     return G
 
@@ -85,6 +85,14 @@ def _attach_edge_properties(G, gen_func):
     for u, v in G.edges:
         prop, value = gen_func()
         G[u][v][prop] = value
+    return G
+
+
+def make_complete_digraph(n_nodes):
+    G = nx.complete_graph(n_nodes)
+    G = _graph_to_dag(G)
+    G.add_edges_from([(v, u) for (u, v) in G.edges])
+    G = add_self_loops(G)
     return G
 
 
@@ -101,12 +109,13 @@ def random_gnp_dag(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
     G = nx.gnp_random_graph(n_nodes, p=edge_prob, directed=True)
 
     def get_edge():
-        return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
+        return "b(z)", -random_arma(p=p_lags, q=0,
+                                    k=1, p_radius=pole_rad)[1][1:]
 
     G = _graph_to_dag(G)
     G = add_self_loops(G, copy_G=False)
     G = _attach_edge_properties(G, get_edge)
-    
+
     G.graph["true_lags"] = p_lags
     return G
 
@@ -124,14 +133,15 @@ def random_gnp(n_nodes, p_lags, edge_prob=0.3, pole_rad=0.95):
     G = nx.gnp_random_graph(n_nodes, p=edge_prob, directed=True)
 
     def get_edge():
-        return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
+        return "b(z)", -random_arma(p=p_lags, q=0,
+                                    k=1, p_radius=pole_rad)[1][1:]
 
     # Add self loops only with probability edge_prob
     G = add_self_loops(G, copy_G=False)
     G = _attach_edge_properties(G, get_edge)
 
     stabilize_system(G)
-    
+
     G.graph["true_lags"] = p_lags
     return G
 
@@ -149,7 +159,8 @@ def random_scg(n_nodes, p_lags, pole_rad=0.95):
     tree = nx.generators.trees.random_tree(n=n_nodes)
 
     def get_edge():
-        return "b(z)", -random_arma(p=p_lags, q=0, k=1, p_radius=pole_rad)[1][1:]
+        return "b(z)", -random_arma(p=p_lags, q=0,
+                                    k=1, p_radius=pole_rad)[1][1:]
 
     G = _graph_to_dag(tree)
     G = add_self_loops(G, copy_G=False)

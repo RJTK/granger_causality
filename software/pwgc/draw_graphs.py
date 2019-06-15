@@ -3,7 +3,10 @@ import matplotlib.pyplot as plt
 
 from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 
-from .var_system import (random_gnp_dag, random_scg)
+try:
+    from .var_system import (random_gnp_dag, random_scg)
+except ImportError:
+    from var_system import (random_gnp_dag, random_scg)
 
 
 def draw_graph(G, file_name=None):
