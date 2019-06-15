@@ -29,7 +29,12 @@ def full_single_pass_experiment(simulation_name, graph_type):
     alpha, N_iters = 0.05, 3
 
     T_iters = [50 + 50 * k for k in range(1, 99)]
-    T_max = T_iters[-1] + 100
+
+    # NOTE: We use only X[T:] to estimate the error
+    # NOTE: so it is important to have a significant trailing
+    # NOTE: set of data in order to make honest estimates of
+    # NOTE: the out of sample predictions.
+    T_max = T_iters[-1] * 2
 
     # Tune the expected number of edges to match N_edges
     N_edges = (len(random_scg(n_nodes, p_lags, pole_rad=0.75).edges) -

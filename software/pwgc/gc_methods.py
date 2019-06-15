@@ -173,7 +173,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
             raise AssertionError("Bad method but should deal with it earlier!")
 
         # Compute residuals
-        r = y - X @ b
+        r = y[max_T:] - X[max_T:] @ b
 
         # Add the filters as properties to G
         for grouping, j in enumerate(a_i):  # Edge j --b(z)--> i
