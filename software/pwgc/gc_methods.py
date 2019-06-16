@@ -620,7 +620,7 @@ def estimate_dense_graph(X, max_lag=10,
     G = attach_X(G, X)
     assert np.all(X == get_X(G))
 
-    estimate_B(G, max_lag, copy_G=copy_G, max_T=max_T, method=method)
+    estimate_B(G, max_lag, copy_G=False, max_T=max_T, method=method)
     G = remove_zero_filters(G, "b_hat(z)", copy_G=False)
     return G
 

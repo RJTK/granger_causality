@@ -133,9 +133,14 @@ def full_single_pass_experiment(simulation_name, graph_type):
             print("N[{} / {}] -- T[{} / {}]\r".format(
                 N_iter + 1, N_iters, T_iter + 1, len(T_iters)))
 
+            # ~252ms
             G, X, sv2_true = make_test_data(T)
+
+            # ~824ms
             G_hat_pwgc = estimate_graph(X, G, max_lags=p_max,
                                         method="lstsqr", alpha=alpha)
+
+            # ~
             G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
                                                max_T=T,
                                                method="lasso")
