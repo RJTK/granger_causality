@@ -174,6 +174,14 @@ def estimate_B(G, max_lag=10, copy_G=False,
         else:
             raise AssertionError("Bad method but should deal with it earlier!")
 
+        if len(y[max_T:]) <= 100:
+            raise ValueError(
+                "len(y) = {} is not long "
+                "enough for using max_T = {} " "samples for estimation and "
+                "the remaining for the " "out of sample error calculation. "
+                "Ensure that we have " "max_T <= len(y) - 100."
+                "".format(len(y), max_T))
+
         # Compute residuals
         r = y[max_T:] - X[max_T:] @ b
 
@@ -280,8 +288,9 @@ def compute_bic(eps, T, s=1):
 
 
 def compute_gc_score(xi_i, xi_ij, T, p_lags):
-    F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
-    F[p_lags == 0] = 0
+    with np.errstate(divide="ignore", invalid="ignore"):
+        F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
+    F[p_lags ==0] = 0
     return F
 
 
@@ -364,6 +373,7 @@ def compute_pairwise_gc(X, max_lag=10):
 
 def normalize_gc_score(F, p):
     F = sps.chi2.cdf(F, p)
+    F[np.isnan(F)] = 0.0
     return F
 
 

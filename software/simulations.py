@@ -83,7 +83,7 @@ class TrackErrors:
 
 def full_single_pass_experiment(simulation_name, graph_type):
     np.random.seed(0)
-    n_nodes, p_lags, p_max = 50, 5, 20
+    n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 3
 
     T_iters = [50 + 50 * k for k in range(1, 99)]
@@ -115,13 +115,13 @@ def full_single_pass_experiment(simulation_name, graph_type):
         raise NotImplementedError("graph_type '{}' is not understood"
                                   "".format(graph_type))
 
-    def make_test_data(T):
+    def make_test_data():
         sv2_true = 0.5 + np.random.exponential(0.5, size=n_nodes)
         G = random_graph()
         drive_gcg(G, T_max, sv2_true, filter_attr="b(z)")
         X = get_X(G)
         X = X - np.mean(X, axis=0)[None, :]
-        X = X[:T]
+        X = X
         return G, X, sv2_true
 
     errs_pwgc = TrackErrors(N_iters, T_iters, n_nodes)
@@ -134,16 +134,17 @@ def full_single_pass_experiment(simulation_name, graph_type):
                 N_iter + 1, N_iters, T_iter + 1, len(T_iters)))
 
             # ~252ms
-            G, X, sv2_true = make_test_data(T)
+            G, X, sv2_true = make_test_data()
 
             # ~824ms
-            G_hat_pwgc = estimate_graph(X, G, max_lags=p_max,
+            G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
                                         method="lstsqr", alpha=alpha)
 
-            # ~
-            G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
-                                               max_T=T,
-                                               method="lasso")
+            # ~37s
+            if N_iter == 0:
+                G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+                                                   max_T=T,
+                                                   method="lasso")
 
             errs_pwgc.update(G, G_hat_pwgc, sv2_true, N_iter, T_iter)
             errs_lasso.update(G, G_hat_lasso, sv2_true, N_iter, T_iter)
