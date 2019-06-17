@@ -1,4 +1,5 @@
 """
+Comparisons for PWGC and LASSO.
 """
 
 import seaborn.apionly as sns
