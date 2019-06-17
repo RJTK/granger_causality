@@ -1,3 +1,6 @@
+"""
+"""
+
 import seaborn.apionly as sns
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -141,19 +144,19 @@ def full_single_pass_experiment(simulation_name, graph_type):
                                         method="lstsqr", alpha=alpha)
 
             # ~37s
-            if N_iter == 0:
-                G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
-                                                   max_T=T,
-                                                   method="lasso")
+            G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+                                               max_T=T,
+                                               method="lasso")
 
             errs_pwgc.update(G, G_hat_pwgc, sv2_true, N_iter, T_iter)
             errs_lasso.update(G, G_hat_lasso, sv2_true, N_iter, T_iter)
 
-    D_errs_pwgc, D_true_errs_pwgc, D_MCC_pwgc = errs_pwgc.get_results()
-    D_errs_lasso, D_true_errs_lasso, D_MCC_lasso = errs_lasso.get_results()
+    D_errs_pwgc, D_true_errs, D_MCC_pwgc = errs_pwgc.get_results()
+    D_errs_lasso, _, D_MCC_lasso = errs_lasso.get_results()
 
     plot_results(
-        D_MCC_pwgc, D_errs_pwgc, D_true_errs_pwgc, T_iters,
+        D_MCC_pwgc, D_errs_pwgc, D_MCC_lasso, D_errs_lasso,
+        D_true_errs,
         title=("Test Errors against T (Random {} graph on "
                "$n = {}$ nodes)".format(graph_type, n_nodes)),
         save_file=["../figures/{}_simulation.pdf".format(simulation_name),
@@ -173,9 +176,11 @@ def _fit_sqrt_model(x, y):
     return y_low, y_hat, y_high
 
 
-def _plot_sqrt_model(x, y, y_low, y_hat, y_high, ax, color="b",
+def _plot_sqrt_model(x, y, y_low, y_hat, y_high, ax,
+                     color="b", marker="o",
                      fill_between=True):
-    ax.scatter(x, y, color=color, marker="o")
+    ax.scatter(x, y, color=color, marker=marker, alpha=0.75,
+               linewidths=0.0, edgecolors=color)
     ax.plot(x, y_hat, color=color, linewidth=2)
     if fill_between:
         ax.fill_between(x, y_low, y_high,
@@ -183,32 +188,53 @@ def _plot_sqrt_model(x, y, y_low, y_hat, y_high, ax, color="b",
     return
 
 
-def plot_results(D_MCC, D_errs, D_true_errs, T_iters,
-                 save_file=None, title=""):
-    t = np.array(D_MCC["variable"], dtype=float)
-    mcc = np.array(D_MCC["value"], dtype=float)
-    errs = np.array(D_errs["value"], dtype=float)
-    true_errs = np.array(D_true_errs["value"], dtype=float)
+def _plot_individual_results(t, mcc, normed_errs, ax_mcc, title="",
+                             legend=True):
+    ax_mcc.set_title(title)
 
-    errs = errs / true_errs  # Error relative to noise floor
-
-    fig, ax_mcc = plt.subplots(1, 1)
     ax_pred = ax_mcc.twinx()
-    order = ["{}".format(T) for T in T_iters]
-
     _plot_sqrt_model(t, mcc, *_fit_sqrt_model(t, mcc),
-                     ax=ax_mcc, color="b", fill_between=False)
-    _plot_sqrt_model(t, errs, *np.exp(_fit_sqrt_model(t, np.log(errs))),
-                     ax=ax_pred, color="r", fill_between=False)
+                     ax=ax_mcc, color="b", marker="o", fill_between=False)
+    _plot_sqrt_model(t, normed_errs, *_fit_sqrt_model(t, normed_errs),
+                     ax=ax_pred, color="r", marker="^", fill_between=False)
 
     ax_mcc.set_xlabel("Time Points $T$")
     ax_mcc.set_ylabel("Graph Recovery MCC Score")
     ax_pred.set_ylabel("Log Prediction Error Relative to Noise Floor")
-    ax_pred.plot([], [], color="b", label="MCC")
-    ax_pred.plot([], [], color="r", label="Prediction Error")
-    ax_pred.legend(loc="upper left")
+    ax_mcc.set_ylim(0, 1.25)
+    ax_pred.set_ylim(0.5, 3)
+
+    if legend:
+        ax_pred.plot([], [], color="b", marker="o", label="MCC")
+        ax_pred.plot([], [], color="r", marker="^", label="Prediction Error")
+        ax_pred.legend(loc="upper left")
     ax_pred.grid(False)
-    ax_mcc.set_title(title)
+    return
+
+
+def plot_results(D_MCC_pwgc, D_errs_pwgc,
+                 D_MCC_lasso, D_errs_lasso,
+                 D_true_errs,
+                 save_file=None, title=""):
+    true_errs = np.array(D_true_errs["value"], dtype=float)
+    t = np.array(D_true_errs["variable"], dtype=float)
+
+    def _D_to_np(D_MCC, D_errs):
+        mcc = np.array(D_MCC["value"], dtype=float)
+        errs = np.array(D_errs["value"], dtype=float)
+        errs = errs / true_errs  # Error relative to noise floor
+        return mcc, errs
+
+    mcc_pwgc, errs_pwgc = _D_to_np(D_MCC_pwgc, D_errs_pwgc)
+    mcc_lasso, errs_lasso = _D_to_np(D_MCC_lasso, D_errs_lasso)
+
+    fig, axes = plt.subplots(1, 2, sharex=True, sharey=True)
+
+    _plot_individual_results(t, mcc_pwgc, errs_pwgc, axes[0],
+                             title="PWGC Algorithm", legend=True)
+    _plot_individual_results(t, mcc_lasso, errs_lasso, axes[1],
+                             title="LASSO", legend=False)
+    fig.suptitle(title)
 
     if save_file is not None:
         if isinstance(save_file, str):
