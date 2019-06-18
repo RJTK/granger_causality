@@ -5,16 +5,18 @@ Methods which implement granger-causality computations.
 import networkx as nx
 import numpy as np
 import numba
-from levinson import (lev_durb, whittle_lev_durb)
+
+from multiprocessing import Pool
+from itertools import product
+from functools import reduce
+from math import ceil
 
 from scipy import linalg
 from scipy import stats as sps
 from scipy.linalg import toeplitz
 from sklearn.linear_model import LassoLarsIC
 
-from itertools import product
-from functools import reduce
-from math import ceil
+from levinson import (lev_durb, whittle_lev_durb)
 
 # TODO: What is the proper way to do this?  I want packaging,
 # TODO: but I also want to be able to C-c C-c this file into
@@ -335,19 +337,26 @@ def compute_xi(X, max_lag):
 # Numba parallelism seems much slower unfortunately
 # @numba.jit(nopython=True, cache=True, parallel=True)
 @numba.jit(nopython=True, cache=True)
-def fast_compute_xi(X, max_lag=10):
-    T, n = X.shape
-    R = compute_covariances(X, max_lag)
+def fast_compute_xi(R, T, n_min=0, n_max=np.inf):
+    """
+    Calculates Xi[n_min: n_max, :]
+    """
+    _, n, _ = R.shape
+    n_min = max(n_min, 0)
+    n_max = min(n_max, n)
 
-    xi_i = np.zeros(n)
-    xi_ij, p_ij = np.zeros((n, n)), np.zeros((n, n))
+    xi_i = np.nan * np.zeros(n)
+    xi_ij, p_ij = np.nan * np.zeros((n, n)), np.nan * np.zeros((n, n))
 
-    for i in range(n):
+    for i in range(n_min, n_max):
         xi_i[i], p_i = _fast_univariate_AR_error(R[:, i, i], T)
         xi_ij[i, i] = xi_i[i]
         p_ij[i, i] = p_i
 
-    for i in numba.prange(n):
+    # Recall that we are computing a horizontal band
+    # as well as the transposed vertical band
+
+    for i in range(n_min, n_max):
         for j in range(i):
             Rij = form_bivariate_covariance(R, i, j)
             ei, ej, _p = _fast_bivariate_AR_error(Rij, T)
@@ -377,16 +386,52 @@ def normalize_gc_score(F, p):
     return F
 
 
-def fast_compute_pairwise_gc(X, max_lag=10):
+def fast_compute_pairwise_gc(X, max_lag=10, k_cores=1):
     """
     This is /dramatically/ faster than compute_pairwise_gc.
 
     TODO: However there are significant discrepancies!
     TODO: There is something clearly wrong about this implementation.
     """
-    T, _, = X.shape
-    xi_i, xi_ij, p_ij = fast_compute_xi(X, max_lag)
+    T, n, = X.shape
+
+    R = compute_covariances(X, max_lag)
+    if k_cores == 1:
+        xi_i, xi_ij, p_ij = fast_compute_xi(R, T, n_min=0, n_max=n)
+    elif k_cores > 1:
+        xi_i, xi_ij, p_ij = _par_fast_compute_pairwise_gc(
+            n, T, R, k_cores=k_cores)
+    else:
+        raise AssertionError("Must have k_cores >= 1!")
     return compute_gc_score(xi_i, xi_ij, T, p_ij), p_ij
+
+
+def _par_fast_compute_pairwise_gc(n, T, R, k_cores=2):
+    xi_i = np.nan * np.ones(n)
+    xi_ij = np.nan * np.ones((n, n))
+    p_ij = np.nan * np.ones((n, n))
+
+    pool = Pool(k_cores)
+
+    # Heuristic for load balancing
+    n_split = list(map(int,
+                       n * (1 - (np.linspace(0, 1, k_cores + 1) ** 2)[::-1])))
+    zip_n = list(zip(n_split[:-1], n_split[1:]))
+
+    args = [(R, T, n_min, n_max) for n_min, n_max in zip_n]
+    res = pool.starmap(fast_compute_xi, args)
+    pool.close()
+
+    for i, n_min_n_max in zip(range(len(zip_n)), zip_n):
+        n_min, n_max = n_min_n_max
+        _xi_i, _xi_ij, _p_ij = res[i]
+        xi_i[n_min:n_max] = _xi_i[n_min: n_max]
+        xi_ij[n_min:n_max, :n_max] = _xi_ij[n_min:n_max, :n_max]
+        xi_ij[:n_max, n_min:n_max] = _xi_ij[:n_max, n_min:n_max]
+        p_ij[n_min:n_max, :n_max] = _p_ij[n_min:n_max, :n_max]
+        p_ij[:n_max, n_min:n_max] = _p_ij[:n_max, n_min:n_max]
+    pool.join()
+    return  xi_i, xi_ij, p_ij
 
 
 # TODO: P_j should be an n x n array
@@ -649,7 +694,8 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
 
     # Compute the pairwise errors and filter sizes
     # F, P = compute_pairwise_gc(X, max_lag=max_lags)
-    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags)
+    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                    k_cores=int(1 + np.log(n)))
 
     # Screen edges via benjamini hochberg criterion
     P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F

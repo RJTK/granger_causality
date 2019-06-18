@@ -2264,9 +2264,17 @@ assumptions which guarantee the correctness of Algorithm
 \ref{alg:pwgr_heuristic} hold.  However, the performance is still
 markedly superior in the case of a more general DAG.  Finally, we
 remark that the PWGC algorithm can be extended to apply to more
-general graphs via sequential application.  We will also see in
-section \ref{sec:application} that our algorithm can scale effectively
-to large problems.
+general graphs via sequential application.
+
+In regards scalability, we have observed that performing the $O(n^2)$
+pairwise Granger-causality calculations consumes the vast majority
+($> 90\%$) of the computation time.  Since this step is trivially
+parallelizable\footnote{We admit that we are using only a
+  single-threaded implementation}, our algorithm should scale well
+with multiple cores or multiple machines.
+
+% We will also see in section \ref{sec:application} that our algorithm
+% can scale effectively to large problems.
 
 \section{Application}
 \label{sec:application}

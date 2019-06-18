@@ -2,7 +2,6 @@
 Comparisons for PWGC and LASSO.
 """
 
-import seaborn.apionly as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -35,9 +34,7 @@ class TrackErrors:
 
         self.b_errs = np.zeros((N_iters, N_T_iters))
         self.errs = np.zeros(self.b_errs.shape)
-        self.errs_vec = np.zeros((N_iters, N_T_iters, n_nodes))
         self.true_errs = np.zeros(self.b_errs.shape)
-        self.true_errs_vec = np.zeros(self.errs_vec.shape)
         self.rhos = np.zeros(self.b_errs.shape)
         self.N_cross_edges = np.zeros(self.b_errs.shape)
         self.N_hat_cross_edges = np.zeros(self.b_errs.shape)
@@ -48,18 +45,14 @@ class TrackErrors:
         b_err = np.mean(list(map(np.var,
                                  get_estimation_errors(G, G_hat))))
         err = np.sum(get_errors(G_hat))
-        err_vec = np.sort(get_errors(G_hat))
         true_err = np.sum(sv2_true)
-        true_err_vec = np.sort(sv2_true)
 
         self.rhos[N_iter, T_iter] = gcg_to_var(
             G_hat, "b_hat(z)", assert_stable=False).get_rho()
 
         self.b_errs[N_iter, T_iter] = b_err
         self.errs[N_iter, T_iter] = err
-        self.errs_vec[N_iter, T_iter] = err_vec
         self.true_errs[N_iter, T_iter] = true_err
-        self.true_errs_vec[N_iter, T_iter] = true_err_vec
         self.N_cross_edges[N_iter, T_iter] = len(
             set((i, j) for i, j in G.edges if i != j))
         self.N_hat_cross_edges[N_iter, T_iter] = len(set(
@@ -85,7 +78,7 @@ class TrackErrors:
         return D_errs, D_true_errs, D_MCC
 
 
-def full_single_pass_experiment(simulation_name, graph_type):
+def lasso_comparison(simulation_name, graph_type):
     np.random.seed(0)
     n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 3
@@ -243,4 +236,5 @@ def plot_results(D_MCC_pwgc, D_errs_pwgc,
         else:  # Allow passing a list
             _ = [fig.savefig(f) for f in save_file]
     plt.show()
+
     return

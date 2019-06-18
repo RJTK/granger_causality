@@ -10,7 +10,7 @@ mpl_rc("font", **font)
 mpl_rc("text", usetex=False)
 
 from var_system import (random_gnp_dag, drive_gcg, get_errors,
-                        get_estimation_errors, random_tree_dag,
+                        get_estimation_errors, random_scg,
                         get_X, attach_node_prop, gcg_to_var)
 from gc_methods import (compute_pairwise_gc, estimate_B, pw_scg,
                         estimate_graph, full_filter_estimator,
@@ -70,7 +70,7 @@ def test_pw_scg():
 
     T_max = 5000
 
-    random_graph = lambda: random_tree_dag(
+    random_graph = lambda: random_scg(
         n_nodes, p_lags, pole_rad=0.75)
     # random_graph = lambda: random_gnp_dag(
     #     n_nodes, p_lags, pole_rad=0.75, edge_prob=2./n_nodes)
