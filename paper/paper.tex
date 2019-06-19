@@ -1858,27 +1858,31 @@ sophisticated schemes can only serve to improve the results.  Textbook
 reviews of the following concepts are provided e.g. by
 \cite{all_of_statistics}, \cite{murphy_mlp}, and elsewhere.
 
-We proceed first by defining pairwise Granger-causality hypothesis
-tests, second a model order selection criteria, and finally the method
-for choosing a $P-$value cutoff.
+In subsection \ref{sec:pairwise_hypothesis_testing} we define pairwise
+Granger-causality hypothesis tests, in subsection
+\ref{sec:model_order_selection} a model order selection criteria, in
+subsection \ref{sec:efficient_model_estimation} an efficient
+estimation algorithm, in subsection \ref{sec:error_rate_control} the
+method for choosing an hypothesis testing threshold, and finally in
+subsection \ref{sec:finite_pwgc} the unified finite sample algorithm.
 
-\subsection{Hypothesis Testing}
+\subsection{Pairwise Hypothesis Testing}
+\label{sec:pairwise_hypothesis_testing}
 In performing pairwise checks for Granger-causality $x_j \pwgc x_i$ we
-follow the simple scheme of estimating the two linear models via
-ordinary least squares:
+follow the simple scheme of estimating the following two linear models:
 
 \begin{align}
   H_0:&\ \widehat{x}_i^{(p_i)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau),\\
-  H_1:&\ \widehat{x}_i^{(p_i, p_j)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_j}b_{ij}(\tau)x_j(t - \tau).
+  H_1:&\ \widehat{x}_i^{(p_{ij})}(t) = \sum_{\tau = 1}^{p_{ij}} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_{ij}}b_{ij}(\tau)x_j(t - \tau).
 \end{align}
 
 Under the null hypothesis $H_0$ (i.e. that $x_j \npwgc x_i$) we can
-form the asymptotically $\chi^2(p_j)$ distributed test statistic
+form the asymptotically $\chi^2(p_{ij})$ distributed test statistic
 (\hl{TODO: Citation that this is chi2})
 
 \begin{equation}
   \label{eqn:gc_statistics}
-  F_{ij}(p_i, p_j) = \frac{T}{p_j}\Big(\frac{\xi_i(p_i)}{\xi_{ij}(p_i, p_j))} - 1\Big),
+  F_{ij}(p_i, p_{ij}) = \frac{T}{p_{ij}}\Big(\frac{\xi_i(p_i)}{\xi_{ij}(p_{ij})} - 1\Big),
 \end{equation}
 
 where $\xi_i(p_i)$ is the sample mean square of the residuals\footnote{This
@@ -1887,21 +1891,21 @@ where $\xi_i(p_i)$ is the sample mean square of the residuals\footnote{This
 $x_i(t) - \widehat{x}^{(p_i)}_i(t)$
 
 \begin{equation*}
-  \xi_i(p_i) = \frac{1}{T - p_i}\sum_{t = p_i + 1}^T (x_i(t) - \widehat{x}_i^{(p_i)}(t))^2
+  \xi_i(p_i) = \frac{1}{T - p_i}\sum_{t = p_i + 1}^T (x_i(t) - \widehat{x}_i^{(p_i)}(t))^2,
 \end{equation*}
 
-Given additional assumptions on $x(t)$ (\hl{TODO: What assumptions? --
-  this must also depend on choice of $p_i, p_j$}) we have the
-convergence (\hl{a.s. or in P?  -- I think in P})
+and similarly for $\xi_{ij}(p_{ij})$.  Under moment conditions $x(t)$
+(\hl{TODO: What assumptions? -- this must also depend on choice of
+  $p_i, p_j$}) we have the convergence in probability:
 
 \begin{equation}
-  \underset{T \rightarrow \infty}{\text{lim }}F_{ij} =
+  F_{ij}(p_i, p_{ij}) \overset{\P}{\rightarrow}
   \left\{
     \begin{array}{ll}
       0;\ x_j \npwgc x_i\\
       \infty;\ x_j \pwgc x_i
     \end{array}
-  \right.
+  \right. \text{ as } T \rightarrow \infty.  % the '.' after \right is necessary.
 \end{equation}
 
 Therefore, we can make the statement that Algorithm
@@ -1912,121 +1916,83 @@ Therefore, we can make the statement that Algorithm
 \subsection{Model Order Selection}
 \label{sec:model_order_selection}
 There are a variety of methods to choose the filter orders $p_i$ and
-$p_j$ \hl{TODO: cite some more}, we will focus in particular on the
-Bayesian Information Criteria (BIC).  The BIC is substantially more
-conservative than the Akaiake Information Criteria, and since we are
-searching for \textit{sparse graphs}, we therefore prefer the BIC. For
-the bivariate case we focus for simplicity on $p_i = p_j$ and write
-simply\footnote{We use the same $p$ for the bivariate case, but this
-  need not be the same as the corresponding univariate estimate}
-$x_{ij}^{(p)}$, in which case the BIC, which we seek to
-\textit{minimize} over $p$ is given by:
+$p_j$ (see e.g. \cite{lutkepohl2005new}), but we will focus in
+particular on the Bayesian Information Criteria (BIC).  The BIC is
+substantially more conservative than the popular alternative Akaiake
+Information Criteria (the BIC is also asymptotically consistent), and
+since we are searching for \textit{sparse graphs}, we therefore prefer
+the BIC, where we seek to \textit{minimize} over $p$:
 
 \begin{equation}
   \label{eqn:bic}
   \begin{aligned}
-    BIC_{\text{univariate}}(p) &= T \ln \xi_i(p) + p\ln T,\\
-    BIC_{\text{bivariate}}(p) &= T \ln \xi_{ij}(p) + 2p\ln T.\\
+    BIC_{\text{univariate}}(p) &= \ln\ \xi_i(p) + p\frac{\ln T}{T},\\
+    BIC_{\text{bivariate}}(p) &= \ln \det \widehat{\Sigma}_{ij}(p) + 4p\frac{\ln T}{T},\\
   \end{aligned}
 \end{equation}
 
+where $\widehat{\Sigma}_{ij}(p)$ is the $2 \times 2$ residual
+covariance matrix for the $VAR(p)$ model of $(x_i(t), x_j(t))$.  The
+bivariate errors $\xi_{ij}(p)$ and $\xi_{ji}(p)$ are the diagonal
+entries of $\widehat{\Sigma}_{ij}(p)$.
+
 We carry this out by a simple direct search on each model order
-between $1$ and some prescribed $p_\text{max}$.  In practice it is
+between $0$ and some prescribed $p_\text{max}$.  In practice it is
 sufficient to pick $p_\text{max}$ ad-hoc or via some simple heuristic
-(e.g. plotting the sequence $BIC(p)$ over $p$), and we will review in
-Section \ref{sec:efficient_model_estimation} an algorithm to carry out
-this search efficiently.
-
-% \begin{algorithm}
-%   \caption{BIC Model Selection Algorithm}
-%   \label{alg:maximize_bic}
-
-%   \SetKwInOut{Input}{input}
-%   \SetKwInOut{Output}{output}
-%   \SetKwInOut{Initialize}{initialize}
-%   \DontPrintSemicolon
-
-%   \BlankLine
-%   \Input{$T$ samples of WSS processes $x_i(t), x_j(t)$.  A maximum possible lag $p_{\text{max}}$.}
-%   \Output{Model orders $p_i$ and $p$ for models in Hypotheses $H_0$ and $H_1$ respectively.}
-%   \Initialize{
-%     $BIC_{\text{univariate}} = -\infty$\\
-%     $BIC_{\text{bivariate}} = -\infty$\\
-%   }
-
-%   \# \texttt{Find $p_i$}\\
-%   \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
-%     $\xi_i(p) = $\ \texttt{fit\_univariate}$(x_i(t), p)$ \texttt{ \# Fit model for $H_0$}\\
-%     $bic_p = -(T - p - 1) \ln \xi_i(p) - p\ln(T - p - 1)$\\
-%     \If{$bic_p > BIC_{\text{univariate}}$}{
-%       $BIC_{\text{univariate}} = bic_p$\\
-%       \texttt{continue}\\
-%     } \Else{
-%       $p_i = p - 1$\\
-%       \texttt{break}\\
-%     }
-%   }
-
-%   \BlankLine
-%   \# \texttt{Find $p$}\\
-%   \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
-%     $\xi_{ij}(p) = $\ \texttt{fit\_biivariate}$(x_i(t), x_j(t), p)$ \texttt{ \# Fit model for $H_1$}\\
-%     $bic_p = -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln(T - p - 1)$\\
-%     \If{$bic_p > BIC_{\text{bivariate}}$}{
-%       $BIC_{\text{biivariate}} = bic_p$\\
-%       \texttt{continue}\\
-%     }\Else{
-%       $p = p - 1$\\
-%       \texttt{break}\\
-%     }
-%   }
-%     \Return{$p_i, p$}
-% \end{algorithm}
+e.g. plotting the sequence $BIC(p)$ over $p$, though it is not
+technically possible to guarantee that the optimal $p$ is chosen
+(since there can in general be arbitrarily long lags from one variable
+to another).
 
 \subsection{Efficient Model Estimation}
 \label{sec:efficient_model_estimation}
 In practice, the vast majority of computational effort involved in
 implementing our estimation algorithm is spent calculating the error
-estimates $\xi_i(p_i)$ and $\xi_{ij}(p, p)$.  This requires fitting a
-total of $n^2p_{\text{max}}$ autoregressive models, where the most
+estimates $\xi_i(p_i)$ and $\xi_{ij}(p_{ij})$.  This requires fitting
+a total of $n^2p_{\text{max}}$ autoregressive models, where the most
 naive algorithm (e.g. solving a least squares problem for each model)
 for this task will consume $O(n^2p_{\text{max}}^4T)$ time, it is
 possible to carry out this task in a much more modest
-$O(n^2p_{\text{max}}^2 ) + O(n^2p_{\text{max}}T)$ time.
-
-Firstly, we estimate the sequence of Covariance
-matrices\footnote{The particular indexing and normalization given in
-  equation \ref{eqn:covariance_estimate} is critical to ensure
-  $\widehat{R}$ is positive semidefinite.  The estimate can be viewed
-  as calculating the covariance sequence of a signal multiplied by a
-  rectangular window.}
+$O(n^2p_{\text{max}}^2 ) + O(n^2p_{\text{max}}T)$ time via the
+autocorrelation method which deploys the following autocovariance
+estimates in the Yule-Walker equations:\footnote{The particular
+  indexing and normalization given in equation
+  \ref{eqn:covariance_estimate} is critical to ensure $\widehat{R}$ is
+  positive semidefinite.  The estimate can be viewed as calculating
+  the covariance sequence of a signal multiplied by a rectangular
+  window.}
 
 \begin{equation}
   \label{eqn:covariance_estimate}
   \widehat{R}_x(\tau) = \frac{1}{T}\sum_{t = \tau + 1}^T x(t) x(t - \tau)^\T;\ \tau = 0, \ldots, p_{\text{max}},
 \end{equation}
 
-an $O(n^2p_{\text{max}}T)$ operation.  Secondly, the variance
-estimates $\xi_i(p)$ for $p = 1, \ldots, p_{\text{max}}$ can be
-evaluated in $O(p_{\text{max}}^2)$ time each by applying the
-Levinson-Durbin recursion to $\widehat{R}_{ii}(tau)$, which
-effectively estimates a sequence of $AR$ models, producing $\xi_i(p)$
-as a side-effect (see
+These covariance estimates constitute the $O(n^2p_{\text{max}}T)$
+operation.  Given these particular estimates, the variances $\xi_i(p)$
+for $p = 1, \ldots, p_{\text{max}}$ can be evaluated in
+$O(p_{\text{max}}^2)$ time each by applying the Levinson-Durbin
+recursion to $\widehat{R}_{ii}(\tau)$, which effectively estimates a
+sequence of $AR$ models, producing $\xi_i(p)$ as a side-effect (see
 \cite{hayes_statistical_digital_signal_processing} and
 \cite{levinson_durbin_recursion}).
 
-Similarly, the variance estimates $\xi_{ij}$ and $\xi_{ji}$ can be
-obtained by estimating $\frac{(n + 1)n}{2}$ bivariate AR models, again
-in $O(p_{\text{max}}^2)$ via Whittle's generalized LD recursion
+Similarly, the variance estimates $\widehat{\Sigma}_{ij}(p)$ (which
+include $\xi_{ij}$ and $\xi_{ji}$) can be obtained by estimating
+$\frac{(n + 1)n}{2}$ bivariate AR models, again in
+$O(p_{\text{max}}^2)$ time via Whittle's generalized Levinson-Durbin
+recursion\footnote{We have made use of standalone tailor made
+  implementations of these algorithms, available at
+  \textsf{github.com/RJTK/Levinson-Durbin-Recursion}.}
 \cite{whittle_generalized_levinson_durbin}.
 
 
 \subsection{Edge Probabilities and Error Rate Controls}
+\label{sec:error_rate_control}
 Denote $F_{ij}$ the Granger-causality statistic of equation
 \ref{eqn:gc_statistics} with model orders chosen by the methods of
 Section \ref{sec:model_order_selection}.  Note that this statistic is
-asymptotically $\chi^2(p)$ distributed, and denote by $G$ the
-$\chi^2(p)$ cumulative distribution function.  We will define the matrix
+asymptotically $\chi^2(p_{ij})$ distributed, and denote by $G$ the
+cumulative distribution function thereof.  We will define the matrix
 
 \begin{equation}
   \label{eqn:edge_inclusion_probability}
@@ -2042,7 +2008,24 @@ The value $\delta$ can be chosen by a variety of methods, in our case
 we apply the Benjamini Hochberg criteria \cite{benjamini_hochberg}
 \cite{all_of_statistics} to control the false discovery rate of
 pairwise edges to a level $\alpha$ (where we generally take
-$\alpha = 0.05$).
+$\alpha = 0.05$).  Applying the extremely simple Bonferroni method is
+overly conservative for this application.
+
+\subsection{Finite Sample Recovery Algorithm}
+\label{sec:finite_pwgc}
+
+\begin{algorithm}
+    \SetKwInOut{Input}{input}
+    \SetKwInOut{Output}{output}
+    \SetKwInOut{Initialize}{initialize}
+    \DontPrintSemicolon
+
+    \BlankLine
+    \caption{Finite Sample Pairwise Graph Recovery (PWGC)}
+    \label{alg:finite_pwgc}
+
+    
+\end{algorithm}
 
 % \section{Structure Learning}
 % \label{sec:structure_learning}
@@ -2191,24 +2174,26 @@ $\alpha = 0.05$).
 We have implemented our empirical experiments in Python \cite{scipy},
 in particular we leverage the LASSO implementation from
 \texttt{sklearn} \cite{sklearn} and the random graph generators from
-\texttt{networkx} \cite{networkx}.  We run the same experiment on two
-separate graph topologies having $n = 50$ nodes: a strongly causal
-graph and a directed acyclic graph.  These are generated respectively
-by drawing a random tree and a random Erdos Renyi graph, then
-directing edges from lower numbered nodes to higher numbered nodes,
-the edge probabilities in the Erdos Renyi graph are tuned to result in
-the same number of edges in expectation.
+\texttt{networkx} \cite{networkx}.  We run experiments using two
+separate graph topologies having $n$ nodes: a strongly causal graph
+(SCG) and a directed acyclic graph (DAG).  These are generated
+respectively by drawing a random tree and a random Erdos Renyi graph
+(with edge probability $q = \frac{2}{n}$ resulting in approximately
+the same number of edges for the SCG as for the DAG), then creating a
+directed graph by directing edges from lower numbered nodes to higher
+numbered nodes.
 
 We populate each of the edges (including self loops) with random
 linear filters constructed by placing $5$ transfer function poles
 (i.e. $p = 5$) uniformly at random in a disc of radius $3 / 4$ (which
 guarantees stability for acyclic graphs).  The resulting system is
-driven by i.i.d. Gaussian random vectors, each component having random
+driven by i.i.d. Gaussian random noise, each component having random
 variance $\sigma_i^2 = 1/2 + r_i$ where $r_i \sim \text{exp}(1/2)$.
-We set $p_{\text{max}} = 15$ and collect results for $300$ trials with $T$
-varying between $50$ and $5000$.
+We set $p_{\text{max}} = 15$.  Results and representitive graphs are
+collected in Figure \ref{fig:simulation_results}.
 
-Results of our Algorithm are compared against the LASSO:
+We compare our results against the LASSO as a baseline, estimating the
+filter $\B(z)$ that minimizes $\xi_{\text{LASSO}}$ in the following:
 
 \begin{equation}
   \begin{aligned}
@@ -2220,61 +2205,86 @@ Results of our Algorithm are compared against the LASSO:
 where $||\matvec B||_1$ emphasizes the application of a vector norm, and
 $\lambda$ is the regularization parameter chosen via the BIC.
 
-% The pairwise causality function $\mathsf{pwgc}$ of Algorithm
-% \ref{alg:Bz_estimate} are obtained via the residuals
-% $\mathbf{\epsilon}_{ij}$ of the model
-% $\mathbf{x}_i = \mathbf{X}_{ij}\widehat{\beta_{}} +
-% \mathbf{\epsilon}_{ij}$ estimated via ordinary least squares, where
-% $\mathbf{X}_{ij}$ includes $10$ lagged values of processes $i$ and
-% $j$.
-
-% The function $\mathsf{estimate_B}$ in Algorithm \ref{alg:Bz_estimate}
-% is carried out via the LASSO \cite{tibshirani2015statistical}, with
-% the regularization parameter being chosen to minimize the Bayesian
-% information criteria, a more conservative heuristic than the AIC.
-
 \begin{figure}
   \centering
   \caption{Simulation Results and Representitive Random Graph Topologies}
   \label{fig:simulation_results}
 
-  \begin{subfigure}[b]{0.45\textwidth}
+  {\scriptsize Comparison of PWGC and LASSO for $VAR(p)$ model
+    estimation.  The MCC is measured on the left axis in blue with
+    circle markers, and the relative log mean-squared prediction error
+    $\frac{\ln\ \tr \widehat{\Sigma}_v}{\ln\ \tr \Sigma_v}$ on the
+    right axis in red with triangle markers.  We use $q$ to denote the
+    edge probability in a random Erdos-Reny graph (modified to form a
+    DAG).  Solid lines indicate ad-hoc regression estimates for
+    visualization purposes only.
+
+    Matthew's Correlation Coefficient (MCC)
+    \cite{matthews1975comparison} synthesizes the confusion matrix
+    into a single score appropriate for unbalanced labels and is
+    calibrated to fall into the range $[-1, 1]$ with $1$ being perfect
+    performance, $0$ being the performance of random guessing, and
+    $-1$ being perfectly opposed.
+  }
+
+  \begin{subfigure}[b]{0.3\textwidth}
     \caption{Random SCG}
     \includegraphics[width=\linewidth]{example_scg.pdf}
   \end{subfigure}
-  \begin{subfigure}[b]{0.45\textwidth}
-    \caption{Random DAG}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \caption{Random DAG $(q = \frac{2}{n})$}
     \includegraphics[width=\linewidth]{example_dag.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \caption{Random DAG $(q = \frac{4}{n})$}
+    \includegraphics[width=\linewidth]{example_dag_q.pdf}
   \end{subfigure}
 
   \begin{subfigure}[b]{0.45\textwidth}
+    \caption{PWGC vs LASSO (SCG)}
+    \label{fig:simulation_results_comparison1}
     \includegraphics[width=\linewidth]{random_scg_simulation.pdf}
     % \missingfigure{}
   \end{subfigure}
   \begin{subfigure}[b]{0.45\textwidth}
+    \caption{PWGC vs LASSO (DAG, $q = \frac{2}{n}$)}
+    \label{fig:simulation_results_comparison2}
     \includegraphics[width=\linewidth]{random_dag_simulation.pdf}
     % \missingfigure{}
   \end{subfigure}
+
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Fixed $T$, increasing $n$ (SCG)}
+    \label{fig:simulation_results_scaling}
+    \includegraphics[width=\linewidth]{increasing_n_simulation.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Fixed $T, n$, increasing edges $q$ (DAG)}
+    \label{fig:simulation_results_dense}
+    \includegraphics[width=\linewidth]{dag_increasing_q_simulation.pdf}
+  \end{subfigure}
 \end{figure}
 
-In reference to figure \ref{fig:simulation_results} it should not be
-overly surprising that our PWGC algorithm performs better than the
-LASSO for the case of a strongly causal graph, since in this case the
-assumptions which guarantee the correctness of Algorithm
-\ref{alg:pwgr_heuristic} hold.  However, the performance is still
-markedly superior in the case of a more general DAG.  Finally, we
-remark that the PWGC algorithm can be extended to apply to more
-general graphs via sequential application.
+In reference to figure \ref{fig:simulation_results_comparison1} it
+should not be overly surprising that our PWGC algorithm performs
+better than the LASSO for the case of a strongly causal graph, since
+in this case the assumptions which guarantee the correctness of
+Algorithm \ref{alg:pwgr_heuristic} hold.  However, the performance is
+still markedly superior in the case of a more general DAG.
 
 In regards scalability, we have observed that performing the $O(n^2)$
 pairwise Granger-causality calculations consumes the vast majority
 ($> 90\%$) of the computation time.  Since this step is trivially
-parallelizable\footnote{We admit that we are using only a
-  single-threaded implementation}, our algorithm should scale well
-with multiple cores or multiple machines.
-
-% We will also see in section \ref{sec:application} that our algorithm
-% can scale effectively to large problems.
+parallelizable, our algorithm also scales well with multiple cores or
+multiple machines.  Figure \ref{fig:simulation_results_scaling} is a
+demonstrating of this scalability, where we are able to estimate
+graphs having over $1500$ nodes (over $2.25 \times 10 ^6$ possible
+edges) using only $T = 500$ data points, granted, an SCG on this many
+nodes is extremely sparse.  Application to denser graphs is explored
+in Figure \ref{fig:simulation_results_dense}, where $n$ and $T$ are
+held fixed while increasing the edge probability $q$, thereby creating
+denser graphs.  For larger values of $q$ in this plot there is a
+comparable number of edges as there are data samples $T$.
 
 \section{Application}
 \label{sec:application}

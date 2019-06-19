@@ -83,13 +83,13 @@ def lasso_comparison(simulation_name, graph_type):
     n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 3
 
-    T_iters = [50 + 50 * k for k in range(1, 99)]
+    T_iters = list(map(int, np.logspace(2, 4.7, 100)))
+    # T_iters = [50 + 250 * k for k in range(1, 149)]
 
     # NOTE: We use only X[T:] to estimate the error
     # NOTE: so it is important to have a significant trailing
     # NOTE: set of data in order to make honest estimates of
     # NOTE: the out of sample predictions.
-    T_max = T_iters[-1] * 2
 
     # Tune the expected number of edges to match N_edges
     N_edges = (len(random_scg(n_nodes, p_lags, pole_rad=0.75).edges) -
@@ -112,10 +112,10 @@ def lasso_comparison(simulation_name, graph_type):
         raise NotImplementedError("graph_type '{}' is not understood"
                                   "".format(graph_type))
 
-    def make_test_data():
+    def make_test_data(T):
         sv2_true = 0.5 + np.random.exponential(0.5, size=n_nodes)
         G = random_graph()
-        drive_gcg(G, T_max, sv2_true, filter_attr="b(z)")
+        drive_gcg(G, 500 + 2 * T, sv2_true, filter_attr="b(z)")
         X = get_X(G)
         X = X - np.mean(X, axis=0)[None, :]
         X = X
@@ -131,7 +131,7 @@ def lasso_comparison(simulation_name, graph_type):
                 N_iter + 1, N_iters, T_iter + 1, len(T_iters)))
 
             # ~252ms
-            G, X, sv2_true = make_test_data()
+            G, X, sv2_true = make_test_data(T)
 
             # ~824ms
             G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,

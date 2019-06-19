@@ -40,7 +40,18 @@ def estimate_b_lstsqr(X, y):
     y: np.array (T)
     X: np.array (T x s)
     """
-    w = linalg.cho_solve(linalg.cho_factor(X.T @ X), X.T @ y)
+    T, n = X.shape
+    R = X.T @ X / T
+    r = X.T @ y / T
+    try:
+        w = linalg.cho_solve(linalg.cho_factor(R), r)
+    except linalg.LinAlgError:
+        R = R + np.min(np.diag(R)) *  np.eye(R.shape[0])
+
+    try:
+        w = linalg.cho_solve(linalg.cho_factor(R), r)
+    except linalg.LinAlgError:
+        w, _, _, _ = linalg.lstsq(R, r)
     return w
 
 
@@ -250,11 +261,6 @@ def compute_covariances(X, p):
 def _compute_AR_error(X, y):
     w = estimate_b_lstsqr(X, y)
     return np.var(y - X @ w)
-
-
-def _fast_compute_AR_error(R, r):
-    w = estimate_b_lstsqr_cov(R, r)
-    return max(0, R[0, 0] - w @ r)
 
 
 @numba.jit(nopython=True, cache=True)
