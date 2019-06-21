@@ -14,7 +14,8 @@ from math import ceil
 from scipy import linalg
 from scipy import stats as sps
 from scipy.linalg import toeplitz
-from sklearn.linear_model import LassoLarsIC
+from sklearn.linear_model import LassoLarsIC, LassoLarsCV
+from spams import fistaFlat
 
 from levinson import (lev_durb, whittle_lev_durb)
 
@@ -68,6 +69,9 @@ def estimate_b_lasso(X, y):
     """
     lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
                         normalize=False, precompute=True)
+    # lasso = LassoLarsCV(fit_intercept=False, verbose=False,
+    #                     normalize=True, precompute=True,
+    #                     cv=3, n_jobs=3)
 
     # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
     lasso.fit(X, y)
@@ -77,10 +81,90 @@ def estimate_b_lasso(X, y):
         return w
 
     # Use lasso only to select the support
-    X_lasso = X[:, [i for i, wi in enumerate(w) if wi != 0]]
+    eps = 1e-9
+    X_lasso = X[:, [i for i, wi in enumerate(w) if abs(wi) >= eps]]
     w_lr = estimate_b_lstsqr(X_lasso, y)
-    w[[i for i, wi in enumerate(w) if wi != 0]] = w_lr
+    w[[i for i, wi in enumerate(w) if abs(wi) >= eps]] = w_lr
     return w
+
+
+def estimate_b_alasso(X, y):
+    """
+    Estimate y_hat = Xb via Adaptive-LASSO
+    and using BIC to choose regularizers.
+
+    y: np.array (T)
+    X: np.array (T x s)
+    """
+    nu = 2.0  # We approximate l_q regression where q = 1 - nu
+
+    # This is an adaptive scheme that uses "piloting weights" to improve
+    # the selection capacity of the lasso.
+    b0 = estimate_b_lstsqr(X, y)
+    w = 1. / np.abs(b0)**nu
+    X_wgt = X / w[None, :]
+
+    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
+                        normalize=False, precompute=True)
+    # lasso = LassoLarsCV(fit_intercept=False, verbose=False,
+    #                     normalize=True, precompute=True,
+    #                     cv=3, n_jobs=3)
+
+    # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
+    lasso.fit(X_wgt, y)
+    w = lasso.coef_
+    if np.all(w == 0):
+        # All zero support
+        return w
+
+    # Use lasso only to select the support
+    # It it actually okay to do this?
+    eps = 1e-9
+    X_lasso = X[:, [i for i, wi in enumerate(w) if abs(wi) >= eps]]
+    w_lr = estimate_b_lstsqr(X_lasso, y)
+    w[[i for i, wi in enumerate(w) if abs(wi) >= eps]] = w_lr
+    return w
+
+
+def estimate_b_glasso(X, y, p, T_train):
+    # lmbda_g: Group Lasso regularization
+    # lmbda_l: Lasso regularization
+
+    _, _np = X.shape
+    n = _np // p
+
+    X_train, y_train = X[:T_train, :], y[:T_train, None]
+    X_test, y_test = X[T_train:, :], y[T_train:, None]
+
+    w0 = np.zeros((n * p, 1))
+
+    eps = 1e-9
+    lmbda_g = 1.0
+    # lmbda_l = 1.0
+
+    _X = np.asfortranarray(X_train)
+    _y = np.asfortranarray(y_train)
+    _w0 = np.asfortranarray(w0)
+
+    err_star = np.inf
+    w_star = _w0
+    w = _w0
+    for lmbda_g in np.logspace(-2, 2, 100):
+        w, _ = fistaFlat(_y, _X, w,
+                         loss="square", regul="group-lasso-l2",
+                         lambda1=lmbda_g,
+                         # lambda2=lmbda_l,
+                         size_group=p, intercept=False, pos=False,
+                         numThreads=4, max_it=100, subgrad=False,
+                         return_optim_info=True)
+        err = np.var(y_test - X_test @ np.array(w))
+        if err < err_star:
+            err_star = err
+            w_star = w
+
+    w_star = np.array(w_star)
+    w_star[w_star <= eps] = 0.0
+    return w_star
 
 
 def form_Xy(X_raw, y_raw, p=10):
@@ -182,6 +266,10 @@ def estimate_B(G, max_lag=10, copy_G=False,
         # Estimate
         if method == "lasso":
             b = estimate_b_lasso(X[:max_T], y[:max_T])
+        elif method == "glasso":
+            b = estimate_b_glasso(X, y, p=max_lag, T_train=max_T)
+        elif method == "alasso":
+            b = estimate_b_alasso(X, y)
         elif method == "lstsqr":
             b = estimate_b_lstsqr(X[:max_T], y[:max_T])
         else:
@@ -686,7 +774,8 @@ def estimate_dense_graph(X, max_lag=10,
     return G
 
 
-def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
+def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05,
+                   fast_mode=True):
     """
     Produce an estimated graph from the data X.
 
@@ -699,9 +788,11 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     T, n = X.shape
 
     # Compute the pairwise errors and filter sizes
-    # F, P = compute_pairwise_gc(X, max_lag=max_lags)
-    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
-                                    k_cores=int(1 + np.log(n)))
+    if fast_mode:
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                        k_cores=int(1 + np.log(n)))
+    else:
+        F, P = compute_pairwise_gc(X, max_lag=max_lags)
 
     # Screen edges via benjamini hochberg criterion
     P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
@@ -714,7 +805,7 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     G_hat = add_self_loops(G_hat, copy_G=False)
 
     # Restimate the coefficients
-    if method == "lasso":
+    if method in {"lasso", "glasso", "alasso"}:
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
                            method=method)
         G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)

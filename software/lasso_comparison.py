@@ -83,8 +83,10 @@ def lasso_comparison(simulation_name, graph_type):
     n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 3
 
-    T_iters = list(map(int, np.logspace(2, 4.7, 100)))
-    # T_iters = [50 + 250 * k for k in range(1, 149)]
+    # T_iters = list(map(int, np.logspace(2, 3, 20)))
+    # T_iters = list(map(int, np.linspace(500, 5000, 20)))
+    # T_iters = [50 + 100 * k for k in range(1, 99)]
+    T_iters = [20, 40, 80, 100, 150, 250, 500]
 
     # NOTE: We use only X[T:] to estimate the error
     # NOTE: so it is important to have a significant trailing
@@ -135,12 +137,27 @@ def lasso_comparison(simulation_name, graph_type):
 
             # ~824ms
             G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
-                                        method="lstsqr", alpha=alpha)
+                                        method="lstsqr", alpha=alpha,
+                                        fast_mode=False)
 
             # ~37s
+            # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+            #                                    max_T=T,
+            #                                    method="lasso")
+            # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+            #                                    max_T=T,
+            #                                    method="glasso")
+            # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+            #                                    max_T=T,
+            #                                    method="alasso")
+
+            # TODO: Notice that I'm giving it the /real/ p value
             G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
                                                max_T=T,
-                                               method="lasso")
+                                               method="alasso")
+            # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+            #                                    max_T=T,
+            #                                    method="lasso")
 
             errs_pwgc.update(G, G_hat_pwgc, sv2_true, N_iter, T_iter)
             errs_lasso.update(G, G_hat_lasso, sv2_true, N_iter, T_iter)
@@ -153,9 +170,10 @@ def lasso_comparison(simulation_name, graph_type):
         D_true_errs,
         title=("Test Errors against T (Random {} graph on "
                "$n = {}$ nodes)".format(graph_type, n_nodes)),
-        save_file=["../figures/{}_simulation.pdf".format(simulation_name),
-                   "../figures/jpgs_pngs/"
-                   "{}_simulation.png".format(simulation_name)])
+        lasso_title="Adaptive LASSO")
+        # save_file=["../figures/{}_simulation.pdf".format(simulation_name),
+        #            "../figures/jpgs_pngs/"
+        #            "{}_simulation.png".format(simulation_name)])
     return
 
 
@@ -209,7 +227,8 @@ def _plot_individual_results(t, mcc, normed_errs, ax_mcc, title="",
 def plot_results(D_MCC_pwgc, D_errs_pwgc,
                  D_MCC_lasso, D_errs_lasso,
                  D_true_errs,
-                 save_file=None, title=""):
+                 save_file=None, title="",
+                 lasso_title="LASSO"):
     true_errs = np.array(D_true_errs["value"], dtype=float)
     t = np.array(D_true_errs["variable"], dtype=float)
 
@@ -227,7 +246,7 @@ def plot_results(D_MCC_pwgc, D_errs_pwgc,
     _plot_individual_results(t, mcc_pwgc, errs_pwgc, axes[0],
                              title="PWGC Algorithm", legend=True)
     _plot_individual_results(t, mcc_lasso, errs_lasso, axes[1],
-                             title="LASSO", legend=False)
+                             title=lasso_title, legend=False)
     fig.suptitle(title)
 
     if save_file is not None:
