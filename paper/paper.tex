@@ -69,7 +69,7 @@ it's effect.
 In practice, Granger's notion of causation it not a convincing test
 for \textit{true} causation, since our statements about causation are
 highly dependent upon the data that we are able to observe.  Rather,
-the interpretation of Granger causality is as a means of uncovering a
+the interpretation of Granger causality is as a means of uncovering a plausible
 flow of ``information'' or ``energy'' through some underlying graph of
 interactions.  Though this graph cannot be observed directly, we will
 infer it's presence as a latent structure among our observed time
@@ -78,14 +78,25 @@ e.g. in Neuroscience as a means of recovering interactions amongst
 brain regions \cite{bressler2011wiener}, \cite{anna_paper2008},
 \cite{david2008identifying}; in the study of the dependence and
 connectedness of financial institutions \cite{NBERw16223}; gene
-expression networks \cite{Fujita2007}; and power system design
-\cite{Misyrlis2016450}, \cite{yuan2014root}.
+expression networks \cite{Fujita2007},
+\cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery},
+\cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty},
+and power system design \cite{Misyrlis2016450}, \cite{yuan2014root}.
+
+\hl{TODO: From the gene network papers, it looks like these gene
+  networks may actually have strongly-causal structure.  i.e. we can
+  highlight the fact that our deeper understanding of a special
+  problem case may in fact have significant applicability in these
+  application areas.}
+
+Other citations: support recovery consistency for the weighted lasso
+in univariate AR(p) models:
 
 Finding the ``best'' graph structure consistent with observed data is
 generally an extremely challenging problem (i.e. this is a best subset
 selection problem, see \cite{bss_mio}, \cite{hastie_bss_comp}), though
 the comparison of quality between different structures, and hence the
-notion of ``best'', needs to be quantified.  In applications where we
+notion of ``best'' needs to be quantified.  In applications where we
 are interested merely in minimizing the mean squared error of a linear
 one-step-ahead predictor, then we will naturally desire an entirely
 dense graph of connections, since each edge can only serve to reduce
@@ -103,11 +114,43 @@ it's simplicity, but is liable to get stuck in shallow local minima.
 A second and wildly successful heuristic is the LASSO regularizer
 \cite{tibshirani1996regression}, which can be understood as a natural
 convex relaxation to penalizing the count of the non-zero edges.  The
-LASSO enjoys strong theoretical guarantees \cite{wainwright2009sharp},
-even in the case of time series data \cite{basu2015}
-\cite{wong2016lasso}, variations on which have been applied elsewhere
-\cite{DBLP:journals/corr/HallacPBL17} \cite{haufe2008sparse}
-\cite{bolstad2011causal} \cite{he2013stationary}.
+LASSO enjoys fairly strong theoretical guarantees
+\cite{wainwright2009sharp}, extending largely to the case of
+stationary time series data with a sufficiently fast rate of
+dependence decay \cite{basu2015} \cite{wong2016lasso}
+\cite{autoregressive_process_modelling_via_the_lasso_procedure}.
+Variations on the LASSO have been applied in a number of different
+contexts \cite{DBLP:journals/corr/HallacPBL17} \cite{haufe2008sparse}
+\cite{bolstad2011causal} \cite{he2013stationary}
+\cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery}.
+One of the key improvements to the original LASSO algorithm is the
+adaptive (i.e. weighted) adaLASSO \cite{adaptive_lasso_zou2006}, for
+which oracle results are established.  The crux of the matter for time
+series analysis is to craft a good weighting scheme, see e.g.
+\cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}.
+Success of the LASSO has lead to the famous ``bet on sparsity''
+principle -- that is, for large problems and finite sources of data,
+you might as well bet that a sparse model is correct, because if it
+isn't, there is no hope.
+
+In the context of time series data, sparsity assumptions remain
+important, but there is significant additional structure that may
+arise as a result of considering the topology of the underlying
+Granger-causality graph, which to our knowledge remains largely
+unexplored.  The focus of this paper is to shed light on some of these
+topological questions, in particular, we study a particularly simple
+notion of causality graph topology which we term ``strongly causal''
+and show that $VAR$ models having this structure satisfy naturaal
+intuitive notions of ``information flow'' through the graph.
+Moreover, we show that such graphs are perfectly (asymptotically)
+recoverable with only \textit{pairwise} Granger-causality tests.  Our
+finite sample results are based on simulations, where we show
+promising results for these graphs topologies where our algorithm
+performs substantially better in our simulation setup than do
+competing LASSO algorithms, even for graphs that do not exactly
+satisfy our strongly-causal topology assumptions.
+
+\todo{What graphs in practice may be strongly causal -- see the gene network papers.}
 
 The contributions of this paper are as follows: firstly, in section
 \ref{sec:theory} we study \textit{pairwise} Granger-causality
@@ -128,6 +171,8 @@ thousands of nodes on a single machine.  In section
 \ref{sec:application} we develop an example application (\hl{more
   detail...}).  And provide concluding remarks on further open
 problems in our conclusion (section \ref{sec:conclusion}).
+
+\todo{Simulations with very small T (i.e. T = 20)}
 
 % \cite{yuan2006model} as well as local search hill
 % climbing (\hl{state here the results}).  
@@ -1878,7 +1923,7 @@ follow the simple scheme of estimating the following two linear models:
 
 Under the null hypothesis $H_0$ (i.e. that $x_j \npwgc x_i$) we can
 form the asymptotically $\chi^2(p_{ij})$ distributed test statistic
-(\hl{TODO: Citation that this is chi2})
+\todo{Is this actually $\chi^2$ when $p_{ij}$ is chosen from the data?  This is adaptive!}
 
 \begin{equation}
   \label{eqn:gc_statistics}
@@ -1909,7 +1954,7 @@ and similarly for $\xi_{ij}(p_{ij})$.  Under moment conditions $x(t)$
 \end{equation}
 
 Therefore, we can make the statement that Algorithm
-\ref{alg:pwgr_heuristic} asymptotically implements Algorithm
+\ref{alg:finite_pwgc} asymptotically implements Algorithm
 \ref{alg:pwgr}.  \hl{TODO: Modify Algorithm 2 to make this true.}
 \hl{TODO: Enclose this into a theorem}
 
@@ -2014,6 +2059,16 @@ overly conservative for this application.
 \subsection{Finite Sample Recovery Algorithm}
 \label{sec:finite_pwgc}
 
+After the graph topology $\widehat{\gcg}$ has been estimated via
+Algorithm \ref{alg:finite_pwgc}, we refit the entire model with the
+specified sparsity pattern directly via ordinary least squares.
+Producing graph estimates which are not strongly causal can be
+achieved out by performing sequential estimates
+$\widehat{x}_1(t), \widehat{x}_2(t), \ldots$ by estimating a strongly
+causal graph with the residuals of the previous model as input, and
+then refitting on the estimated sparsity pattern.  However we reserve
+any analysis of this scheme for future work.
+
 \begin{algorithm}
     \SetKwInOut{Input}{input}
     \SetKwInOut{Output}{output}
@@ -2023,8 +2078,44 @@ overly conservative for this application.
     \BlankLine
     \caption{Finite Sample Pairwise Graph Recovery (PWGC)}
     \label{alg:finite_pwgc}
+    \Input{Estimates of pairwise Granger-causality statistics $F_{ij}$
+      (eqn \ref{eqn:gc_statistics}).  Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}).  Hypothesis testing threshold $\delta$ chosen via the Benjamini-Hochberg criterion (Section \ref{sec:error_rate_control})}
+    \Output{A strongly causal graph $\widehat{\gcg}$}
+    \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
+      $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
+      $k = 1$ \texttt{\# a counter used only for notation}}
 
-    
+    \BlankLine
+
+    $W_\delta \leftarrow \{(i, j)\ |\ P_{ji} > 1 - \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
+    $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total node incident probability}\\
+    $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) < \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Nodes with fewest incident edges}\\
+    \If{$P_0 = \emptyset$}{
+      $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) \le \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Ensure non-empty}
+    }
+    \BlankLine
+
+    \While{$S \ne \emptyset$}{
+      $S \leftarrow S \setminus P_{k - 1}$ \texttt{\# remove processed nodes}\\
+      % $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
+      $\mathcal{I}_k \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$\\
+      $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) < \ceil{\text{min}(\mathcal{I}_k)}\}$\\
+      \If{$P_k = \emptyset$}{
+        $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) \le \ceil{\text{min}(\mathcal{I}_k)}\}$
+      }
+      \;
+      \texttt{\# add strongest edges, maintaining strong causality}\\
+      $U_k \leftarrow \bigcup_{r = 1}^k P_{k - r}$ \texttt{\# Include all forward edges}\\
+      \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in U_k \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$} {
+        \If{$\mathsf{is\_strongly\_causal}(E \cup \{(i, j)\})$} {
+          \texttt{\# }$\mathsf{is\_strongly\_causal}$ \texttt{can be implemented by keeping}\\
+          \texttt{\# track of ancestor / descendant relationships}\\
+          $E \leftarrow E \cup \{(i, j)\}$
+        }
+      }
+      $k \leftarrow k + 1$\\
+    }
+    \Return{$([n], E)$}
 \end{algorithm}
 
 % \section{Structure Learning}
@@ -2269,7 +2360,7 @@ In reference to figure \ref{fig:simulation_results_comparison1} it
 should not be overly surprising that our PWGC algorithm performs
 better than the LASSO for the case of a strongly causal graph, since
 in this case the assumptions which guarantee the correctness of
-Algorithm \ref{alg:pwgr_heuristic} hold.  However, the performance is
+Algorithm \ref{alg:finite_pwgc} hold.  However, the performance is
 still markedly superior in the case of a more general DAG.
 
 In regards scalability, we have observed that performing the $O(n^2)$
@@ -2292,6 +2383,7 @@ comparable number of edges as there are data samples $T$.
 \label{sec:conclusion}
 % Extensions to transfer entropy?.  Case of time varying statistics?.  Develop sparse estimators for SS models (\cite{barnett2015granger})?.  Apply MIO for the Whittle relaxation?
 
+\clearpage
 \printbibliography
 \end{document}
 
