@@ -76,15 +76,9 @@ def estimate_b_lasso(X, y):
     # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
     lasso.fit(X, y)
     w = lasso.coef_
-    if np.all(w == 0):
-        # All zero support
-        return w
 
-    # Use lasso only to select the support
-    eps = 1e-9
-    X_lasso = X[:, [i for i, wi in enumerate(w) if abs(wi) >= eps]]
-    w_lr = estimate_b_lstsqr(X_lasso, y)
-    w[[i for i, wi in enumerate(w) if abs(wi) >= eps]] = w_lr
+    # NOTE: A postprocessing step with OLS is not actually a good thing to do
+    # NOTE: as the selection and shrinkage trade off in an intelligent way.
     return w
 
 
@@ -383,9 +377,12 @@ def compute_bic(eps, T, s=1):
     return bic
 
 
-def compute_gc_score(xi_i, xi_ij, T, p_lags):
+def compute_gc_score(xi_i, xi_ij, T, p_lags, F_distr=False):
     with np.errstate(divide="ignore", invalid="ignore"):
-        F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
+        if F_distr:
+            F = (T - p_lags) * ((xi_i[:, None] / xi_ij) - 1) / p_lags
+        else:
+            F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
     F[p_lags ==0] = 0
     return F
 
@@ -466,21 +463,26 @@ def fast_compute_xi(R, T, n_min=0, n_max=np.inf):
 # TODO: (1) for scarce data, use sklearn ARD or possibly LASSO
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
-def compute_pairwise_gc(X, max_lag=10):
+def compute_pairwise_gc(X, max_lag=10, F_distr=False):
     T, _, _ = *X.shape, max_lag
     xi_i, xi_ij, p_i, p_ij = compute_xi(
         X, max_lag)
-    F = compute_gc_score(xi_i, xi_ij, T, p_ij)
+    F = compute_gc_score(xi_i, xi_ij, T, p_ij, F_distr=F_distr)
     return F, p_ij  # p_i is actually irrelevant.
 
 
-def normalize_gc_score(F, p):
-    F = sps.chi2.cdf(F, p)
+def normalize_gc_score(F, p, T=None, F_distr=False):
+    if F_distr:
+        if T is None:
+            raise ValueError("If F_distr=True, we also require T.")
+        sps.f.cdf(F, p, T - p)
+    else:
+        F = sps.chi2.cdf(F, p)
     F[np.isnan(F)] = 0.0
     return F
 
 
-def fast_compute_pairwise_gc(X, max_lag=10, k_cores=1):
+def fast_compute_pairwise_gc(X, max_lag=10, F_distr=False, k_cores=1):
     """
     This is /dramatically/ faster than compute_pairwise_gc.
 
@@ -497,7 +499,7 @@ def fast_compute_pairwise_gc(X, max_lag=10, k_cores=1):
             n, T, R, k_cores=k_cores)
     else:
         raise AssertionError("Must have k_cores >= 1!")
-    return compute_gc_score(xi_i, xi_ij, T, p_ij), p_ij
+    return compute_gc_score(xi_i, xi_ij, T, p_ij, F_distr=F_distr), p_ij
 
 
 def _par_fast_compute_pairwise_gc(n, T, R, k_cores=2):
@@ -775,7 +777,7 @@ def estimate_dense_graph(X, max_lag=10,
 
 
 def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05,
-                   fast_mode=True):
+                   fast_mode=True, F_distr=False):
     """
     Produce an estimated graph from the data X.
 
@@ -789,13 +791,13 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05,
 
     # Compute the pairwise errors and filter sizes
     if fast_mode:
-        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags, F_distr=F_distr,
                                         k_cores=int(1 + np.log(n)))
     else:
-        F, P = compute_pairwise_gc(X, max_lag=max_lags)
+        F, P = compute_pairwise_gc(X, max_lag=max_lags, F_distr=F_distr)
 
     # Screen edges via benjamini hochberg criterion
-    P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
+    P_edges = normalize_gc_score(F, P, T, F_distr=F_distr)  # p-values are just 1 - F
     P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
     t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
 

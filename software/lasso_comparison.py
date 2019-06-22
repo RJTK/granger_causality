@@ -84,9 +84,9 @@ def lasso_comparison(simulation_name, graph_type):
     alpha, N_iters = 0.05, 3
 
     # T_iters = list(map(int, np.logspace(2, 3, 20)))
-    # T_iters = list(map(int, np.linspace(500, 5000, 20)))
-    # T_iters = [50 + 100 * k for k in range(1, 99)]
-    T_iters = [20, 40, 80, 100, 150, 250, 500]
+    # T_iters = list(map(int, np.linspace(30, 5000, 20)))
+    T_iters = [50 + 100 * k for k in range(1, 99)]
+    # T_iters = [20, 40, 80, 100, 150, 250, 500]
 
     # NOTE: We use only X[T:] to estimate the error
     # NOTE: so it is important to have a significant trailing
@@ -126,7 +126,6 @@ def lasso_comparison(simulation_name, graph_type):
     errs_pwgc = TrackErrors(N_iters, T_iters, n_nodes)
     errs_lasso = TrackErrors(N_iters, T_iters, n_nodes)
 
-    # TODO: There is a ton of repeated work going on all over
     for T_iter, T in enumerate(T_iters):
         for N_iter, _ in enumerate(range(N_iters)):
             print("N[{} / {}] -- T[{} / {}]\r".format(
@@ -138,7 +137,10 @@ def lasso_comparison(simulation_name, graph_type):
             # ~824ms
             G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
                                         method="lstsqr", alpha=alpha,
-                                        fast_mode=False)
+                                        fast_mode=True, F_distr=False)
+            # G_hat_lasso = estimate_graph(X[:T], G, max_lags=p_max,
+            #                             method="lstsqr", alpha=alpha,
+            #                             fast_mode=True, F_distr=True)
 
             # ~37s
             # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
@@ -147,14 +149,14 @@ def lasso_comparison(simulation_name, graph_type):
             # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
             #                                    max_T=T,
             #                                    method="glasso")
-            # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
-            #                                    max_T=T,
-            #                                    method="alasso")
-
-            # TODO: Notice that I'm giving it the /real/ p value
             G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
                                                max_T=T,
                                                method="alasso")
+
+            # TODO: Notice that I'm giving it the /real/ p value
+            # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
+            #                                    max_T=T,
+            #                                    method="alasso")
             # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
             #                                    max_T=T,
             #                                    method="lasso")
