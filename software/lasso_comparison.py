@@ -81,11 +81,12 @@ class TrackErrors:
 def lasso_comparison(simulation_name, graph_type):
     np.random.seed(0)
     n_nodes, p_lags, p_max = 50, 5, 15
-    alpha, N_iters = 0.05, 3
+    alpha, N_iters = 0.05, 1
 
     # T_iters = list(map(int, np.logspace(2, 3, 20)))
     # T_iters = list(map(int, np.linspace(30, 5000, 20)))
-    T_iters = [50 + 100 * k for k in range(1, 99)]
+    # T_iters = [50 + 100 * k for k in range(1, 99)]
+    T_iters = [50 + 100 * k for k in range(1, 99, 2)]
     # T_iters = [20, 40, 80, 100, 150, 250, 500]
 
     # NOTE: We use only X[T:] to estimate the error
@@ -135,6 +136,7 @@ def lasso_comparison(simulation_name, graph_type):
             G, X, sv2_true = make_test_data(T)
 
             # ~824ms
+            # TODO: F_distr is incorrect
             G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
                                         method="lstsqr", alpha=alpha,
                                         fast_mode=True, F_distr=False)
@@ -153,7 +155,6 @@ def lasso_comparison(simulation_name, graph_type):
                                                max_T=T,
                                                method="alasso")
 
-            # TODO: Notice that I'm giving it the /real/ p value
             # G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
             #                                    max_T=T,
             #                                    method="alasso")

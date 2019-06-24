@@ -13,7 +13,7 @@ from math import ceil
 
 from scipy import linalg
 from scipy import stats as sps
-from scipy.linalg import toeplitz
+from scipy.linalg import toeplitz, cho_solve, cho_factor
 from sklearn.linear_model import LassoLarsIC, LassoLarsCV
 from spams import fistaFlat
 
@@ -34,30 +34,54 @@ except ImportError:
                             make_complete_digraph, attach_X)
 
 
-def estimate_b_lstsqr(X, y):
+def estimate_b_lstsqr(X, y, ret_G=False, lmbda=np.inf):
     """
     Simple direct estimate of a linear filter y_hat = Xb.
+
+    - if ret_G=True, we will return the gram Matrix X.T @ X.
+    - lmbda is a regularzation term interpretable as the
+      prior variance on the coefficient terms; i.e. we will
+      compute the Tikhonov-regularized Leastsquares solution
+      using X.T @ X / T + (1. / lmbda * T) as the covariance
+      estimate.
 
     y: np.array (T)
     X: np.array (T x s)
     """
     T, n = X.shape
-    R = X.T @ X / T
+    R = (X.T @ X) / T
     r = X.T @ y / T
+
+    R_reg = R + (1. / (lmbda * T)) * np.eye(n)
     try:
-        w = linalg.cho_solve(linalg.cho_factor(R), r)
+        w = cho_solve(cho_factor(R_reg), r)
     except linalg.LinAlgError:
-        R = R + np.min(np.diag(R)) *  np.eye(R.shape[0])
+        R_reg = R_reg + np.min(np.diag(R_reg)) *  np.eye(R_reg.shape[0])
 
     try:
-        w = linalg.cho_solve(linalg.cho_factor(R), r)
+        w = cho_solve(cho_factor(R_reg), r)
     except linalg.LinAlgError:
-        w, _, _, _ = linalg.lstsq(R, r)
-    return w
+        w, _, _, _ = linalg.lstsq(R_reg, r)
+
+    if ret_G:
+        return w, R * T
+    else:
+        return w
 
 
 def estimate_b_lstsqr_cov(R, r):
-    return linalg.cho_solve(linalg.cho_factor(R), r)
+    return cho_solve(cho_factor(R), r)
+
+
+def _estimate_b_lasso(G, X, y):
+    """
+    Lasso estimation given a precomputed Gram matrix G.
+    """
+    # NOTE: the 'normalize' parameter is ignored when fit_intercept=False
+    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
+                        normalize=False, precompute=G)
+    w = lasso.fit(X, y).coef_
+    return w
 
 
 def estimate_b_lasso(X, y):
@@ -67,56 +91,46 @@ def estimate_b_lasso(X, y):
     y: np.array (T)
     X: np.array (T x s)
     """
-    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
-                        normalize=False, precompute=True)
-    # lasso = LassoLarsCV(fit_intercept=False, verbose=False,
-    #                     normalize=True, precompute=True,
-    #                     cv=3, n_jobs=3)
-
-    # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
-    lasso.fit(X, y)
-    w = lasso.coef_
-
-    # NOTE: A postprocessing step with OLS is not actually a good thing to do
-    # NOTE: as the selection and shrinkage trade off in an intelligent way.
+    G = X.T @ X
+    w = _estimate_b_lasso(G, X, y)
     return w
 
 
-def estimate_b_alasso(X, y):
+def estimate_b_alasso(X, y, lmbda_lstsqr=2.0, nu=0.5):
     """
     Estimate y_hat = Xb via Adaptive-LASSO
-    and using BIC to choose regularizers.
+    and using BIC to choose regularizer.
+
+    This is an adaptive scheme that uses "piloting weights" to improve
+    the selection capacity of the lasso.
+
+    lmbda_lstsqr: Prior variance for the lstsqr estimate (set to
+      np.inf to disable)
+    nu: exponential coefficient for the weights, larger values will
+      put a greater emphasis on the lstsqr estimate, smaller values
+      bring us close to the vanilla lasso.  Values larger than 1 can
+      lead to substantial variability in the low sample regime,
+      whereas nu > 1 allows for the LASSO regularizer to converge to
+      0.  So for small samples: 0 < nu < 1 (i.e. nu = 0.5) and for
+      larger samples nu > 1 (i.e. nu = 3/2).
+
+    The oracle property requires that lmbda_n / sqrt(n) -> 0 and
+    (lambda_n * n^(nu - 1)/2) -> oo
 
     y: np.array (T)
     X: np.array (T x s)
     """
-    nu = 2.0  # We approximate l_q regression where q = 1 - nu
+    # NOTE: I am putting a regularizer on the cov matrix to avoid crazy
+    # NOTE: variance in small samples, but inspection of the lstsqr
+    # NOTE: function will show that my normalization is s.t.
+    # NOTE: the estimator is still root(n)-consistent.
+    b0, G = estimate_b_lstsqr(X, y, ret_G=True, lmbda=lmbda_lstsqr)
+    wgt = np.abs(b0)**nu
+    X_wgt = X * wgt[None, :]
+    G_wgt = wgt[:, None] * G * wgt[None, :]
 
-    # This is an adaptive scheme that uses "piloting weights" to improve
-    # the selection capacity of the lasso.
-    b0 = estimate_b_lstsqr(X, y)
-    w = 1. / np.abs(b0)**nu
-    X_wgt = X / w[None, :]
-
-    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
-                        normalize=False, precompute=True)
-    # lasso = LassoLarsCV(fit_intercept=False, verbose=False,
-    #                     normalize=True, precompute=True,
-    #                     cv=3, n_jobs=3)
-
-    # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
-    lasso.fit(X_wgt, y)
-    w = lasso.coef_
-    if np.all(w == 0):
-        # All zero support
-        return w
-
-    # Use lasso only to select the support
-    # It it actually okay to do this?
-    eps = 1e-9
-    X_lasso = X[:, [i for i, wi in enumerate(w) if abs(wi) >= eps]]
-    w_lr = estimate_b_lstsqr(X_lasso, y)
-    w[[i for i, wi in enumerate(w) if abs(wi) >= eps]] = w_lr
+    w = _estimate_b_lasso(G_wgt, X_wgt, y)
+    w = w * wgt
     return w
 
 
@@ -844,9 +858,14 @@ def compute_F1_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
 def compute_MCC_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
     TP, TN, FP, FN = compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges,
                                    n_nodes)
-    MCC = (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) *
+    mcc = _compute_mcc(TP, TN, FP, FN)
+    return mcc
+
+
+def _compute_mcc(TP, TN, FP, FN):
+    mcc = (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) *
                                         (TN + FP) * (TN + FN))
-    return MCC
+    return mcc
 
 
 def example_graph():
