@@ -1016,7 +1016,7 @@ time series networks, that is, the topology of $\gcg$.
   \label{def:strongly_causal}
   We will say that a Granger-causality graph $\gcg$ is
   \textit{strongly causal} if there is at most 1 directed path between
-  any two nodes.
+  any two nodes.  Strongly Causal Graphs will be referred to as ``SCGs''.
 \end{definition}
 
 Examples of strongly causal graphs include directed trees (or
@@ -1026,6 +1026,46 @@ $2n$ nodes is also strongly causal, demonstrating that the number of
 edges of such a graph can still scale quadratically with the number of
 nodes.  It is evident that the strong causal property is inherited by
 subgraphs.
+
+\begin{example}
+  Though examples of SCGs are easy to construct in theory, should
+  practitioners expect SCGs to arise in application?  While a positive
+  answer to this question is not \textit{necessary} for the concept to
+  be useful, it is certainly sufficient.  Though the answer is likely
+  to depend upon the particular application area, examples appear to
+  be available in biology, in particular, the authors of
+  \cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}
+  cite an example of the so called ``transcription regulatory network
+  of \textit{E.coli}'', and
+  \cite{learning_genome_scale_regulatory_networks} study a much larger
+  regulatory network of \textit{Saccharomyces cerevisiae}.  These
+  networks, which we reproduce\footnote{Figure \ref{fig:gene_network1}
+    is reproduced under the Creative Commons Attribution
+    Non-Commercial License
+    (\url{http://creativecommons.org/licenses/by-nc/2.5}) and Figure
+    \ref{fig:gene_network2} under the Creative Commons Attribution
+    License (\url{https://creativecommons.org/licenses/by/4.0/})} in
+  figure \ref{fig:gene_networks} appear to have at most a small number
+  of edges which violate the strong-causality condition.
+
+  \begin{figure}[h]
+    \centering
+    \caption{Transcription Regulatory Networks}
+    \label{fig:gene_networks}
+    \begin{subfigure}[b]{0.45\textwidth}
+      \caption{\textit{E.Coli} Network of
+        \cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}}
+      \label{fig:gene_network1}
+      \includegraphics[width=\linewidth, height=\linewidth]{ecoli_regulatory_network.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+      \caption{\textit{Saccharomyces cerevisiae} Network of
+        \cite{learning_genome_scale_regulatory_networks}}
+      \label{fig:gene_network2}
+      \includegraphics[width=\linewidth, height=\linewidth]{huge_gene_network.png}
+    \end{subfigure}
+  \end{figure}
+\end{example}
 
 % \begin{lemma}
 %   \label{lem:still_strongly_causal}
