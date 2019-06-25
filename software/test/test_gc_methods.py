@@ -46,8 +46,8 @@ class TrackErrors:
 
 def example_linear_regression():
     np.random.seed(0)
-    p = 100
-    p0 = 15
+    p = 20
+    p0 = 8
 
     sigma = 2.5
     N_iters = 250
@@ -55,8 +55,8 @@ def example_linear_regression():
     errs_lstsqr, errs_lasso, errs_alasso = [TrackErrors(N_iters, p, p0)
                                             for _ in range(3)]
 
-    sample_points = np.array(list(map(int, np.linspace(10, 1e5, N_iters))))
-    n_test = 1000
+    sample_points = np.array(list(map(int, np.linspace(10, 5e5, N_iters))))
+    n_test = 10000
     for i, n in enumerate(sample_points):
         print("i = {} / {}, n = {}\r".format(i + 1, N_iters, n))
         noise = sigma * np.random.normal(size=n + n_test)
@@ -65,9 +65,7 @@ def example_linear_regression():
         # L = np.random.standard_t(size=(p, p), df=3)
         L = np.random.normal(size=(p, p))  # Make X dependent
         X = np.random.normal(size=(n + n_test, p))
-        X[1:] += 0.5 * np.random.normal() * X[:-1]
         X[2:] += 0.5 * np.random.normal() * X[:-2]
-        X[3:] += 0.5 * np.random.normal() * X[:-3]
         X = X @ L
 
         X = X / np.std(X)

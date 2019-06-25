@@ -15,6 +15,7 @@ from scipy import linalg
 from scipy import stats as sps
 from scipy.linalg import toeplitz, cho_solve, cho_factor
 from sklearn.linear_model import LassoLarsIC, LassoLarsCV
+from sklearn.preprocessing import StandardScaler
 from spams import fistaFlat
 
 from levinson import (lev_durb, whittle_lev_durb)
@@ -84,6 +85,19 @@ def _estimate_b_lasso(G, X, y):
     return w
 
 
+def _standardize_X(f):
+    def _f(X, *args, **kwargs):
+        _X = X - np.mean(X, axis=0)[None, :]
+        s = np.std(_X, axis=0)[None, :]
+        _X = _X / s
+
+        w = f(_X, *args, **kwargs)
+        w = w / s.ravel()
+        return w
+    return _f
+
+
+@_standardize_X
 def estimate_b_lasso(X, y):
     """
     Estimate y_hat = Xb via LASSO and using BIC to choose regularizers.
@@ -96,7 +110,8 @@ def estimate_b_lasso(X, y):
     return w
 
 
-def estimate_b_alasso(X, y, lmbda_lstsqr=2.0, nu=0.5):
+@_standardize_X
+def estimate_b_alasso(X, y, lmbda_lstsqr=2.0, nu=2.0):
     """
     Estimate y_hat = Xb via Adaptive-LASSO
     and using BIC to choose regularizer.
@@ -397,7 +412,7 @@ def compute_gc_score(xi_i, xi_ij, T, p_lags, F_distr=False):
             F = (T - p_lags) * ((xi_i[:, None] / xi_ij) - 1) / p_lags
         else:
             F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
-    F[p_lags ==0] = 0
+    F[p_lags == 0] = 0
     return F
 
 

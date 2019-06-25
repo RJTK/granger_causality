@@ -1917,34 +1917,33 @@ In performing pairwise checks for Granger-causality $x_j \pwgc x_i$ we
 follow the simple scheme of estimating the following two linear models:
 
 \begin{align}
-  H_0:&\ \widehat{x}_i^{(p_i)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau),\\
-  H_1:&\ \widehat{x}_i^{(p_{ij})}(t) = \sum_{\tau = 1}^{p_{ij}} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_{ij}}b_{ij}(\tau)x_j(t - \tau).
+  H_0:&\ \widehat{x}_i^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau),\\
+  H_1:&\ \widehat{x}_i^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^pb_{ij}(\tau)x_j(t - \tau).
 \end{align}
 
-Under the null hypothesis $H_0$ (i.e. that $x_j \npwgc x_i$) we can
-form the asymptotically $\chi^2(p_{ij})$ distributed test statistic
-\todo{Is this actually $\chi^2$ when $p_{ij}$ is chosen from the data?  This is adaptive!}
+We formulate the statistic 
 
 \begin{equation}
   \label{eqn:gc_statistics}
-  F_{ij}(p_i, p_{ij}) = \frac{T}{p_{ij}}\Big(\frac{\xi_i(p_i)}{\xi_{ij}(p_{ij})} - 1\Big),
+  F_{ij}(p) = \frac{T}{p}\Big(\frac{\xi_i(p)}{\xi_{ij}(p)} - 1\Big),
 \end{equation}
 
-where $\xi_i(p_i)$ is the sample mean square of the residuals\footnote{This
-  quantity is often denoted $\widehat{\sigma}$, but we maintain
-  notation from Definition \ref{def:granger_causality}.}
-$x_i(t) - \widehat{x}^{(p_i)}_i(t)$
+where $\xi_i(p)$ is the sample mean square of the
+residuals\footnote{This quantity is often denoted $\widehat{\sigma}$,
+  but we maintain notation from Definition
+  \ref{def:granger_causality}.}  $x_i(t) - \widehat{x}^{(p)}_i(t)$,
 
 \begin{equation*}
-  \xi_i(p_i) = \frac{1}{T - p_i}\sum_{t = p_i + 1}^T (x_i(t) - \widehat{x}_i^{(p_i)}(t))^2,
+  \xi_i(p) = \frac{1}{T - p}\sum_{t = p + 1}^T (x_i(t) - \widehat{x}_i^{(p)}(t))^2,
 \end{equation*}
 
-and similarly for $\xi_{ij}(p_{ij})$.  Under moment conditions $x(t)$
-(\hl{TODO: What assumptions? -- this must also depend on choice of
-  $p_i, p_j$}) we have the convergence in probability:
+and similarly for $\xi_{ij}(p)$.  We test $F_{ij}(p)$ against a
+$\chi^2(p)$ distribution.
+
+If disturbances are Gaussian, we will have the convergence
 
 \begin{equation}
-  F_{ij}(p_i, p_{ij}) \overset{\P}{\rightarrow}
+  F_{ij}(p) \overset{\P}{\rightarrow}
   \left\{
     \begin{array}{ll}
       0;\ x_j \npwgc x_i\\
@@ -1953,11 +1952,14 @@ and similarly for $\xi_{ij}(p_{ij})$.  Under moment conditions $x(t)$
   \right. \text{ as } T \rightarrow \infty.  % the '.' after \right is necessary.
 \end{equation}
 
-Therefore, we can make the statement that Algorithm
-\ref{alg:finite_pwgc} asymptotically implements Algorithm
-\ref{alg:pwgr}.  \hl{TODO: Modify Algorithm 2 to make this true.}
-\hl{TODO: Enclose this into a theorem}
-
+In our finite sample implementation (see Algorithm
+\ref{alg:finite_pwgc}) we add edges to $\widehat{\gcg}$ in order of
+the decreasing magnitude of $F_{ij}$ instead of proceeding backwards
+through $P_{k - r}$ in Algorithm \ref{alg:pwgr}.  This makes greater
+use of the information provided by the test statistic $F_{ij}$,
+moreover, if $x_i \gc x_j$ and $x_j \gc x_k$, it is expected that
+$F_{kj} > F_{ji}$, thereby providing the same effect as proceeding
+backwards through $P_{k - r}$.
 \subsection{Model Order Selection}
 \label{sec:model_order_selection}
 There are a variety of methods to choose the filter orders $p_i$ and
@@ -2283,18 +2285,20 @@ variance $\sigma_i^2 = 1/2 + r_i$ where $r_i \sim \text{exp}(1/2)$.
 We set $p_{\text{max}} = 15$.  Results and representitive graphs are
 collected in Figure \ref{fig:simulation_results}.
 
-We compare our results against the LASSO as a baseline, estimating the
-filter $\B(z)$ that minimizes $\xi_{\text{LASSO}}$ in the following:
+We compare our results against the LASSO.  Motivated by scaling, we
+split the squared error term into separate terms, one for each group of
+incident edges on a node, and estimate the collection of $n$ incident
+filters $\big\{\B_{ij}(z)\big\}_{j = 1}^n$ that minimizes
+$\xi_i^{\text{LASSO}}$ in the following:
 
 \begin{equation}
   \begin{aligned}
-  \xi_{\text{LASSO}}^{(\lambda)} &= \underset{B}{\text{min}}\ \frac{1}{T}\sum_{t = p + 1}^T||x(t) - \sum_{\tau = 1}^p B(\tau) x(t - \tau)||_2^2 + \lambda \sum_{\tau = 1}^p ||\matvec B(\tau)||_1\\
-  \xi_{\text{LASSO}} &= \underset{\lambda \ge 0}{\text{min}}\ \xi_{\text{LASSO}}^{(\lambda)} + \mathsf{BIC}(B_{\text{LASSO}}^{(\lambda)})\\
+  \xi_i^{\text{LASSO}}(\lambda) &= \underset{B}{\text{min}}\ \frac{1}{T}\sum_{t = p + 1}^T\big(x_i(t) - \sum_{\tau = 1}^p\sum_{j = 1}^n B_{i, j}(\tau) x(t - \tau)\big)^2 + \lambda \sum_{\tau = 1}^p \sum_{j = 1}^n |B_{ij}(\tau)|\\
+  \xi_i^{\text{LASSO}} &= \underset{\lambda \ge 0}{\text{min}}\ \xi_i^{\text{LASSO}}(\lambda) + \mathsf{BIC}\big(B_i^{\text{LASSO}}(\lambda)\big)\\
   \end{aligned}
 \end{equation}
 
-where $||\matvec B||_1$ emphasizes the application of a vector norm, and
-$\lambda$ is the regularization parameter chosen via the BIC.
+where we are choosing $\lambda$, the regularization parameter, via the BIC.
 
 \begin{figure}
   \centering
@@ -2361,7 +2365,14 @@ should not be overly surprising that our PWGC algorithm performs
 better than the LASSO for the case of a strongly causal graph, since
 in this case the assumptions which guarantee the correctness of
 Algorithm \ref{alg:finite_pwgc} hold.  However, the performance is
-still markedly superior in the case of a more general DAG.
+still markedly superior in the case of a more general DAG.  We would
+conjecture that a DAG having a similar degree of sparsity as an SCG is
+likely to be ``close'' to an SCG.  Figure
+\ref{fig:simulation_results_dense} illustrates the severe (expected)
+degredation in performance as the number of DAG edges increases while
+the number of data samples $T$ remains fixed.  For larger values $q$
+in this plot, the number of edges in the graph is comparable to the
+number of data samples.
 
 In regards scalability, we have observed that performing the $O(n^2)$
 pairwise Granger-causality calculations consumes the vast majority
@@ -2371,11 +2382,9 @@ multiple machines.  Figure \ref{fig:simulation_results_scaling} is a
 demonstrating of this scalability, where we are able to estimate
 graphs having over $1500$ nodes (over $2.25 \times 10 ^6$ possible
 edges) using only $T = 500$ data points, granted, an SCG on this many
-nodes is extremely sparse.  Application to denser graphs is explored
-in Figure \ref{fig:simulation_results_dense}, where $n$ and $T$ are
-held fixed while increasing the edge probability $q$, thereby creating
-denser graphs.  For larger values of $q$ in this plot there is a
-comparable number of edges as there are data samples $T$.
+nodes is extremely sparse.  However, it is certainly possible to
+improve the scalability of the LASSO as applied to time series data by
+taking advantage of the block-Toeplitz covariance structure.
 
 \section{Application}
 \label{sec:application}

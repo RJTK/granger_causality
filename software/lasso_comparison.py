@@ -81,12 +81,12 @@ class TrackErrors:
 def lasso_comparison(simulation_name, graph_type):
     np.random.seed(0)
     n_nodes, p_lags, p_max = 50, 5, 15
-    alpha, N_iters = 0.05, 1
+    alpha, N_iters = 0.05, 3
 
     # T_iters = list(map(int, np.logspace(2, 3, 20)))
     # T_iters = list(map(int, np.linspace(30, 5000, 20)))
     # T_iters = [50 + 100 * k for k in range(1, 99)]
-    T_iters = [50 + 100 * k for k in range(1, 99, 2)]
+    T_iters = [50 + 100 * k for k in range(1, 99, 1)]
     # T_iters = [20, 40, 80, 100, 150, 250, 500]
 
     # NOTE: We use only X[T:] to estimate the error
@@ -173,10 +173,11 @@ def lasso_comparison(simulation_name, graph_type):
         D_true_errs,
         title=("Test Errors against T (Random {} graph on "
                "$n = {}$ nodes)".format(graph_type, n_nodes)),
-        lasso_title="Adaptive LASSO")
-        # save_file=["../figures/{}_simulation.pdf".format(simulation_name),
-        #            "../figures/jpgs_pngs/"
-        #            "{}_simulation.png".format(simulation_name)])
+        lasso_title="Adaptive LASSO",
+        save_file=["../figures/{}_simulation.pdf".format(simulation_name),
+                   "../figures/jpgs_pngs/"
+                   "{}_simulation.png".format(simulation_name)],
+        show_results=False)
     return
 
 
@@ -231,7 +232,8 @@ def plot_results(D_MCC_pwgc, D_errs_pwgc,
                  D_MCC_lasso, D_errs_lasso,
                  D_true_errs,
                  save_file=None, title="",
-                 lasso_title="LASSO"):
+                 lasso_title="LASSO",
+                 show_results=True):
     true_errs = np.array(D_true_errs["value"], dtype=float)
     t = np.array(D_true_errs["variable"], dtype=float)
 
@@ -257,6 +259,6 @@ def plot_results(D_MCC_pwgc, D_errs_pwgc,
             fig.savefig(save_file)
         else:  # Allow passing a list
             _ = [fig.savefig(f) for f in save_file]
-    plt.show()
-
+    if show_results:
+        plt.show()
     return
