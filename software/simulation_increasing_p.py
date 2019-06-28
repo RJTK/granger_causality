@@ -8,8 +8,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.model_selection import GridSearchCV
+from plotting_helpers import (COLOR1, COLOR2, plotting_model)
 
 from matplotlib import rc as mpl_rc
 font = {"family" : "normal",
@@ -68,16 +67,16 @@ class TrackErrors:
         return MCC, self.b_errs, self.errs, self.true_errs
 
 
-def pwgc_increasing_n(T):
-    simulation_name="dag_increasing_q_small_T"
+def pwgc_increasing_q(T):
+    simulation_name="dag_increasing_q_small_T_alasso"
     
     np.random.seed(0)
-    alpha, p_lags, p_max, T = 0.05, 5, 15, 500
+    alpha, p_lags, p_max, T = 0.05, 3, 5, 500
     T_max = 2 * T
 
     n = 50
-    edge_probs = np.linspace(2. / n**2, 1. / np.log(n), 100)
-    N_reps = 3
+    edge_probs = np.linspace(2. / n**2, 1. / np.log(n), 200)
+    N_reps = 2
 
     def random_graph(q):
         return random_gnp_dag(n, p_lags, pole_rad=0.75,
@@ -98,13 +97,14 @@ def pwgc_increasing_n(T):
 
     for q_iter, q in enumerate(edge_probs):
         for rep in range(N_reps):
-            print("q[{} / {}]\r".format(q_iter + 1, len(edge_probs)))
+            print("q[{} / {}]".format(q_iter + 1, len(edge_probs)),
+                  end="\r")
 
             G, X, sv2_true = make_test_data(q)
             G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
                                         method="lstsqr", alpha=alpha)
             G_hat_lasso = estimate_dense_graph(X, max_lag=p_lags,
-                                               max_T=T, method="lasso")
+                                               max_T=T, method="alasso")
             errs_pwgc.update(G, G_hat_pwgc, sv2_true, q_iter, rep)
             errs_lasso.update(G, G_hat_lasso, sv2_true, q_iter, rep)
 
@@ -126,43 +126,44 @@ def _plot_results(q_iters, mcc_pwgc, errs_pwgc,
                   mcc_lasso, errs_lasso,
                   true_errs, title=None, save_file=None):
 
-    def _plot_single(mcc, errs, ax_mcc, title):
-        ax_pred = ax_mcc.twinx()
-        ax_pred.grid(False)
-        ax_mcc.set_title(title)
+    def _plot_single(var_pwgc, var_lasso, ax, title, ylabel):
+        ax.set_title(title)
 
-        ax_mcc.set_xlabel("Erdos-Renyi Edge probability")
-        ax_mcc.set_ylabel("Graph Recovery MCC Score")
-        ax_pred.set_ylabel("Log Prediction Error Relative to Noise Floor")
-        ax_mcc.set_ylim(-0.25, 1.25)
-        ax_pred.set_ylim(0.5, 13)
+        ax.set_xlabel("Erdos-Renyi Edge probability")
+        ax.set_ylabel(ylabel)
 
-        log_normed_errs = np.log(errs) / np.log(true_errs)
-        loc_q_iters = np.vstack([q_iters] * errs.shape[1]).T.ravel()
-        loc_q_iters, mcc, log_normed_errs = list(
-            map(np.ravel, [loc_q_iters, mcc, log_normed_errs]))
-        ax_mcc.scatter(loc_q_iters, mcc, color="b", marker="o",
-                       alpha=0.75)
-        ax_pred.scatter(loc_q_iters, log_normed_errs, color="r", marker="^",
+        loc_q_iters = np.vstack([q_iters] * var_pwgc.shape[1]).T.ravel()
+
+        loc_q_iters, var_pwgc, var_lasso = list(
+            map(np.ravel, [loc_q_iters, var_pwgc, var_lasso]))
+
+        ax.scatter(loc_q_iters, var_pwgc, color=COLOR1, marker="o",
+                   alpha=0.75)
+        ax.scatter(loc_q_iters, var_lasso, color=COLOR2, marker="^",
                         alpha=0.75)
 
-        ax_mcc.plot(loc_q_iters, _fit_plotting_model(loc_q_iters, mcc),
-                    color="b", linewidth=2)
-
-        # This is the worst code in the universe
-        ax_pred.plot(loc_q_iters, _fit_plotting_model(
-            loc_q_iters, log_normed_errs),
-                     color="r", linewidth=2)
+        ax.plot(loc_q_iters, plotting_model(loc_q_iters, var_pwgc),
+                color=COLOR1, linewidth=2)
+        ax.plot(loc_q_iters, plotting_model(
+            loc_q_iters, var_lasso),
+                color=COLOR2, linewidth=2)
         return
 
-    fig, axes = plt.subplots(1, 2, sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, 2, sharex=True, sharey=False)
 
-    _plot_single(mcc_pwgc, errs_pwgc, axes[0], "PWGC")
-    _plot_single(mcc_lasso, errs_lasso, axes[1], "LASSO")
+    log_normed_errs_pwgc = np.log(errs_pwgc) / np.log(true_errs)
+    log_normed_errs_lasso = np.log(errs_lasso) / np.log(true_errs)
+
+    _plot_single(mcc_pwgc, mcc_lasso, axes[0], title="MCC Comparison", ylabel="MCC")
+    _plot_single(log_normed_errs_pwgc, log_normed_errs_lasso, axes[1],
+                 title="Prediction Error Comparison",
+                 ylabel="Log Prediction Error Relative to Noise Floor")
     fig.suptitle(title)
 
-    axes[0].plot([], [], color="b", marker="o", label="MCC")
-    axes[0].plot([], [], color="r", marker="^", label="Prediction Error")
+    axes[0].set_ylim(0, 1.25)
+
+    axes[0].plot([], [], color=COLOR1, marker="o", label="PWGC")
+    axes[0].plot([], [], color=COLOR2, marker="^", label="Adaptive LASSO")
     axes[0].legend(loc="upper left")
 
     if save_file is not None:
@@ -174,18 +175,5 @@ def _plot_results(q_iters, mcc_pwgc, errs_pwgc,
     return
 
 
-def _fit_plotting_model(x, y):
-    # A completely ad-hoc function used in plotting.
-    X = np.vstack((np.ones_like(x), x, np.sqrt(x), x**2,
-                   x * np.sqrt(x))).T
-
-    # kr = GridSearchCV(KernelRidge(kernel='rbf', gamma=0.1), cv=5,
-    #                   param_grid={"alpha": [1e0, 0.1, 1e-2, 1e-3],
-    #                               "gamma": np.logspace(-2, 2, 5)})
-    # kr.fit(x[:, None], y)
-    # y_hat = kr.predict(x[:, None])
-
-    fit = sm.OLS(endog=y, exog=X, hasconst=True)
-    fit_res = fit.fit()
-    y_hat = fit_res.fittedvalues
-    return y_hat
+if __name__ == "__main__":
+    pwgc_increasing_q(500)

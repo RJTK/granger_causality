@@ -14,7 +14,7 @@ from math import ceil
 from scipy import linalg
 from scipy import stats as sps
 from scipy.linalg import toeplitz, cho_solve, cho_factor
-from sklearn.linear_model import LassoLarsIC, LassoLarsCV
+from sklearn.linear_model import LassoLarsIC, LassoLarsCV, Lasso
 from sklearn.preprocessing import StandardScaler
 from spams import fistaFlat
 
@@ -286,15 +286,17 @@ def estimate_B(G, max_lag=10, copy_G=False,
         # Form linear regression matrices
         X, y = form_Xy(X_raw, y_raw, p=max_lag)
 
+        X_maxT, y_maxT = X[:max_T], y[:max_T]
+
         # Estimate
         if method == "lasso":
-            b = estimate_b_lasso(X[:max_T], y[:max_T])
+            b = estimate_b_lasso(X_maxT, y_maxT)
         elif method == "glasso":
-            b = estimate_b_glasso(X, y, p=max_lag, T_train=max_T)
+            b = estimate_b_glasso(X_maxT, y_maxT, p=max_lag, T_train=max_T)
         elif method == "alasso":
-            b = estimate_b_alasso(X, y)
+            b = estimate_b_alasso(X_maxT, y_maxT, nu=1.5)
         elif method == "lstsqr":
-            b = estimate_b_lstsqr(X[:max_T], y[:max_T])
+            b = estimate_b_lstsqr(X_maxT, y_maxT)
         else:
             raise AssertionError("Bad method but should deal with it earlier!")
 
@@ -504,7 +506,7 @@ def normalize_gc_score(F, p, T=None, F_distr=False):
     if F_distr:
         if T is None:
             raise ValueError("If F_distr=True, we also require T.")
-        sps.f.cdf(F, p, T - p)
+        F = sps.f.cdf(F, p, T - p)
     else:
         F = sps.chi2.cdf(F, p)
     F[np.isnan(F)] = 0.0
@@ -803,6 +805,29 @@ def estimate_dense_graph(X, max_lag=10,
     estimate_B(G, max_lag, copy_G=False, max_T=max_T, method=method)
     G = remove_zero_filters(G, "b_hat(z)", copy_G=False)
     return G
+
+
+def pwgc_estimate_graph(X, max_lags=10, alpha=0.05,
+                        method="lstsqr"):
+    T, n = X.shape
+
+    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                    k_cores=int(1 + np.log(n)))
+
+    # Screen edges via benjamini hochberg criterion
+    P_edges = normalize_gc_score(F, P, T, F_distr=True)  # p-values are just 1 - F
+    P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
+    t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
+
+    # Estimate a strongly causal graph
+    G_hat = pw_scg(F, P_edges, t_bh)
+    G_hat = attach_X(G_hat, X, prop_name="x")
+    G_hat = add_self_loops(G_hat, copy_G=False)
+
+    G_hat = estimate_B(G_hat, max_lags, copy_G=False,
+                       method=method)
+    G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
+    return G_hat
 
 
 def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05,

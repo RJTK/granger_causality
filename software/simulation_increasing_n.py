@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 
+from plotting_helpers import (COLOR3, COLOR4, COLOR5,
+                              plotting_model)
+
 from matplotlib import rc as mpl_rc
 font = {"family" : "normal",
         "weight" : "bold",
@@ -63,88 +66,103 @@ class TrackErrors:
         return MCC, self.b_errs, self.errs, self.true_errs
 
 
-def pwgc_increasing_n(T, simulation_name, graph_type):
+def pwgc_increasing_n(T, simulation_name):
     np.random.seed(0)
     alpha, p_lags, p_max = 0.05, 5, 15
     T_max = 2 * T
 
-    n_iters = np.arange(10, 2000, 20)
-    N_reps = 3
+    n_iters = np.arange(10, 1500, 10)
+    N_reps = 2
 
-    if graph_type == "SCG":
-        def random_graph(n):
-            return random_scg(n, p_lags, pole_rad=0.75)
-    elif graph_type == "DAG":
-        def random_graph(n):
-            N_edges = (len(random_scg(n, p_lags,
-                                      pole_rad=0.75).edges) -
-                       n)  # Due to self loops
-            edge_prob = 2 * N_edges / (n * (n - 1))
-            return random_gnp_dag(n, p_lags, pole_rad=0.75,
-                                  edge_prob=edge_prob)
-    else:
-        raise NotImplementedError("Only 'SCG' and 'DAG' graph "
-                                  "types are available")
+    def random_graph_scg(n):
+        return random_scg(n, p_lags, pole_rad=0.75)
 
-    def make_test_data(n):
+    def random_graph_dag_q2(n):
+        N_edges = (len(random_scg(n, p_lags,
+                                  pole_rad=0.75).edges) -
+                   n)  # Due to self loops
+        edge_prob_q2 = 2 * N_edges / (n * (n - 1))
+        return random_gnp_dag(n, p_lags, pole_rad=0.75,
+                              edge_prob=edge_prob_q2)
+
+    def random_graph_dag_q4(n):
+        N_edges = (len(random_scg(n, p_lags,
+                                  pole_rad=0.75).edges) -
+                   n)  # Due to self loops
+        edge_prob_q4 = 4 * N_edges / (n * (n - 1))
+        return random_gnp_dag(n, p_lags, pole_rad=0.75,
+                              edge_prob=edge_prob_q4)
+
+    def make_test_data(n, graph_type):
         sv2_true = 0.5 + np.random.exponential(0.5, size=n)
-        G = random_graph(n)
+        if graph_type == "SCG":
+            G = random_graph_scg(n)
+        elif graph_type == "DAG_q2":
+            G = random_graph_dag_q2(n)
+        elif graph_type == "DAG_q4":
+            G = random_graph_dag_q4(n)
+
         drive_gcg(G, T_max, sv2_true, filter_attr="b(z)")
         X = get_X(G)
         X = X - np.mean(X, axis=0)[None, :]
         X = X
         return G, X, sv2_true
 
-    errs_pwgc = TrackErrors(n_iters, N_reps)
+    def get_results(graph_type):
+        errs_pwgc = TrackErrors(n_iters, N_reps)
+        for n_iter, n in enumerate(n_iters):
+            for rep in range(N_reps):
+                print("n[{} / {}]".format(n_iter + 1, len(n_iters)),
+                      end="\r")
 
-    for n_iter, n in enumerate(n_iters):
-        for rep in range(N_reps):
-            print("n[{} / {}]\r".format(n_iter + 1, len(n_iters)))
+                G, X, sv2_true = make_test_data(n, graph_type)
+                G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
+                                            method="lstsqr", alpha=alpha)
+                errs_pwgc.update(G, G_hat_pwgc, sv2_true, n_iter, rep)
 
-            G, X, sv2_true = make_test_data(n)
-            G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
-                                        method="lstsqr", alpha=alpha)
-            errs_pwgc.update(G, G_hat_pwgc, sv2_true, n_iter, rep)
+        mcc, _, _, _ = errs_pwgc.get_results()
+        return mcc
 
-    mcc, _, errs, true_errs = errs_pwgc.get_results()
+    mcc_scg = get_results("SCG")
+    mcc_dag_q2 = get_results("DAG_q2")
+    mcc_dag_q4 = get_results("DAG_q4")
+
     _plot_results(
-        n_iters[:-22], mcc[:-22], errs[:-22], true_errs[:-22],
+        n_iters, mcc_scg, mcc_dag_q2, mcc_dag_q4,
         title="Test Errors Against $n$ for $T = {}$".format(T),
         save_file=["../figures/{}_simulation.png".format(simulation_name),
                    "../figures/{}_simulation.pdf".format(simulation_name)])
     return
 
 
-def _plot_results(n_iters, mcc, errs, true_errs,
+def _plot_results(n_iters, mcc_scg, mcc_dag_q2, mcc_dag_q4,
                   title=None, save_file=None):
-    log_normed_errs = np.log(errs) / np.log(true_errs)
-    n_iters = np.vstack([n_iters] * mcc.shape[1]).T
-    n_iters, mcc, log_normed_errs = list(map(np.ravel,
-                                             [n_iters, mcc, log_normed_errs]))
+    n_iters = np.vstack([n_iters] * mcc_scg.shape[1]).T
+    n_iters, mcc_scg, mcc_dag_q2, mcc_dag_q4 = list(
+        map(np.ravel, [n_iters, mcc_scg, mcc_dag_q2, mcc_dag_q4]))
 
-    fig, ax_mcc = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1)
     fig.suptitle(title)
+    ax.set_ylim(0, 1.25)
 
-    ax_pred = ax_mcc.twinx()
-    ax_pred.grid(False)
+    ax.scatter(n_iters, mcc_scg, color=COLOR3, marker="o", alpha=0.75)
+    ax.scatter(n_iters, mcc_dag_q2, color=COLOR4, marker="^", alpha=0.75)
+    ax.scatter(n_iters, mcc_dag_q4, color=COLOR5, marker="P", alpha=0.75)
 
-    ax_mcc.scatter(n_iters, mcc, color="b", marker="o")
-    ax_pred.scatter(n_iters, log_normed_errs, color="r", marker="^")
+    ax.plot(n_iters, plotting_model(n_iters, mcc_scg),
+            color=COLOR3, linewidth=2)
+    ax.plot(n_iters, plotting_model(n_iters, mcc_dag_q2),
+            color=COLOR4, linewidth=2)
+    ax.plot(n_iters, plotting_model(n_iters, mcc_dag_q4),
+            color=COLOR5, linewidth=2)
 
-    ax_mcc.plot(n_iters, _fit_plotting_model(n_iters, mcc),
-                color="b", linewidth=2)
-    ax_pred.plot(n_iters, _fit_plotting_model(n_iters, log_normed_errs),
-                color="r", linewidth=2)
+    ax.set_xlabel("System size $n$")
+    ax.set_ylabel("Graph Recovery MCC Score")
 
-    ax_mcc.set_title("PWGC")
-
-    ax_mcc.set_xlabel("System size $n$")
-    ax_mcc.set_ylabel("Graph Recovery MCC Score")
-    ax_pred.set_ylabel("Log Prediction Error Relative to Noise Floor")
-
-    ax_mcc.plot([], [], color="b", marker="o", label="MCC")
-    ax_mcc.plot([], [], color="r", marker="^", label="Prediction Error")
-    ax_mcc.legend(loc="upper left")
+    ax.plot([], [], color=COLOR3, marker="o", label="SCG")
+    ax.plot([], [], color=COLOR4, marker="^", label="DAG $q = \\frac{2}{n}$")
+    ax.plot([], [], color=COLOR5, marker="P", label="DAG $q = \\frac{4}{n}$")
+    ax.legend(loc="upper right")
 
     if save_file is not None:
         if isinstance(save_file, str):
@@ -155,10 +173,5 @@ def _plot_results(n_iters, mcc, errs, true_errs,
     return
 
 
-def _fit_plotting_model(x, y):
-    X = np.vstack((np.ones_like(x), x, np.sqrt(x))).T
-
-    fit = sm.OLS(endog=y, exog=X, hasconst=True)
-    fit_res = fit.fit()
-    y_hat = fit_res.fittedvalues
-    return y_hat
+if __name__ == "__main__":
+    pwgc_increasing_n(T=500, simulation_name="new_increasing_n")
