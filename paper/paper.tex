@@ -1595,7 +1595,7 @@ $\gcg$ via pairwise tests alone.
 % testing as a heuristic for general graphs.
 
 \begin{theorem}[Pairwise Recovery]
-  \label{thm:tree_recovery}
+  \label{thm:scg_recovery}
   If the Granger-causality graph $\gcg$ for persistent process $x(t)$
   is a strongly causal DAG then $\gcg$ can be inferred from pairwise
   causality tests.  The procedure can be carried out, assuming
@@ -2296,7 +2296,7 @@ any analysis of this scheme for future work.
 % Since we have in mind applications where $n$ is large, sampling posterior probabilities can be prohibitively burdensome, so we can instead fit the mean-field variational approximation $p(B, G, \sigma\ |\ X) \approx q_Gq_Bq_\sigma$ and subsequently apply a thresholding operation to the posterior edge inclusion probabilities under $q_G$.
 
 % \subsection{Pairwise Minimum Error Spanning Trees}
-% Inspired by theorem \ref{thm:tree_recovery}, we propose the following
+% Inspired by theorem \ref{scg_recovery}, we propose the following
 % structure learning heuristic.
 
 % %% This algorithm should perform coordinate descent or jointly refit all the trees.
@@ -2440,7 +2440,7 @@ $\xi_i^{\text{LASSO}}$ in the following:
   \end{aligned}
 \end{equation}
 
-where we are choosing $\lambda$, the regularization parameter, via the BIC.
+where we are choosing $\lambda$, the regularization parameters, via the BIC.
 
 \begin{figure}
   \centering
@@ -2460,27 +2460,48 @@ where we are choosing $\lambda$, the regularization parameter, via the BIC.
   \end{subfigure}
 \end{figure}
 
+\begin{remark}[Graph Topologies]
+  We depict in Figure \ref{fig:random_graph_topologies} the topologies
+  of random graphs used in our empirical evaluation.  For values of
+  $q$ close to $\frac{2}{n}$, the resulting random graphs tend to have
+  a topology which is, at least qualitatively, close to the SCG.  As
+  the value of $q$ increases, the random graphs deviate farther from
+  the SCG topology, and we therefore expect the LASSO to outperform
+  PWGC for larger values of $q$.  This can be observed in Figure
+  \ref{fig:simulation_results_dense}, at least where performance is
+  measured by the support recovery (i.e. via the MCC).
+\end{remark}
+
+\begin{remark}[MCC as a Support Recovery Measurement]
+  We apply Matthew's Correlation Coefficient (MCC)
+  \cite{matthews1975comparison} as a statistic for measuring support
+  recovery performance.  This statistic synthesizes the confusion
+  matrix into a single score appropriate for unbalanced labels and is
+  calibrated to fall into the range $[-1, 1]$ with $1$ being perfect
+  performance, $0$ being the performance of random guessing, and $-1$
+  being perfectly opposed.
+\end{remark}
+
+\begin{remark}[Error Measurement]
+  We we estimate the 1-step ahead prediction error by forming the variance matrix estimate
+
+  \begin{equation*}
+    \widehat{\Sigma}_v \defeq \frac{1}{T_{\text{out}}} \sum_{t = 1}^{T_{\text{out}}} (x(t) - \widehat{x}(t))(x(t) - \widehat{x}(t))^\T
+  \end{equation*}
+
+  on a long stream of out-of-sample data.  We then report the quantity
+
+  \begin{equation*}
+    \frac{\ln \tr \widehat{\Sigma}_v}{\ln \tr \Sigma_v}
+  \end{equation*}
+
+  where $\widehat{\Sigma}_v = \Sigma_v$ is the best possible performance.
+\end{remark}
+
 \begin{figure}
   \centering
-  \caption{Simulation Results}
+  \caption{PWGC Compared Against AdaLASSO \cite{adaptive_lasso_zou2006}}
   \label{fig:simulation_results}
-
-  {\scriptsize Comparison of PWGC and LASSO for $\VAR(p)$ model
-    estimation.  The MCC is measured on the left axis in blue with
-    circle markers, and the relative log mean-squared prediction error
-    $\frac{\ln\ \tr \widehat{\Sigma}_v}{\ln\ \tr \Sigma_v}$ on the
-    right axis in red with triangle markers.  We use $q$ to denote the
-    edge probability in a random Erdos-Reny graph (modified to form a
-    DAG).  Solid lines indicate ad-hoc regression estimates for
-    visualization purposes only.
-
-    Matthew's Correlation Coefficient (MCC)
-    \cite{matthews1975comparison} synthesizes the confusion matrix
-    into a single score appropriate for unbalanced labels and is
-    calibrated to fall into the range $[-1, 1]$ with $1$ being perfect
-    performance, $0$ being the performance of random guessing, and
-    $-1$ being perfectly opposed.
-  }
 
   \begin{subfigure}[b]{0.45\textwidth}
     \caption{PWGC vs adaLASSO (SCG)}
@@ -2495,22 +2516,60 @@ where we are choosing $\lambda$, the regularization parameter, via the BIC.
     % \missingfigure{}
   \end{subfigure}
 
+  {\scriptsize Comparison of PWGC and LASSO for $\VAR(p)$ model
+    estimation.  We make comparisons against both the MCC and the
+    relative log mean-squared prediction error
+    $\frac{\ln\tr \widehat{\Sigma}_v}{\ln\tr \Sigma_v}$.  Results
+    in Figure \ref{fig:simulation_results_comparison1} are for systems
+    guaranteed to satisfy the assumptions required for Theorem
+    \ref{thm:scg_recovery}.  Figure
+    \ref{fig:simulation_results_comparison2} provides results for
+    systems which do not guarantee the assumptions of Theorem
+    \ref{thm:scg_recovery}, though the graph has a similar level of
+    sparsity.}
+\end{figure}
+
+\begin{figure}
+  \centering
   \begin{subfigure}[b]{0.45\textwidth}
     \caption{Fixed $T$, increasing $n$ (SCG)}
     \label{fig:simulation_results_scaling}
-    \includegraphics[width=\linewidth]{increasing_n_simulation.pdf}
+    \includegraphics[width=\linewidth]{new_increasing_n_simulation.pdf}
   \end{subfigure}
-  \begin{subfigure}[b]{0.45\textwidth}
-    \caption{Fixed $T, n$, increasing edges $q$ (DAG)}
-    \label{fig:simulation_results_dense}
-    \includegraphics[width=\linewidth]{dag_increasing_q_small_T_alasso_simulation.pdf}
-  \end{subfigure}
-
   \begin{subfigure}[b]{0.45\textwidth}
     \caption{MCC Comparison for $T \le 100$}
-    \label{fig:mcc_comparison}
+    \label{fig:small_T_comparison}
     \includegraphics[width=\linewidth]{new_mcc_comparison000.pdf}
   \end{subfigure}
+
+  {\scriptsize Figure \ref{fig:simulation_results_scaling} depicts
+    support recovery performance as the number of nodes $n$ increases,
+    and the edge proportion as well as the number of samples $T$ is
+    held fixed.  Remarkably, performance appears to degrade slowly in
+    $n$ -- it is the graph topology (SCG or non-SCG) as well as the
+    level of sparsity (measured by $q$) which is the main factor for
+    support recovery performance.
+
+    Figure \ref{fig:small_T_comparison} provides a support recovery
+    comparison for very small values of $T$ typical of some
+    applications.}
+\end{figure}
+
+\begin{figure}
+  \caption{Fixed $T, n$, increasing edges $q$ (DAG)}
+  \label{fig:simulation_results_dense}
+  \includegraphics[width=\linewidth]{dag_increasing_q_small_T_alasso_simulation.pdf}
+
+  {\scriptsize Figure \ref{fig:simulation_results_dense} provides a
+    comparison between PWGC and AdaLASSO as the density of graph edges
+    (as measured by $q$) increases.  For reference,
+    $\frac{2}{n} = 0.04$ has approximately the same level of sparsity
+    as the SCGs we simulated.  As $q$ increases, the AdaLASSO
+    outperforms PWGC as measured by the MCC.  However, PWGC maintains
+    superior performance for 1-step-ahead prediction.  We speculate
+    that this is a result of fitting the sparsity pattern recovered by
+    PWGC via OLS which directly seeks to optimize this metric, whereas
+    the LASSO is encumbered by the sparsity inducing penalty.}
 \end{figure}
 
 In reference to figure \ref{fig:simulation_results_comparison1} it

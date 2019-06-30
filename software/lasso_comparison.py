@@ -128,7 +128,7 @@ def simple_lasso():
 
 def lasso_mcc_comparison():
     np.random.seed(0)
-    n_nodes, p_lags, p_max = 50, 3, 5
+    n_nodes, p_lags, p_max = 50, 5, 15
     alpha = 0.05
 
     N_edges = (len(random_scg(n_nodes, p_lags, pole_rad=0.75).edges) -
@@ -205,16 +205,15 @@ def lasso_mcc_comparison():
                      title=("MCC Comparison on $n = {}$ nodes"
                             "".format(n_nodes)),
                      lasso_title="Adaptive LASSO", show_results=True,
-                     save_file=["../figures/new_mcc_comparison000.pdf",
-                                "../figures/jpgs_pngs/new_mcc_comparison000.png"]
+                     save_file=["../figures/new_mcc_comparison001.pdf",
+                                "../figures/jpgs_pngs/new_mcc_comparison001.png"]
                     )
     return
 
 
 def lasso_comparison(simulation_name, graph_type):
     np.random.seed(0)
-    # n_nodes, p_lags, p_max = 50, 5, 15
-    n_nodes, p_lags, p_max = 50, 3, 5
+    n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 2
 
     # T_iters = list(map(int, np.logspace(2, 3, 20)))
@@ -451,6 +450,6 @@ def plot_mcc_results(t, mcc_pwgc_scg, mcc_lasso_scg,
 
 
 if __name__ == "__main__":
-    # lasso_comparison("lasso_comparison_scg", "SCG")
-    # lasso_comparison("lasso_comparison_dag", "DAG")
+    lasso_comparison("lasso_comparison_scg_pmax15", "SCG")
+    lasso_comparison("lasso_comparison_dag_pmax15", "DAG")
     lasso_mcc_comparison()

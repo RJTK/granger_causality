@@ -68,10 +68,10 @@ class TrackErrors:
 
 
 def pwgc_increasing_q(T):
-    simulation_name="dag_increasing_q_small_T_alasso"
-    
+    simulation_name = "dag_increasing_q_small_T_alasso_pmax15"
+
     np.random.seed(0)
-    alpha, p_lags, p_max, T = 0.05, 3, 5, 500
+    alpha, p_lags, p_max, T = 0.05, 5, 15, 500
     T_max = 2 * T
 
     n = 50
