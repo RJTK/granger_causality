@@ -2500,21 +2500,10 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
 
 \begin{figure}
   \centering
-  \caption{PWGC Compared Against AdaLASSO \cite{adaptive_lasso_zou2006}}
-  \label{fig:simulation_results}
+  \caption{PWGC Compared Against AdaLASSO \cite{adaptive_lasso_zou2006} (SCG)}
+  \label{fig:simulation_results_comparison1}
+  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_scg_simulation.pdf}
 
-  \begin{subfigure}[b]{0.45\textwidth}
-    \caption{PWGC vs adaLASSO (SCG)}
-    \label{fig:simulation_results_comparison1}
-    \includegraphics[width=\linewidth]{new_lasso_comparison_scg_simulation.pdf}
-    % \missingfigure{}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.45\textwidth}
-    \caption{PWGC vs adaLASSO (DAG, $q = \frac{2}{n}$)}
-    \label{fig:simulation_results_comparison2}
-    \includegraphics[width=\linewidth]{new_lasso_comparison_dag_simulation.pdf}
-    % \missingfigure{}
-  \end{subfigure}
 
   {\scriptsize Comparison of PWGC and LASSO for $\VAR(p)$ model
     estimation.  We make comparisons against both the MCC and the
@@ -2522,11 +2511,17 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
     $\frac{\ln\tr \widehat{\Sigma}_v}{\ln\tr \Sigma_v}$.  Results
     in Figure \ref{fig:simulation_results_comparison1} are for systems
     guaranteed to satisfy the assumptions required for Theorem
-    \ref{thm:scg_recovery}.  Figure
-    \ref{fig:simulation_results_comparison2} provides results for
-    systems which do not guarantee the assumptions of Theorem
-    \ref{thm:scg_recovery}, though the graph has a similar level of
-    sparsity.}
+    \ref{thm:scg_recovery}.}
+\end{figure}
+
+\begin{figure}
+  \caption{PWGC vs adaLASSO (DAG, $q = \frac{2}{n}$)}
+  \label{fig:simulation_results_comparison2}
+  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_dag_simulation.pdf}
+  {\scriptsize Figure \ref{fig:simulation_results_comparison2}
+    provides results for systems which do not guarantee the
+    assumptions of Theorem \ref{thm:scg_recovery}, though the graph
+    has a similar level of sparsity.}
 \end{figure}
 
 \begin{figure}
