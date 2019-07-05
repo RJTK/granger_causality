@@ -279,6 +279,7 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
         if len(a_i) == 0:
             G.nodes[i]["sv^2_hat"] = np.var(y_raw)
+            G.nodes[i]["r"] = G.nodes[i]["x"][max_T + max_lag:]
             continue
         else:
             X_raw = np.hstack([G.nodes[j]["x"][:, None] for j in a_i])

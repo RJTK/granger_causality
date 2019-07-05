@@ -169,17 +169,17 @@ def random_scg(n_nodes, p_lags, pole_rad=0.95):
     return G
 
 
-def sort_X_by_nodes(G, X):
+def sort_X_by_nodes(G, X, prop="x"):
     nodes = list(G.nodes)
     nodes_inv = [nodes.index(i) for i in range(len(nodes))]
     X_inv = X[:, nodes_inv]
-    assert np.all(X_inv[:, 0] == G.nodes[0]["x"])
+    assert np.all(X_inv[:, 0] == G.nodes[0][prop])
     return X_inv
 
 
 def get_X(G, prop="x"):
     X = get_node_property_vector(G, prop).T
-    X = sort_X_by_nodes(G, X)
+    X = sort_X_by_nodes(G, X, prop)
     return X
 
 

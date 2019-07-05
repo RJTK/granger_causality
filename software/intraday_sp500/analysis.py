@@ -47,27 +47,48 @@ def main():
     X = D_close.to_numpy()
 
     graph_estimates = []
-    G_e = pwgc_estimate_graph(X, max_lags=20, method="alasso")
+    max_lag = 2
+    G_e = pwgc_estimate_graph(X, max_lags=max_lag, method="alasso")
     graph_estimates.append(G_e)
     for i in range(3):
         G_r = get_residual_graph(graph_estimates[-1])
         X_r = get_X(G_r)
-        G_e = pwgc_estimate_graph(X_r, max_lags=20, method="alasso",
+        G_e = pwgc_estimate_graph(X_r, max_lags=max_lag, method="alasso",
                                   alpha=0.01)
         graph_estimates.append(G_e)
 
     G_sp500_hat = combine_graphs(graph_estimates)
-    # draw_graph(G_sp500_hat)
-    nx.readwrite.gexf.write_gexf(G_sp500_hat, path="./G_sp500_hat.gexf")
+
+    G_sp500_hat = attach_X(G_sp500_hat, X)
+
+    T_max = 750
+    G_sp500_hat = estimate_B(G_sp500_hat, max_lag=max_lag, method="alasso",
+                             max_T=T_max)
+
+    len_r = len(X) - T_max - max_lag
+    # for i in G_sp500_hat.nodes:
+        
+    X_r = get_X(G_sp500_hat, prop="r")
 
     G_sp500_hat = nx.relabel_nodes(G_sp500_hat,
                                    {i: sp500[i] for i in range(len(sp500))})
-    # G_sp500_hat.remove_edges_from([(i, j) for i, j in G_sp500_hat.edges
-    #                               if i == j])
 
-    G_sp500_hat = attach_X(G_sp500_hat, X)
-    G_sp500_hat = estimate_B(G_sp500_hat, max_lag=10, method="alasso")
-    X_r = get_X(G_r, prop="x")
+
+    # draw_graph(G_sp500_hat)
+    nx.readwrite.gexf.write_gexf(G_sp500_hat, path="./G_sp500_hat.gexf")
+
+    i = 10
+    plt.plot(X[6:, i], color="b", alpha=0.75, linewidth=2)
+    plt.plot(X_r[:, i], color="r", alpha=0.75)
+    plt.show()
+
+    plt.plot(X[6:, i] - X_r[:, i])
+    plt.show()
+
+    i = 12
+    plt.plot(X[-247:, i], color="b", alpha=0.75, linewidth=2)
+    plt.plot(X_r[:, i], color="r", alpha=0.75, linewidth=1)
+    plt.show()
 
     deg_seq = [d for n, d in G_sp500_hat.degree()]
 
