@@ -5,16 +5,20 @@ Methods which implement granger-causality computations.
 import networkx as nx
 import numpy as np
 import numba
-from levinson import (lev_durb, whittle_lev_durb)
 
-from scipy import linalg
-from scipy import stats as sps
-from scipy.linalg import toeplitz
-from sklearn.linear_model import LassoLarsIC
-
+from multiprocessing import Pool
 from itertools import product
 from functools import reduce
 from math import ceil
+
+from scipy import linalg
+from scipy import stats as sps
+from scipy.linalg import toeplitz, cho_solve, cho_factor
+from sklearn.linear_model import LassoLarsIC, LassoLarsCV, Lasso
+from sklearn.preprocessing import StandardScaler
+from spams import fistaFlat
+
+from levinson import (lev_durb, whittle_lev_durb)
 
 # TODO: What is the proper way to do this?  I want packaging,
 # TODO: but I also want to be able to C-c C-c this file into
@@ -31,21 +35,69 @@ except ImportError:
                             make_complete_digraph, attach_X)
 
 
-def estimate_b_lstsqr(X, y):
+def estimate_b_lstsqr(X, y, ret_G=False, lmbda=np.inf):
     """
     Simple direct estimate of a linear filter y_hat = Xb.
+
+    - if ret_G=True, we will return the gram Matrix X.T @ X.
+    - lmbda is a regularzation term interpretable as the
+      prior variance on the coefficient terms; i.e. we will
+      compute the Tikhonov-regularized Leastsquares solution
+      using X.T @ X / T + (1. / lmbda * T) as the covariance
+      estimate.
 
     y: np.array (T)
     X: np.array (T x s)
     """
-    w = linalg.cho_solve(linalg.cho_factor(X.T @ X), X.T @ y)
-    return w
+    T, n = X.shape
+    R = (X.T @ X) / T
+    r = X.T @ y / T
+
+    R_reg = R + (1. / (lmbda * T)) * np.eye(n)
+    try:
+        w = cho_solve(cho_factor(R_reg), r)
+    except linalg.LinAlgError:
+        R_reg = R_reg + np.min(np.diag(R_reg)) *  np.eye(R_reg.shape[0])
+
+    try:
+        w = cho_solve(cho_factor(R_reg), r)
+    except linalg.LinAlgError:
+        w, _, _, _ = linalg.lstsq(R_reg, r)
+
+    if ret_G:
+        return w, R * T
+    else:
+        return w
 
 
 def estimate_b_lstsqr_cov(R, r):
-    return linalg.cho_solve(linalg.cho_factor(R), r)
+    return cho_solve(cho_factor(R), r)
 
 
+def _estimate_b_lasso(G, X, y):
+    """
+    Lasso estimation given a precomputed Gram matrix G.
+    """
+    # NOTE: the 'normalize' parameter is ignored when fit_intercept=False
+    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
+                        normalize=False, precompute=G)
+    w = lasso.fit(X, y).coef_
+    return w
+
+
+def _standardize_X(f):
+    def _f(X, *args, **kwargs):
+        _X = X - np.mean(X, axis=0)[None, :]
+        s = np.std(_X, axis=0)[None, :]
+        _X = _X / s
+
+        w = f(_X, *args, **kwargs)
+        w = w / s.ravel()
+        return w
+    return _f
+
+
+@_standardize_X
 def estimate_b_lasso(X, y):
     """
     Estimate y_hat = Xb via LASSO and using BIC to choose regularizers.
@@ -53,21 +105,89 @@ def estimate_b_lasso(X, y):
     y: np.array (T)
     X: np.array (T x s)
     """
-    lasso = LassoLarsIC(criterion="bic", fit_intercept=False,
-                        normalize=False, precompute=True)
-
-    # NOTE: This takes 5 - 10 ms for (5000, 125) matrix X
-    lasso.fit(X, y)
-    w = lasso.coef_
-    if np.all(w == 0):
-        # All zero support
-        return w
-
-    # Use lasso only to select the support
-    X_lasso = X[:, [i for i, wi in enumerate(w) if wi != 0]]
-    w_lr = estimate_b_lstsqr(X_lasso, y)
-    w[[i for i, wi in enumerate(w) if wi != 0]] = w_lr
+    G = X.T @ X
+    w = _estimate_b_lasso(G, X, y)
     return w
+
+
+@_standardize_X
+def estimate_b_alasso(X, y, lmbda_lstsqr=2.0, nu=2.0):
+    """
+    Estimate y_hat = Xb via Adaptive-LASSO
+    and using BIC to choose regularizer.
+
+    This is an adaptive scheme that uses "piloting weights" to improve
+    the selection capacity of the lasso.
+
+    lmbda_lstsqr: Prior variance for the lstsqr estimate (set to
+      np.inf to disable)
+    nu: exponential coefficient for the weights, larger values will
+      put a greater emphasis on the lstsqr estimate, smaller values
+      bring us close to the vanilla lasso.  Values larger than 1 can
+      lead to substantial variability in the low sample regime,
+      whereas nu > 1 allows for the LASSO regularizer to converge to
+      0.  So for small samples: 0 < nu < 1 (i.e. nu = 0.5) and for
+      larger samples nu > 1 (i.e. nu = 3/2).
+
+    The oracle property requires that lmbda_n / sqrt(n) -> 0 and
+    (lambda_n * n^(nu - 1)/2) -> oo
+
+    y: np.array (T)
+    X: np.array (T x s)
+    """
+    # NOTE: I am putting a regularizer on the cov matrix to avoid crazy
+    # NOTE: variance in small samples, but inspection of the lstsqr
+    # NOTE: function will show that my normalization is s.t.
+    # NOTE: the estimator is still root(n)-consistent.
+    b0, G = estimate_b_lstsqr(X, y, ret_G=True, lmbda=lmbda_lstsqr)
+    wgt = np.abs(b0)**nu
+    X_wgt = X * wgt[None, :]
+    G_wgt = wgt[:, None] * G * wgt[None, :]
+
+    w = _estimate_b_lasso(G_wgt, X_wgt, y)
+    w = w * wgt
+    return w
+
+
+def estimate_b_glasso(X, y, p, T_train):
+    # lmbda_g: Group Lasso regularization
+    # lmbda_l: Lasso regularization
+
+    _, _np = X.shape
+    n = _np // p
+
+    X_train, y_train = X[:T_train, :], y[:T_train, None]
+    X_test, y_test = X[T_train:, :], y[T_train:, None]
+
+    w0 = np.zeros((n * p, 1))
+
+    eps = 1e-9
+    lmbda_g = 1.0
+    # lmbda_l = 1.0
+
+    _X = np.asfortranarray(X_train)
+    _y = np.asfortranarray(y_train)
+    _w0 = np.asfortranarray(w0)
+
+    err_star = np.inf
+    w_star = _w0
+    w = _w0
+    for lmbda_g in np.logspace(-2, 2, 100):
+        w, _ = fistaFlat(_y, _X, w,
+                         loss="square", regul="group-lasso-l2",
+                         lambda1=lmbda_g,
+                         # lambda2=lmbda_l,
+                         size_group=p, intercept=False, pos=False,
+                         numThreads=4, max_it=100, subgrad=False,
+                         return_optim_info=True)
+        err = np.var(y_test - X_test @ np.array(w))
+        if err < err_star:
+            err_star = err
+            w_star = w
+
+    w_star = np.array(w_star)
+    w_star[w_star <= eps] = 0.0
+    return w_star
 
 
 def form_Xy(X_raw, y_raw, p=10):
@@ -166,13 +286,27 @@ def estimate_B(G, max_lag=10, copy_G=False,
         # Form linear regression matrices
         X, y = form_Xy(X_raw, y_raw, p=max_lag)
 
+        X_maxT, y_maxT = X[:max_T], y[:max_T]
+
         # Estimate
         if method == "lasso":
-            b = estimate_b_lasso(X[:max_T], y[:max_T])
+            b = estimate_b_lasso(X_maxT, y_maxT)
+        elif method == "glasso":
+            b = estimate_b_glasso(X_maxT, y_maxT, p=max_lag, T_train=max_T)
+        elif method == "alasso":
+            b = estimate_b_alasso(X_maxT, y_maxT, nu=1.5)
         elif method == "lstsqr":
-            b = estimate_b_lstsqr(X[:max_T], y[:max_T])
+            b = estimate_b_lstsqr(X_maxT, y_maxT)
         else:
             raise AssertionError("Bad method but should deal with it earlier!")
+
+        if len(y[max_T:]) <= 100:
+            raise ValueError(
+                "len(y) = {} is not long "
+                "enough for using max_T = {} " "samples for estimation and "
+                "the remaining for the " "out of sample error calculation. "
+                "Ensure that we have " "max_T <= len(y) - 100."
+                "".format(len(y), max_T))
 
         # Compute residuals
         r = y[max_T:] - X[max_T:] @ b
@@ -242,11 +376,6 @@ def _compute_AR_error(X, y):
     return np.var(y - X @ w)
 
 
-def _fast_compute_AR_error(R, r):
-    w = estimate_b_lstsqr_cov(R, r)
-    return max(0, R[0, 0] - w @ r)
-
-
 @numba.jit(nopython=True, cache=True)
 def _fast_univariate_AR_error(r, T):
     _, _, eps = lev_durb(r)
@@ -279,8 +408,12 @@ def compute_bic(eps, T, s=1):
     return bic
 
 
-def compute_gc_score(xi_i, xi_ij, T, p_lags):
-    F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
+def compute_gc_score(xi_i, xi_ij, T, p_lags, F_distr=False):
+    with np.errstate(divide="ignore", invalid="ignore"):
+        if F_distr:
+            F = (T - p_lags) * ((xi_i[:, None] / xi_ij) - 1) / p_lags
+        else:
+            F = T * ((xi_i[:, None] / xi_ij) - 1) / p_lags
     F[p_lags == 0] = 0
     return F
 
@@ -326,19 +459,26 @@ def compute_xi(X, max_lag):
 # Numba parallelism seems much slower unfortunately
 # @numba.jit(nopython=True, cache=True, parallel=True)
 @numba.jit(nopython=True, cache=True)
-def fast_compute_xi(X, max_lag=10):
-    T, n = X.shape
-    R = compute_covariances(X, max_lag)
+def fast_compute_xi(R, T, n_min=0, n_max=np.inf):
+    """
+    Calculates Xi[n_min: n_max, :]
+    """
+    _, n, _ = R.shape
+    n_min = max(n_min, 0)
+    n_max = min(n_max, n)
 
-    xi_i = np.zeros(n)
-    xi_ij, p_ij = np.zeros((n, n)), np.zeros((n, n))
+    xi_i = np.nan * np.zeros(n)
+    xi_ij, p_ij = np.nan * np.zeros((n, n)), np.nan * np.zeros((n, n))
 
-    for i in range(n):
+    for i in range(n_min, n_max):
         xi_i[i], p_i = _fast_univariate_AR_error(R[:, i, i], T)
         xi_ij[i, i] = xi_i[i]
         p_ij[i, i] = p_i
 
-    for i in numba.prange(n):
+    # Recall that we are computing a horizontal band
+    # as well as the transposed vertical band
+
+    for i in range(n_min, n_max):
         for j in range(i):
             Rij = form_bivariate_covariance(R, i, j)
             ei, ej, _p = _fast_bivariate_AR_error(Rij, T)
@@ -354,29 +494,71 @@ def fast_compute_xi(X, max_lag=10):
 # TODO: (1) for scarce data, use sklearn ARD or possibly LASSO
 # TODO: (2) when data is abundant stick with OLS and chi2 tests
 # TODO: -- However, still need to select number of parameters!
-def compute_pairwise_gc(X, max_lag=10):
+def compute_pairwise_gc(X, max_lag=10, F_distr=False):
     T, _, _ = *X.shape, max_lag
     xi_i, xi_ij, p_i, p_ij = compute_xi(
         X, max_lag)
-    F = compute_gc_score(xi_i, xi_ij, T, p_ij)
+    F = compute_gc_score(xi_i, xi_ij, T, p_ij, F_distr=F_distr)
     return F, p_ij  # p_i is actually irrelevant.
 
 
-def normalize_gc_score(F, p):
-    F = sps.chi2.cdf(F, p)
+def normalize_gc_score(F, p, T=None, F_distr=False):
+    if F_distr:
+        if T is None:
+            raise ValueError("If F_distr=True, we also require T.")
+        F = sps.f.cdf(F, p, T - p)
+    else:
+        F = sps.chi2.cdf(F, p)
+    F[np.isnan(F)] = 0.0
     return F
 
 
-def fast_compute_pairwise_gc(X, max_lag=10):
+def fast_compute_pairwise_gc(X, max_lag=10, F_distr=False, k_cores=1):
     """
     This is /dramatically/ faster than compute_pairwise_gc.
 
     TODO: However there are significant discrepancies!
     TODO: There is something clearly wrong about this implementation.
     """
-    T, _, = X.shape
-    xi_i, xi_ij, p_ij = fast_compute_xi(X, max_lag)
-    return compute_gc_score(xi_i, xi_ij, T, p_ij), p_ij
+    T, n, = X.shape
+
+    R = compute_covariances(X, max_lag)
+    if k_cores == 1:
+        xi_i, xi_ij, p_ij = fast_compute_xi(R, T, n_min=0, n_max=n)
+    elif k_cores > 1:
+        xi_i, xi_ij, p_ij = _par_fast_compute_pairwise_gc(
+            n, T, R, k_cores=k_cores)
+    else:
+        raise AssertionError("Must have k_cores >= 1!")
+    return compute_gc_score(xi_i, xi_ij, T, p_ij, F_distr=F_distr), p_ij
+
+
+def _par_fast_compute_pairwise_gc(n, T, R, k_cores=2):
+    xi_i = np.nan * np.ones(n)
+    xi_ij = np.nan * np.ones((n, n))
+    p_ij = np.nan * np.ones((n, n))
+
+    pool = Pool(k_cores)
+
+    # Heuristic for load balancing
+    n_split = list(map(int,
+                       n * (1 - (np.linspace(0, 1, k_cores + 1) ** 2)[::-1])))
+    zip_n = list(zip(n_split[:-1], n_split[1:]))
+
+    args = [(R, T, n_min, n_max) for n_min, n_max in zip_n]
+    res = pool.starmap(fast_compute_xi, args)
+    pool.close()
+
+    for i, n_min_n_max in zip(range(len(zip_n)), zip_n):
+        n_min, n_max = n_min_n_max
+        _xi_i, _xi_ij, _p_ij = res[i]
+        xi_i[n_min:n_max] = _xi_i[n_min: n_max]
+        xi_ij[n_min:n_max, :n_max] = _xi_ij[n_min:n_max, :n_max]
+        xi_ij[:n_max, n_min:n_max] = _xi_ij[:n_max, n_min:n_max]
+        p_ij[n_min:n_max, :n_max] = _p_ij[n_min:n_max, :n_max]
+        p_ij[:n_max, n_min:n_max] = _p_ij[:n_max, n_min:n_max]
+    pool.join()
+    return  xi_i, xi_ij, p_ij
 
 
 # TODO: P_j should be an n x n array
@@ -615,17 +797,43 @@ def get_residual_graph(G_hat):
 
 def estimate_dense_graph(X, max_lag=10,
                          max_T=None, method="lasso"):
+    # TODO: Replace this with ts_lasso
+
     _, n = X.shape
     G = make_complete_digraph(n)
     G = attach_X(G, X)
     assert np.all(X == get_X(G))
 
-    estimate_B(G, max_lag, copy_G=copy_G, max_T=max_T, method=method)
-    G = remove_zero_filters(G), "b_hat(z)", copy_G=False)
+    estimate_B(G, max_lag, copy_G=False, max_T=max_T, method=method)
+    G = remove_zero_filters(G, "b_hat(z)", copy_G=False)
     return G
 
 
-def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
+def pwgc_estimate_graph(X, max_lags=10, alpha=0.05,
+                        method="lstsqr"):
+    T, n = X.shape
+
+    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                    k_cores=int(1 + np.log(n)))
+
+    # Screen edges via benjamini hochberg criterion
+    P_edges = normalize_gc_score(F, P, T, F_distr=True)  # p-values are just 1 - F
+    P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
+    t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
+
+    # Estimate a strongly causal graph
+    G_hat = pw_scg(F, P_edges, t_bh)
+    G_hat = attach_X(G_hat, X, prop_name="x")
+    G_hat = add_self_loops(G_hat, copy_G=False)
+
+    G_hat = estimate_B(G_hat, max_lags, copy_G=False,
+                       method=method)
+    G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
+    return G_hat
+
+
+def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05,
+                   fast_mode=True, F_distr=False):
     """
     Produce an estimated graph from the data X.
 
@@ -638,11 +846,14 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     T, n = X.shape
 
     # Compute the pairwise errors and filter sizes
-    # F, P = compute_pairwise_gc(X, max_lag=max_lags)
-    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags)
+    if fast_mode:
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags, F_distr=F_distr,
+                                        k_cores=int(1 + np.log(n)))
+    else:
+        F, P = compute_pairwise_gc(X, max_lag=max_lags, F_distr=F_distr)
 
     # Screen edges via benjamini hochberg criterion
-    P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
+    P_edges = normalize_gc_score(F, P, T, F_distr=F_distr)  # p-values are just 1 - F
     P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
     t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
 
@@ -652,7 +863,7 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05):
     G_hat = add_self_loops(G_hat, copy_G=False)
 
     # Restimate the coefficients
-    if method == "lasso":
+    if method in {"lasso", "glasso", "alasso"}:
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
                            method=method)
         G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
@@ -689,9 +900,14 @@ def compute_F1_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
 def compute_MCC_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
     TP, TN, FP, FN = compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges,
                                    n_nodes)
-    MCC = (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) *
+    mcc = _compute_mcc(TP, TN, FP, FN)
+    return mcc
+
+
+def _compute_mcc(TP, TN, FP, FN):
+    mcc = (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) *
                                         (TN + FP) * (TN + FN))
-    return MCC
+    return mcc
 
 
 def example_graph():

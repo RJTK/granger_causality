@@ -2,6 +2,10 @@
 
 % TODO: read this https://lemire.me/blog/rules-to-write-a-good-research-paper/
 
+% TODO: Are we, in this setting, immune to confounders?  We are removing
+%       all bi-directional edges, so it seems likely that we are?  Can we state
+%       any theorem about this?
+
 %% bibliography stuff -- this needs come before the preamble inclusion
 \usepackage[backend=bibtex,sorting=none]{biblatex}
 \usepackage{enumitem}
@@ -9,6 +13,8 @@
 \usepackage{hyperref}
 \usepackage{todonotes}
 \bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
+% \usepackage{apxproof}
+
 % \bibliography{\string~global_bib.bib}
 
 \def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
@@ -39,95 +45,175 @@
 
 \graphicspath{{../figures/}}
 
-\title{Structure Learning for $\VAR(p)$ Models}
-\author{R. J. Kinnear, R. R. Mazumdar}
+\title{Graph Topological Aspects of Granger Causal Network Learning }
+\author{R. J. Kinnear \\
+  \small\href{mailto:ryan@kinnear.ca}{ryan@kinnear.ca} \\
+  \small\url{https://github.com/RJTK} \and R. R. Mazumdar \\
+  \small\href{mailto:mazum@uwaterloo.ca}{mazum@uwaterloo.ca} }
 
 \begin{document}
 \maketitle
-\abstract{We study Granger Causality and propose a structure learning
-  heuristic for uncovering a parsimonious representation of large
-  $\mathsf{VAR}(p)$ models.}
+\abstract{We study Granger-causality in the context of wide-sense
+  stationary time series, where our focus is on the topological
+  aspects of the underlying causality graph.  We establish sufficient
+  conditions (in particular, we develop the notion of a ``strongly
+  causal'' graph topology) under which the true causality graph can be
+  recovered via pairwise causality testing alone, and provide examples
+  from the gene regulatory network literature suggesting that our
+  concept of a strongly causal graph may be applicable to this field.
+  We implement and detail finite-sample heuristics derived from our
+  theory, and establish through simulation the efficiency gains (both
+  statistical and computational) which can be obtained (in comparison
+  to LASSO algorithms) when structural assumptions are met.}
+
+\keywords{Granger-causality, causality graph, time series, vector autoregression,
+  LASSO, gene regulatory networks, network learning}
+
+\paragraph{Acknowledgement}
+
+We acknowledge the support of the Natural Sciences and Engineering Research Council of Canada (NSERC), [funding reference number 518418-2018].  Cette recherche a été financée par le Conseil de recherches en sciences naturelles et en génie du Canada (CRSNG), [numéro de référence 518418-2018].
+
+\clearpage
+
+% \tableofcontents
+% \clearpage
 
 \section{Introduction and Review}
 \label{sec:introduction}
-Consider a collection of stochastic processes producing observations
-at discrete time intervals.  Are the underlying processes dependent?
-Can we quantify any of the underlying relationships?  Can the arrow of
-time help us to distinguish a directionality or flow of dependence
-among our observed series?  In this paper we contribute to the
-understanding of the notion of Granger-Causality
-\cite{granger1969investigating} \cite{Granger1980329} as a tool for
-answering these questions.
+% Consider a collection of stochastic processes producing observations
+% at discrete time intervals.  Are the underlying processes dependent?
+% Can we quantify any of the underlying relationships?  Can the arrow of
+% time help us to distinguish a directionality or flow of dependence
+% among our observed series?  In this paper we contribute to the
+% understanding of the notion of Granger-Causality
+% \cite{granger1969investigating} \cite{Granger1980329} as a tool for
+% answering these questions.
 
-Heuristically, we state that if an event '$A$' occuring strictly prior
-in time to an even '$B$' and $A$ provides us with exclusive (that is,
-not available anywhere else) information about $B$, then $A$ must have
-had a causal impact on $B$.  This is an entirely model-free notion of
-cause, and instead leverages the intuition that a cause must precede
-it's effect.
+% Heuristically, we state that if an event '$A$' occuring strictly prior
+% in time to an even '$B$' and $A$ provides us with exclusive (that is,
+% not available anywhere else) information about $B$, then $A$ must have
+% had a causal impact on $B$.  This is an entirely model-free notion of
+% cause, and instead leverages the intuition that a cause must precede
+% it's effect.
 
-In practice, Granger's notion of causation it not a convincing test
-for \textit{true} causation, since our statements about causation are
-highly dependent upon the data that we are able to observe.  Rather,
-the interpretation of Granger causality is as a means of uncovering a
-flow of ``information'' or ``energy'' through some underlying graph of
-interactions.  Though this graph cannot be observed directly, we will
-infer it's presence as a latent structure among our observed time
-series data.  This intuition is levereged in a variety of applications
+In this paper we study the notion of Granger-causality
+\cite{granger1969investigating} \cite{Granger1980329} as a means of
+uncovering an underlying causal structure in multivariate time series.
+Though the underlying causality graph cannot be observed directly, we
+will infer it's presence as a latent structure among our observed time
+series data.  This notion is leveraged in a variety of applications
 e.g. in Neuroscience as a means of recovering interactions amongst
 brain regions \cite{bressler2011wiener}, \cite{anna_paper2008},
 \cite{david2008identifying}; in the study of the dependence and
 connectedness of financial institutions \cite{NBERw16223}; gene
-expression networks \cite{Fujita2007}; and power system design
-\cite{Misyrlis2016450}, \cite{yuan2014root}.
+expression networks \cite{Fujita2007},
+\cite{methods_for_inferring_gene_regulatory_networks_from_time_series_expression_data},
+\cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery},
+\cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty};
+and power system design \cite{Misyrlis2016450}, \cite{yuan2014root}.
 
-Finding the ``best'' graph structure consistent with observed data is
-generally an extremely challenging problem (i.e. this is a best subset
-selection problem, see \cite{bss_mio}, \cite{hastie_bss_comp}), though
-the comparison of quality between different structures, and hence the
-notion of ``best'', needs to be quantified.  In applications where we
-are interested merely in minimizing the mean squared error of a linear
-one-step-ahead predictor, then we will naturally desire an entirely
-dense graph of connections, since each edge can only serve to reduce
-estimation error.  However, since the number of edges scales
-quadratically in $n$, it is imperative to infer a sparse causality
-graph for large systems, both to avoid overfitting observed data, as
-well as to aid the interpretability of the results.
+Granger-causality can generally be formulated by searching for the
+``best'' graph structure consistent with observed data, which is in
+general an extremely challenging problem (i.e. it may be framed as a
+best subset selection problem, see \cite{bss_mio},
+\cite{hastie_bss_comp}), moreover, the comparison of quality between
+different structures, and hence the notion of ``best'' needs
+qualification.  In applications where we are interested merely in
+minimizing the mean squared error of a linear one-step-ahead
+predictor, then we will be satisfied with an entirely dense graph of
+connections, since each edge can only serve to reduce estimation
+error.  However, since the number of edges scales quadratically in $n$
+(the number of nodes) it becomes imperative to infer a sparse
+causality graph for large systems, both to avoid overfitting observed
+data, as well as to aid the interpretability of the results.
 
-In \cite{bach2004learning} the authors apply a local search heuristic
-to the Whittle likelihood with an AIC penalization.  The local search
-heuristic where at each iteration an edge is either added, removed, or
-reversed is a common approach to combinatorial optimization due to
-it's simplicity, but is liable to get stuck in shallow local minima.
+A fairly early approach to the problem in the context of large systems
+is provided by \cite{bach2004learning}, where the authors apply a
+local search heuristic to the Whittle likelihood with an AIC
+penalization.  The local search heuristic where at each iteration an
+edge is either added, removed, or reversed is a common approach to
+combinatorial optimization due to it's simplicity, but is liable to
+get stuck in shallow local minima.
 
 A second and wildly successful heuristic is the LASSO regularizer
 \cite{tibshirani1996regression}, which can be understood as a natural
 convex relaxation to penalizing the count of the non-zero edges.  The
-LASSO enjoys strong theoretical guarantees \cite{wainwright2009sharp},
-even in the case of time series data \cite{basu2015}
-\cite{wong2016lasso}.
+LASSO enjoys fairly strong theoretical guarantees
+\cite{wainwright2009sharp}, extending largely to the case of
+stationary time series data with a sufficiently fast rate of
+dependence decay \cite{basu2015} \cite{wong2016lasso}
+\cite{autoregressive_process_modelling_via_the_lasso_procedure}, and
+variations on the LASSO have been applied in a number of different
+time series contexts as well as Granger-causality
+\cite{DBLP:journals/corr/HallacPBL17} \cite{haufe2008sparse}
+\cite{bolstad2011causal} \cite{he2013stationary}
+\cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery}.
+One of the key improvements to the original LASSO algorithm is the
+adaptive (i.e. weighted) ``adaLASSO'' \cite{adaptive_lasso_zou2006},
+for which oracle results (i.e. asymptotic support recovery) are
+established under less restrictive conditions than for the vanilla
+LASSO.  Our experimental comparisons in Section
+\ref{sec:empirical_evaluation} are against the
+adaLASSO. % Success of the LASSO has lead to
+% the famous ``bet on sparsity'' principle ``Use a procedure that does
+% well in sparse problems, since no procedure does well in dense
+% problems.''  \cite{tibshirani2015statistical}.
 
-The contributions of this paper are as follows: firstly, in section
-\ref{sec:theory} we study \textit{pairwise} Granger-causality
+\subsection{Contributions}
+In the context of time series data, sparsity assumptions remain
+important, but there is significant additional structure that may
+arise as a result of considering the topology of the underlying
+Granger-causality graph, which to our knowledge remains largely
+unexplored.  The focus of this paper is to shed light on some of these
+topological questions, in particular, we study a particularly simple
+notion of causality graph topology which we term ``strongly causal''
+and show that $\VAR$ models having this structure satisfy natural
+intuitive notions of ``information flow'' through the graph.
+Moreover, we show that such graphs are perfectly recoverable with only
+\textit{pairwise} Granger-causality tests, which would otherwise suffer
+from serious confounding problems.  Our finite sample results are
+based on simulations, where we show promising results for these graphs
+topologies where our algorithm performs substantially better in our
+simulation setup than do competing LASSO algorithms, even for graphs
+that do not exactly satisfy our strongly-causal topology assumptions.
+
+In the case of gene expression networks, we show examples from the
+literature which suggest our concept of a ``strongly causal graph''
+topology may have application in this field (see Section
+\ref{sec:strongly_causal_graphs})
+
+The principle contributions of this paper are as follows: firstly, in
+section \ref{sec:theory} we study \textit{pairwise} Granger-causality
 relations, providing novel theorems connecting the structure of the
 causality graph to the pairwise ``causality flow'' in the system, as
-well as a characterization of the sparsity pattern of matrices arising
-in the Wold decomposition.  We establish sufficient conditions
-(sections \ref{sec:strongly_causal_graphs},
-\ref{sec:persistent_systems}) under which a fully conditional
-Granger-causality graph can be recovered from pairwise tests alone
-(section \ref{sec:pairwise_algorithm}).  Secondly, we propose in
-section \ref{sec:structure_learning} alternative graph search
-heuristics inspired by our theoretical results.  Our heuristics are
-compared against a standard grouped LASSO algorithm
-\cite{yuan2006model} as well as local search hill climbing (\hl{state
-  here the results}).  In section \ref{sec:application} we develop an
-example application (\hl{more detail...}).  And provide concluding
-remarks on further open problems in our conclusion (section
-\ref{sec:conclusion}).
+well as an interpretation in terms of the graph topology of the
+sparsity pattern of matrices arising in the Wold decomposition,
+generalizing in some sense the notion of ``feedback-free'' processes
+studied by \cite{caines1975feedback} in close connection with
+Granger-causality.  We establish sufficient conditions (sections
+\ref{sec:strongly_causal_graphs}, \ref{sec:persistent_systems}) under
+which a fully conditional Granger-causality graph can be recovered
+from pairwise tests alone (sec \ref{sec:pairwise_algorithm}).
+Secondly, we propose in section \ref{sec:structure_learning} a graph
+search heuristic which implements our theoretical results to finite
+data samples, specifying and summarizing appropriate methods for
+hypothesis testing (section \ref{sec:pairwise_hypothesis_testing}),
+model order selection (section \ref{sec:model_order_selection}),
+computationally efficient estimation (section
+\ref{sec:efficient_model_estimation}), and error rate controls
+(section \ref{sec:error_rate_control}).  Our heuristics are compared
+against the adaLASSO algorithm in Section
+\ref{sec:empirical_evaluation}.  We stress the scalability of our
+algorithm which is capable of comfortably handling hundreds or
+thousands of nodes on a single machine, as opposed to standard LASSO
+algorithms which do not take advantage of the special structure
+associated with stationary time series data.  In section
+\ref{sec:application} we develop an example application.  Concluding
+remarks on further open problems and extentions are provided in Section
+\ref{sec:conclusion}.  \todo{do an application}
 
-%% -Can we also formulate an SDP relaxation?
-%% -Fit trees jointly or via coordinate descent?
+% \cite{yuan2006model} as well as local search hill
+% climbing (\hl{state here the results}).  
 
 \section{Theory}
 \label{sec:theory}
@@ -136,10 +222,10 @@ Consider the space $L_2(\Omega)$, the usual Hilbert space of finite
 variance random variables over a probability space
 $(\Omega, \mathcal{F}, \mathbb{P})$ having inner product
 $\inner{x}{y} = \E[xy]$.  We will work with a discrete time and
-wide-sense stationary (WSS) vector valued process $x(t)$ (with
-$t \in \Z$) with elements taking values in $L_2$.  We suppose that
-$x(t)$ has zero mean, $\E x(t) = 0$, and has absolutely summable
-matrix valued covariance sequence
+wide-sense stationary (WSS) $n$-dimensional vector valued process
+$x(t)$ (with $t \in \Z$) where the $n$ elements take values in $L_2$.  We
+suppose that $x(t)$ has zero mean, $\E x(t) = 0$, and has absolutely
+summable matrix valued covariance sequence
 $R(\tau) \overset{\Delta}{=} \E x(t)x(t - \tau)^\T$ with an absolutely
 continuous spectral density $S(\omega)$:
 
@@ -164,7 +250,7 @@ such a process
   \label{eq:hilbert_space_defn}
   \begin{aligned}
     % \H^x &= \cl \{\sum_{\tau = -T}^T a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, T \in \N\} \subseteq L_2(\Omega),\\
-    \H_t^x &= \cl \{\sum_{\tau = 0}^T a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, T \in \N\} \subseteq L_2(\Omega)\\
+    \H_t^x &= \cl \{\sum_{\tau = 0}^p a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, p \in \N\} \subseteq L_2(\Omega)\\
     H_t^x &= \{a x(t)\ |\ a \in \R\} \subseteq L_2(\Omega),
   \end{aligned}
 \end{equation}
@@ -173,9 +259,9 @@ where the closure is naturally in mean-square.  We will often omit the
 superscript $x$ which should be clear from context.  Evidently these
 spaces are separable, and as closed subspaces of a Hilbert space they
 are themselves Hilbert.  We will denote the spaces generated in
-analagous ways by particular components of $x$ as e.g.
+analogous ways by particular components of $x$ as e.g.
 $\H_t^{(i, j)}$, $\H_t^{i}$ or by all but particular components as
-e.g. $\H_t^{-j}$.
+$\H_t^{-j}$.
 
 As a consequence of the Wold decomposition theorem \cite{lindquist},
 every WSS sequence has the moving average $MA(\infty)$
@@ -192,10 +278,10 @@ where $c(t)$ is a purely deterministic sequence\footnote{the purely
   processes a single sample $c(t_0)$ is enough to determine $c(t)$ for
   every $t$.  For example,
   $c(t) = \text{sin}(2\pi t + \Theta);\; \Theta \sim \mathcal{U}[-\pi,
-  \pi]$}, and $w(t)$ is an uncorrelated sequence and $A(0) = I$.  We
-will assume that $c(t) = 0$, which in practice is to say that it has
-been accurately estimated and removed.  We additionally require that
-this representation can be inverted to yield the $VAR(\infty)$ form
+  \pi]$}, $v(t)$ is an uncorrelated sequence and $A(0) = I$.  We will
+assume that $c(t) = 0$, which in practice is to say that the process
+has been detrended.  We additionally require that this representation
+can be inverted to yield the $\VAR(\infty)$ form
 
 \begin{equation}
   \label{eqn:ar_representation}
@@ -207,7 +293,7 @@ represented as $x(t) = \A(z)v(t) = \B(z)x(t) + v(t)$ via the action
 (convolution) of the operators (LTI filters)
 $\A(z) \defeq \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$ and
 $\B(z) \defeq \sum_{\tau = 1}^\infty B(\tau)z^{-\tau}$ where the
-operator $z^{-1}$ is the backshift operator acting on
+operator $z^{-1}$ is the back shift operator acting on
 $\ell_2^n(\Omega, \mathcal{F}, \mathbb{P})$, that is:
 
 \begin{equation}
@@ -228,8 +314,9 @@ which is referred to as a lack of instantaneous feedback in $x(t)$.
 We formally state our setup to conclude this section:
 
 \begin{definition}[Basic Setup]
+  \label{def:basic_setup}
   The process $x(t)$ is an $n$ dimensional wide sense stationary
-  process having invertible $VAR(\infty)$ representation
+  process having invertible $\VAR(\infty)$ representation
   \eqref{eqn:ar_representation} where $v(t)$ is sequentially
   uncorrelated and has a diagonal covariance matrix.  The $MA(\infty)$
   representation of equation \eqref{eqn:wold} has $c(t) = 0$ and
@@ -241,10 +328,11 @@ We formally state our setup to conclude this section:
 
 \begin{definition}[Granger Causality]
   \label{def:granger_causality}
-  For the WSS series $x(t)$ we say that component $x_j$
+  For the WSS series $x(t)$ satisfying the assumptions of Definition
+  \ref{def:basic_setup} we will say that component $x_j$
   \textit{Granger-Causes} (GC) component $x_i$ (with respect to $x$)
-  and write $x_j \gc x_i$ if given Hilbert spaces
-  $\H_{t - 1}$, $\H^{-j}_{t - 1}$
+  and write $x_j \gc x_i$ if given Hilbert spaces $\H_{t - 1}$,
+  $\H^{-j}_{t - 1}$
 
 \begin{equation}
   \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{-j}_{t - 1}},
@@ -278,7 +366,7 @@ of conditional orthogonality is used throughout.
 
   \begin{enumerate}
     \item{$\mathcal{A} \perp \mathcal{B}\ |\ \mathcal{X}$}
-    \item{$\linE{\beta}{\mathcal{A} \vee \mathcal{X}} = \linE{\beta}{\mathcal{X}}\ \forall \beta \in \mathcal{B}.$}
+    \item{$\linE{\beta}{\mathcal{A} \vee \mathcal{X}} = \linE{\beta}{\mathcal{X}}\ \forall \beta \in \mathcal{B}$.}
     % \item{$\linE{\beta}{\mathcal{A}} = \linE{\linE{\beta}{\mathcal{X}}}{\mathcal{A}}\ \forall \beta \in \mathcal{B}}$}
     \end{enumerate}
 
@@ -326,7 +414,7 @@ of conditional orthogonality is used throughout.
   \in \H_2 \}$ is the closed sum of subspaces.
 \end{lemma}
 \begin{proof}
-  Apply the Gram-schmidt process and directly calculate the projections.
+  Apply the Gram-Schmidt process and directly calculate the projections.
 \end{proof}  
 
 
@@ -341,7 +429,7 @@ of conditional orthogonality is used throughout.
   \begin{enumerate}
     \item{$x_j \ngc x_i$}
     \item{$\forall \tau \in \N_+\ B_{ij}(\tau) = 0$ i.e. $\B_{ij}(z) = 0$}
-    \item{$\mathcal{F}_{j \rightarrow i} \defeq \ln\frac{\xi_i}{\xi_{ij}} = 0$}
+    \item{$F_{ij} \defeq \big(\frac{\xi_i}{\xi_{ij}} - 1\big) = 0$}
     \item{$\H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j} \iff H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j}$}
     \item{$\linE{x_i(t)}{\H_{t - 1}^{-j}} = \linE{x_i(t)}{\H_{t - 1}}$}
     % \item{\hl{Wold $A(\tau)$ condition}}
@@ -439,25 +527,30 @@ convenient reference.
   \textit{directed} graphs, where the edges
   $\gcge \subseteq V \times V$ are \textit{ordered} pairs.
 
-  A (directed) \textit{path} (of length $r$) between nodes $i, j$,
-  denoted $\gcgpath{i}{j}$, is a sequence
+  A (directed) \textit{path} (of length $r$) from node $i$ to node
+  $j$, denoted $\gcgpath{i}{j}$, is a sequence
   $a_0, a_1, \ldots, a_{r - 1}, a_r$ with $a_0 = i$ and $a_r = j$ such
-  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \gcge$.
+  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \gcge$, and where
+  $(a_k, a_{k - 1})$ are \textit{distinct} for $0 \le k < r$.
 
   A \textit{cycle} is a path of length $2$ or more between a node and
-  itself.  An edge between a node and itself $(i, i)$ (which is not a
-  cycle) is referred to as a \textit{loop}.
+  itself.  An edge between a node and itself $(i, i) \in \gcge$ (which
+  is not a cycle) is referred to as a \textit{loop}.
 
   A graph $\gcg$ is a \textit{directed acyclic graph} (DAG) if it is a
   directed graph and does not contain any cycles.
 \end{definition}
 
-\begin{definition}[Grandparents, ancestors]
+\begin{definition}[Parents, Grandparents, Ancestors]
+  A node $j$ is a \textit{parent} of node $i$ if $(j, i) \in \gcge$.
+  The set of all $i$'s parents will be denoted $\pa{i}$, and we
+  explicitly exclude loops as a special case, that is,
+  $i \not\in \pa{i}$ even if $(i, i) \in \gcge$.
+
   The set of level $\ell$ \textit{grandparents} of node $i$, denoted
   $\gpn{\ell}{i}$, is the set such that $j \in \gpn{\ell}{i}$ if and
   only if there is a \textit{directed path} of length $\ell$ in $\gcg$
-  from $j$ to $i$.  Note that a node can be it's own grandparent
-  unless $\gcg$ is a DAG.  Clearly, $\pa{i} = \gpn{1}{i}$.
+  from $j$ to $i$.  Clearly, $\pa{i} = \gpn{1}{i}$.
 
   Finally, the set of \textit{level $\ell$ ancestors} of $i$:
   $\ancn{\ell}{i} = \bigcup_{\lambda \le \ell}\gpn{\lambda}{i}$ is the
@@ -466,14 +559,16 @@ convenient reference.
   to $i$.  The set of \textit{all ancestors} of $i$
   (i.e. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
 
-  Note that since loops are not considered paths, it is not possible
-  for a node to be it's own parent.
+  Recall that we do not allow a node to be it's own parent, however
+  unless $\gcg$ is a DAG, a node can be it's own ancestor.  We will
+  ocassionally need to explicitly exclude $i$ from $\anc{i}$, in which
+  case we will write $\anc{i}\setminus \{i\}$.
 \end{definition}
 
 Our principle object of study will be a graph determined by
 Granger-causality relations as follows.
 
-\begin{definition}[Causality graph, Parents]
+\begin{definition}[Causality graph]
   We define the Granger-causality graph $\gcg = ([n], \gcge)$ to be the directed
   graph formed on $n$ vertices where an edge $(j, i) \in \gcge$ if and
   only if $x_j$ Granger-causes $x_i$ (with respect to $x$).  That is,
@@ -483,14 +578,14 @@ Granger-causality relations as follows.
 The edges of the Granger-causality graph $\gcg$ can be given a general
 notion of ``weight'' by associating an edge $(j, i)$ with the
 \textit{strictly causal} LTI filter $\B_{ij}(z)$ (see eqn
-\eqref{eqn:filter_action}).  Thence, the matrix $\B(z)$ is analagous
+\eqref{eqn:filter_action}).  Thence, the matrix $\B(z)$ is analogous
 to a \textit{weighted adjacency matrix}\footnote{We are using the
   convention that $\B_{ij}(z)$ is a filter with input $x_j$ and output
   $x_i$ so as to write the action of the system as $\B(z)x(t)$ with
   $x(t)$ as a column vector.  This competes with the usual convention
   for adjacency matrices where $A_{ij} = 1$ if there is an edge
   $(i, j)$.  In our case, the sparsity pattern of $\B_{ij}$ is the
-  \textit{transposed} adjacency matrix.} for the graph $\gcg$.  And,
+  \textit{transposed} conventional adjacency matrix.} for the graph $\gcg$.  And,
 in the same way that the $k^{\text{th}}$ power of an adjacency matrix
 counts the number of paths of length $k$ between nodes,
 $(\B(z)^k)_{ij}$ is a filter isolating the ``action'' of $j$ on $i$ at
@@ -498,8 +593,8 @@ a time lag of $k$ steps, this is exemplified in the inversion formula
 \ref{eqn:lsi_inversion}.
 
 An elementary theorem connecting the adjacency matrix with paths will
-allow us to deduce the sparsity pattern of $\A(z)$.  We omit proof,
-though it follows easily by induction:
+allow us to deduce the sparsity pattern of $\A(z)$.  Proof follows
+easily by induction:
 
 \begin{lemma}
   \label{lem:adj_matrix}
@@ -514,9 +609,12 @@ though it follows easily by induction:
 % maybe that is good enough?
 
 From the $\VAR$ representation of $x(t)$ there is clearly a tight
-relationship between each node and it's parent nodes, the following
-proposition is analagous to the definition of feedback free processes
-of \cite{caines1975feedback}:
+relationship between each node and it's parent nodes, the relationship
+is quantified through the sparsity pattern of $B(z)$.  Similarly, the
+following proposition is analogous to the definition of feedback free
+processes of \cite{caines1975feedback} and provides an interpretation
+of the sparsity pattern of $A(z)$ (from the MA representation of
+$x(t)$) in terms of the causality graph $\gcg$.
 
 % % When is this guaranteed w.r.t. the full system?
 % Furthermore, if the filter $\B_{ii}$ is invertible, we can write
@@ -570,8 +668,13 @@ of \cite{caines1975feedback}:
 This statement is ultimately about the sparsity pattern in the Wold
 decomposition matrices $A(\tau)$ since
 $x_i(t) = \sum_{\tau = 0}^\infty \sum_{j = 1}^n A_{ij}(\tau)v_j(t -
-\tau)$.  The proposition states that $\A_{ij}(z) = 0$ unless
-$j \in \anc{i}$.
+\tau)$.  The proposition states that if $j \not \in \anc{i}$ then
+$\A_{ij}(z) = 0$.
+
+\todo{Do we have $A_{ij}(z) \ne 0 \implies j \in \anc{i}$?}
+
+% TODO: ???
+% , however the implication $j \in \anc{i} \implies \A_{ij}(z) \ne 0$ need not hold.
 
 % \begin{proof}
 %   The formula (\ref{eqn:parent_expansion}) was established in the
@@ -611,7 +714,7 @@ $j \in \anc{i}$.
 
 \begin{proof}
   Equation \eqref{eqn:parent_expansion} is immediate from the
-  $VAR(\infty)$ representation of \eqref{eqn:ar_representation} and
+  $\VAR(\infty)$ representation of \eqref{eqn:ar_representation} and
   Theorem \ref{thm:granger_causality_equivalences}, we are left to
   demonstrate \eqref{eqn:ancestor_expansion}.
   
@@ -657,8 +760,8 @@ $j \in \anc{i}$.
 Recall that Granger-causality in general must be understood with
 respect to a particular universe of observations.  If $x_j \gc x_i$
 with respect to $x_{-k}$, it may not hold with respect to $x$.  For
-example, $x_k$ may be a common ancestor which when observed completely
-explains the connection from $x_j$ to $x_i$.  In this paper we study
+example, $x_k$ may be a common ancestor which when observed, completely
+explains the connection from $x_j$ to $x_i$.  In this section we study
 \textit{pairwise} Granger-causality, and seek to understand when
 knowledge of pairwise relations is sufficient to deduce the true fully
 conditional relations of $\gcg$.
@@ -679,6 +782,7 @@ Finally, motivated from a practical standpoint to analyze causation in
 large systems, we will seek to construct practical estimation
 procedures based purely on pairwise causality tests since the
 computation of such pairwise relations is somewhat easier.
+\todo{Reconsider this paragraph}
 
 The following is a fundamental building block:
 
@@ -759,10 +863,17 @@ effectively eliminates the possibility presented in this example.
 
 \begin{proposition}
   \label{prop:ancestor_properties}
-  If in a Granger-causality graph $\gcg$ we have $j \pwgc i$ then
+  If in a Granger-causality graph $\gcg$ where $j \pwgc i$ then
   $j \in \anc{i}$ or $\exists k \in \anc{i} \cap\anc{j}$ which is a
   confounder of $(i, j)$.
 \end{proposition}
+
+\begin{remark}
+  The interpretation of this proposition is that for $j \pwgc i$ then
+  there must either be ``causal flow'' from $j$ to $i$
+  ($j \in \anc{i}$) or there must be a confounder $k$ through which
+  common information is received.
+\end{remark}
 
 \begin{proof}
   We will prove by way of contradiction.  To this end, suppose that
@@ -771,7 +882,7 @@ effectively eliminates the possibility presented in this example.
   $k \rightarrow \cdots \rightarrow j$ path contains $i$.
 
   Firstly, notice that every $u \in \big(\pa{j} \setminus \{i\}\big)$
-  necesssarily inherits these same two properties.  This follows since
+  necessarily inherits these same two properties.  This follows since
   if we also had $u \in \anc{i}$ then $u \in \anc{i} \cap \anc{j}$ so that every
   $u \rightarrow \cdots \rightarrow j$ path must contain $i$, but
   $u \in \pa{j}$, so this is not the case since $u \rightarrow j$ is a
@@ -854,7 +965,7 @@ effectively eliminates the possibility presented in this example.
 An interesting corollary is the following:
 
 \begin{corollary}
-  If the graph $\gcg$ is acyclic and if $j \pwgc i$ and $i \pwgc j$ then $\exists k \in \anc{i} \cap \anc{j}$ confounding $(i, j)$.
+  If the graph $\gcg$ is a DAG then $j \pwgc i, i \pwgc j \implies \exists k \in \anc{i} \cap \anc{j}$ confounding $(i, j)$.
 \end{corollary}
 
 It seems reasonable to expect a converse of proposition
@@ -968,7 +1079,7 @@ time series networks, that is, the topology of $\gcg$.
   \label{def:strongly_causal}
   We will say that a Granger-causality graph $\gcg$ is
   \textit{strongly causal} if there is at most 1 directed path between
-  any two nodes.
+  any two nodes.  Strongly Causal Graphs will be referred to as SCGs.
 \end{definition}
 
 Examples of strongly causal graphs include directed trees (or
@@ -978,6 +1089,46 @@ $2n$ nodes is also strongly causal, demonstrating that the number of
 edges of such a graph can still scale quadratically with the number of
 nodes.  It is evident that the strong causal property is inherited by
 subgraphs.
+
+\begin{example}
+  Though examples of SCGs are easy to construct in theory, should
+  practitioners expect SCGs to arise in application?  While a positive
+  answer to this question is not \textit{necessary} for the concept to
+  be useful, it is certainly sufficient.  Though the answer is likely
+  to depend upon the particular application area, examples appear to
+  be available in biology, in particular, the authors of
+  \cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}
+  cite an example of the so called ``transcription regulatory network
+  of \textit{E.coli}'', and
+  \cite{learning_genome_scale_regulatory_networks} study a much larger
+  regulatory network of \textit{Saccharomyces cerevisiae}.  These
+  networks, which we reproduce\footnote{Figure \ref{fig:gene_network1}
+    is reproduced under the Creative Commons Attribution
+    Non-Commercial License
+    (\url{http://creativecommons.org/licenses/by-nc/2.5}) and Figure
+    \ref{fig:gene_network2} under the Creative Commons Attribution
+    License (\url{https://creativecommons.org/licenses/by/4.0/})} in
+  figure \ref{fig:gene_networks} appear to have at most a small number
+  of edges which violate the strong-causality condition.
+
+  \begin{figure}[h]
+    \centering
+    \caption{Transcription Regulatory Networks}
+    \label{fig:gene_networks}
+    \begin{subfigure}[b]{0.45\textwidth}
+      \caption{\textit{E.Coli} Network of
+        \cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}}
+      \label{fig:gene_network1}
+      \includegraphics[width=\linewidth, height=\linewidth]{ecoli_regulatory_network.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+      \caption{\textit{Saccharomyces cerevisiae} Network of
+        \cite{learning_genome_scale_regulatory_networks}}
+      \label{fig:gene_network2}
+      \includegraphics[width=\linewidth, height=\linewidth]{huge_gene_network.png}
+    \end{subfigure}
+  \end{figure}
+\end{example}
 
 % \begin{lemma}
 %   \label{lem:still_strongly_causal}
@@ -1050,7 +1201,7 @@ important property essentially strengthens proposition
   \label{cor:bidirectional_edge}
   If $\gcg$ is a strongly causal DAG such that $i \pwgc j$ and
   $j \pwgc i$, then $i \not\in \anc{j}$ and $j \not\in \anc{i}$.  In
-  particular, a pairwise bidirectional edge indicates the absense of
+  particular, a pairwise bidirectional edge indicates the absence of
   any edge in $\gcg$.
 \end{corollary}
 \begin{proof}
@@ -1099,7 +1250,9 @@ important property essentially strengthens proposition
 % \end{lemma}
 
 In light of proposition \ref{prop:sc_graph_common_anc}, the following
-provides a partial converse to proposition \ref{prop:ancestor_properties}.
+provides a partial converse to proposition
+\ref{prop:ancestor_properties}, and supports the intuition of ``causal
+flow'' through paths in $\gcg$.
 
 \begin{proposition}
   \label{prop:pwgc_anc}
@@ -1180,7 +1333,7 @@ surprisingly, not true in a general graph.
 
 % This holds in any DAG
 % \begin{lemma}
-%   If $\gcg$ is strongly causal, then any $\VAR(p)$ system on $\gcg$ is stable if and only if
+%   If $\gcg$ is strongly causal, then any $\\VAR(p)$ system on $\gcg$ is stable if and only if
 %   $B_{ii}(z)$ is stable for every $i = 1, \ldots, n$.
 % \end{lemma}
 % \begin{proof}
@@ -1194,8 +1347,8 @@ surprisingly, not true in a general graph.
   Granger-causality does not suffer any difficulty with so-called
   ``colliders'', that is, the topology $i \rightarrow k \leftarrow j$
   will never result in $i \pwgc j$ or $j \pwgc i$.  This is evidently
-  an advantage of the \textit{temporal} nature of Granger causality --
-  ``information'' cannot flow backwards along the edges of $\gcg$.
+  an advantage of the \textit{temporal} nature of Granger -- there is
+  no backwards causal flow along the edges of $\gcg$.
 \end{remark}
 
 \begin{example}
@@ -1237,7 +1390,7 @@ as ``persistence''.  This condition requires that each node maintains
 some ``memory'' of the past.
 
 \begin{definition}[Lag Function]
-  Given a caual filter $\B(z) = \sum_{\tau = 0}^\infty b(\tau)z^{-\tau}$
+  Given a causal filter $\B(z) = \sum_{\tau = 0}^\infty b(\tau)z^{-\tau}$
   define 
 
   \begin{align}
@@ -1246,8 +1399,8 @@ some ``memory'' of the past.
   \end{align}
 
   i.e. the ``first'' and ``last'' coefficients of the filter $\B(z)$,
-  where $\tau_\infty(\B) = \infty$ if the filter has an infinite
-  impulse response.
+  where $\tau_\infty(\B) \defeq \infty$ if the filter has an infinite
+  length.
 \end{definition}
 
 \begin{definition}[Persistent]
@@ -1257,22 +1410,90 @@ some ``memory'' of the past.
 \end{definition}
 
 \begin{remark}
-  There are a multitude of conditions which would guarantee $x(t)$ is
-  persistent, for innstance, any ARMA system with a non-zero
-  autoregressive component is likely to be persistent due to recursion
-  in the coefficients naturally lead to an $\mathsf{MA}(\infty)$
-  representation.
-
-  In particular, any system with a finite impulse response
-  (i.e. $\mathsf{VAR}(q)$ models) is likely to be persistent.  These
-  models are common in applications of Granger-causality.
+  In the context of Granger-causality, ``most'' systems should be
+  persistent.  In particular, $\mathsf{\VAR}(p)$ models are likely to
+  be persistent since these naturally result in an equivalent
+  $\mathsf{MA}(\infty)$ representation, except for the pathological
+  case where $\B(z)$ is Nilpotent.
 
   Moreover, persistence is not the weakest condition necessary for the
-  results of this section, but we opt to avoid unnecessarily
-  complicated definitions.
+  results of this section, the condition
+  $\tau_0(\A_{jk}) < \tau_\infty(\A_{ik})$ for each $i, j, k$ such
+  that $k \in \anc{i} \cap \anc{j}$ is enough.
+  \todo{Write something on the intuition here.}
 \end{remark}
 
-\hl{TODO: Show formally that any $\VAR(p)$ model is persistent.}
+\begin{example}
+  process $x(t)$ generated by the $\VAR(1)$ model\footnote{Recall that
+    any $\VAR(p)$ model with $p < \infty$ can be written as a
+    $\VAR(1)$ model, so we lose little generality in considering this
+    case.}  having $\B(z) = Bz^{-1}$, we will examine
+  conditions that guarantee persistence.  Pick any
+  $i \in [n], j \in \anc{i} \setminus \{i\}$, then the stability of
+  $B$ allows us to write
+
+  \begin{equation*}
+    \A(z) = \sum_{k = 0}^\infty B^k z^{-k},
+  \end{equation*}
+
+  whereby we see that $\exists k > 0$ such that $[B^k]_{ij} \ne 0$
+  (since $j \in \anc{i}$).  Then consider
+
+  \begin{equation*}
+    \begin{aligned}
+      e_i^\T B^{rk} e_j &\overset{(a)}{=} \big((P^\T e_i)^\T J^{rk} P^{-1}e_j\big)\\
+      &= \tr [(P^\T e_i)^\T J^{rk} P^{-1}e_j]\\
+      &\overset{(b)}{=} \tr [(J^{rk}) (v u^\T)],
+    \end{aligned}
+  \end{equation*}
+
+  where $(a)$ utilizes the Jordan Normal Form of $B$, and $(b)$
+  denotes $u = P^\T e_i$ and $v = P^{-1}e_j$.  In order for
+  $\tau_\infty(\A_{ij}) < \infty$, there must be some $N > 1$ such
+  that $\forall r \ge N$, the above term is $0$.  This may be the case
+  for instance if $B$ is a nilpotent matrix.  
+
+  Let us suppose now that $B$ is diagonalizable (i.e. $J$ is a
+  diagonal matrix) with at least $2$ distinct eigenvalues; in this
+  case $B$ is also \textit{not} nilpotent.  We can then rewrite the
+  above as
+
+  \begin{equation*}
+    f(r) \defeq \tr [(J^{rk}) (v u^\T)] = \sum_{\nu = 1}^n \lambda_\nu ^{rk} v_\nu u_\nu \defeq \sum_{\nu = 1}^n \lambda_\nu^{rk} \beta_\nu
+  \end{equation*}
+
+  where $\lambda_\nu$ denotes the eigenvalues of $B$ and
+  $\beta_\nu = u_\nu v_\nu$.  Note that $f(0) = 0$ since $i \ne j$,
+  $u$ is a row of $P$ and $v$ is a column of $P^{-1}$.  Moreover,
+  $f(1) \ne 0$ by hypothesis.  But, in order for
+  $f(r) = 0\ \forall r \ge N$, it would need to be the case that
+
+  \begin{equation*}
+    \Dg(\bm{\lambda})^r \bm{\lambda} = Vz
+  \end{equation*}
+
+  had a solution in $z$ for every $r \ge N$, where $V$ is an
+  $n \times n - 1$ full-rank matrix spanning the nullspace of $\beta$,
+  and $\bm{\lambda} = (\lambda_1, \ldots, \lambda_n)$. That is,
+  iterates of $\Dg(\bm{\lambda})$ applied to $\bm{\lambda}$ would need to remain
+  inside $\beta$'s nullspace.  This would imply that
+
+  \begin{equation*}
+    VV^\dagger \bm{\lambda}^{r + 1} = \bm{\lambda}^{r + 1},
+  \end{equation*}
+
+  i.e. that $\bm{\lambda}^{r + 1}$ is an eigenvector of $VV^\dagger$
+  for an infinite number of integers $r$ (the exponentiation is to be
+  understood as a pointwise operation).  However, since there can only
+  be a finite number of (unit length) eigenvectors, this cannot be the
+  case unless every eigenvalue $(\lambda_1, \ldots, \lambda_n)$ were
+  equal.
+
+  \todo{This may remain true for any matrix with at least 2 distinct eigenvalues}
+  We can conclude by stating that a $\VAR(1)$ system corresponding to
+  matrix $B$ is guaranteed to be persistent if $B$ is diagonalizable
+  and has more than $1$ distinct eigenvalue.
+\end{example}
 
 \begin{lemma}
   \label{lem:time_lag_cancellation}
@@ -1332,7 +1553,7 @@ some ``memory'' of the past.
   \end{align*}
 
   which can be expanded by equation \eqref{eqn:ancestor_expansion} to
-  obtain (after cancellinng all ancestors of $i$ other than $k$)
+  obtain (after cancelling all ancestors of $i$ other than $k$)
 
   \begin{equation*}
     \inner{F(z)A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t - \tau)} = 0\ \forall \tau \ge 1, \text{ strictly causal } F(z),
@@ -1382,14 +1603,15 @@ some ``memory'' of the past.
   and thence there is in general no cancellation in the final term
   above for $\ell \in \anc{i}$.
 
-  Evidently, (\hl{This is clearly not immediately evident}) this is
-  $0$ for each $F$ if and only if
+  \todo{This is clearly not immediately evident}
+
+  Evidently, this is $0$ for each $F$ if and only if
   $\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} = 0$ and
   $\inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} = 0$, which by
-  Collary \ref{cor:time_lag_cancellation} occurs if and only if
+  Corollary \ref{cor:time_lag_cancellation} occurs if and only if
   $\tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})$, which is impossible
-  since in general $\tau_0(\A_{jk}) < \infty$ and for a persistent system
-  $\tau_\infty(\A_{ik}) = \infty$.
+  since in general $\tau_0(\A_{jk}) < \infty$ and for a persistent
+  system $\tau_\infty(\A_{ik}) = \infty$.
 \end{proof}
 
 \subsection{Recovering $\gcg$ via Pairwise Tests}
@@ -1405,7 +1627,7 @@ $\gcg$ via pairwise tests alone.
 % testing as a heuristic for general graphs.
 
 \begin{theorem}[Pairwise Recovery]
-  \label{thm:tree_recovery}
+  \label{thm:scg_recovery}
   If the Granger-causality graph $\gcg$ for persistent process $x(t)$
   is a strongly causal DAG then $\gcg$ can be inferred from pairwise
   causality tests.  The procedure can be carried out, assuming
@@ -1423,7 +1645,7 @@ $\gcg$ via pairwise tests alone.
     \label{alg:pwgr}
     % \TitleOfAlgo{Pairwise Graph Recovery}
     \Input{Pairwise Granger-causality relations between a persistent
-      processe of dimension $n$ whose joint Granger-causality
+      process of dimension $n$ whose joint Granger-causality
       relations are known to form a strongly causal DAG $\gcg$.}
     \Output{Edges $\gcge = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of
       the graph $\gcg$.}
@@ -1433,7 +1655,7 @@ $\gcg$ via pairwise tests alone.
       $k = 1$ \texttt{\# a counter used only for notation}}
     \BlankLine
     $W \leftarrow \{(i, j)\ |\ i \pwgc j, j \npwgc i\}$  \texttt{\# candidate edges}\\
-    $P_0 \leftarrow \{i \in S_0\ |\ \forall s \in S_0\ (s, i) \not\in W\}$  \texttt{\# parentless nodes}\\
+    $P_0 \leftarrow \{i \in S_0\ |\ \forall s \in S_0\ (s, i) \not\in W\}$  \texttt{\# parent-less nodes}\\
     \While{$S_{k - 1} \ne \emptyset$}{
       $S_k \leftarrow S_{k - 1} \setminus P_{k - 1}$ \texttt{\# remove nodes with depth }$k - 1$\\
       $P_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W\}$   \texttt{\# candidate children of }$P_{k - 1}$\\
@@ -1618,7 +1840,7 @@ number of steps.
   $j \not\in \anc{i}$ so $j \npwgc i$ and thence by Proposition
   \ref{prop:ancestor_properties} $(i, j) \in W$.
 
-  Convsersely, suppose $(i, j) \in W$.  Then since $j \npwgc i$
+  Conversely, suppose $(i, j) \in W$.  Then since $j \npwgc i$
   Proposition \ref{prop:persistence_converse} ensures that $(j, i)$
   are not confounded and so by Proposition \ref{prop:ancestor_properties}
   we must have $i \in \anc{j}$.
@@ -1672,7 +1894,7 @@ number of steps.
 
   if $s \in S_k$ is such that $(s, i) \in W$ then $s \pwgc i$ and
   $i \npwgc s$ so that by persistence and Proposition
-  \ref{prop:persistence_converse} there cannot be a counfounder of
+  \ref{prop:persistence_converse} there cannot be a confounder of
   $(s, i)$ (otherwise $i \pwgc s$) so then by Proposition
   \ref{prop:ancestor_properties} we have $s \in \anc{i}$.  We have
   shown that $s \in S_k \implies d(s) \ge k$ and so we must have
@@ -1715,7 +1937,7 @@ number of steps.
   $i \not\in \pa{j}$, then there must be some $u \in \pa{j}$ such that
   $i \in \anc{u}$.  But, this implies that $d(i) < d(u)$ and by
   induction that $(u, j) \in \bigcup_{\ell = 1}^{r - 1}D_{k\ell}$.
-  Morevoer, sice $d(u) < k$ (otherwise $d(j) > k$) each edge in
+  Moreover, since $d(u) < k$ (otherwise $d(j) > k$) each edge in
   the $\gcgpath{i}{u}$ path must already be in $E_{k - 1}$, and so
   there must be an $\gcgpath{i}{j}$ path in
   $E_{k - 1}\cup\big(\bigcup_{\ell = 0}^{r - 1}D_{kr}\big)$, which is
@@ -1855,175 +2077,143 @@ sophisticated schemes can only serve to improve the results.  Textbook
 reviews of the following concepts are provided e.g. by
 \cite{all_of_statistics}, \cite{murphy_mlp}, and elsewhere.
 
-We proceed first by defining pairwise Granger-causality hypothesis
-tests, second a model order selection criteria, and finally the method
-for choosing a $P-$value cutoff.
+In subsection \ref{sec:pairwise_hypothesis_testing} we define pairwise
+Granger-causality hypothesis tests, in subsection
+\ref{sec:model_order_selection} a model order selection criteria, in
+subsection \ref{sec:efficient_model_estimation} an efficient
+estimation algorithm, in subsection \ref{sec:error_rate_control} the
+method for choosing an hypothesis testing threshold, and finally in
+subsection \ref{sec:finite_pwgc} the unified finite sample algorithm.
 
-\subsection{Hypothesis Testing}
+\subsection{Pairwise Hypothesis Testing}
+\label{sec:pairwise_hypothesis_testing}
 In performing pairwise checks for Granger-causality $x_j \pwgc x_i$ we
-follow the simple scheme of estimating the two linear models via
-ordinary least squares:
+follow the simple scheme of estimating the following two linear models:
 
 \begin{align}
-  H_0:&\ \widehat{x}_i^{(p_i)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau),\\
-  H_1:&\ \widehat{x}_i^{(p_i, p_j)}(t) = \sum_{\tau = 1}^{p_i} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^{p_j}b_{ij}(\tau)x_j(t - \tau).
+  H_0:&\ \widehat{x}_i^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau),\\
+  H_1:&\ \widehat{x}_i^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^pb_{ij}(\tau)x_j(t - \tau).
 \end{align}
 
-Under the null hypothesis $H_0$ (i.e. that $x_j \npwgc x_i$) we can
-form the asymptotically $\chi^2(p_j)$ distributed test statistic
-(\hl{TODO: Citation that this is chi2})
+We formulate the statistic 
 
 \begin{equation}
   \label{eqn:gc_statistics}
-  F_{ij}(p_i, p_j) = \frac{T}{p_j}\Big(\frac{\xi_i(p_i)}{\xi_{ij}(p_i, p_j))} - 1\Big),
+  F_{ij}(p) = \frac{T}{p}\Big(\frac{\xi_i(p)}{\xi_{ij}(p)} - 1\Big),
 \end{equation}
 
-where $\xi_i(p_i)$ is the sample mean square of the residuals\footnote{This
-  quantity is often denoted $\widehat{\sigma}$, but we maintain
-  notation from Definition \ref{def:granger_causality}.}
-$x_i(t) - \widehat{x}^{(p_i)}_i(t)$
+where $\xi_i(p)$ is the sample mean square of the
+residuals\footnote{This quantity is often denoted $\widehat{\sigma}$,
+  but we maintain notation from Definition
+  \ref{def:granger_causality}.}  $x_i(t) - \widehat{x}^{(p)}_i(t)$,
 
 \begin{equation*}
-  \xi_i(p_i) = \frac{1}{T - p_i}\sum_{t = p_i + 1}^T (x_i(t) - \widehat{x}_i^{(p_i)}(t))^2
+  \xi_i(p) = \frac{1}{T - p}\sum_{t = p + 1}^T (x_i(t) - \widehat{x}_i^{(p)}(t))^2,
 \end{equation*}
 
-Given additional assumptions on $x(t)$ (\hl{TODO: What assumptions? --
-  this must also depend on choice of $p_i, p_j$}) we have the
-convergence (\hl{a.s. or in P?  -- I think in P})
+and similarly for $\xi_{ij}(p)$.  We test $F_{ij}(p)$ against a
+$\chi^2(p)$ distribution.
+
+If disturbances are Gaussian, we will have the convergence
 
 \begin{equation}
-  \underset{T \rightarrow \infty}{\text{lim }}F_{ij} =
+  F_{ij}(p) \overset{\P}{\rightarrow}
   \left\{
     \begin{array}{ll}
       0;\ x_j \npwgc x_i\\
       \infty;\ x_j \pwgc x_i
     \end{array}
-  \right.
+  \right. \text{ as } T \rightarrow \infty.  % the '.' after \right is necessary.
 \end{equation}
 
-Therefore, we can make the statement that Algorithm
-\ref{alg:pwgr_heuristic} asymptotically implements Algorithm
-\ref{alg:pwgr}.  \hl{TODO: Modify Algorithm 2 to make this true.}
-\hl{TODO: Enclose this into a theorem}
-
+In our finite sample implementation (see Algorithm
+\ref{alg:finite_pwgc}) we add edges to $\widehat{\gcg}$ in order of
+the decreasing magnitude of $F_{ij}$ instead of proceeding backwards
+through $P_{k - r}$ in Algorithm \ref{alg:pwgr}.  This makes greater
+use of the information provided by the test statistic $F_{ij}$,
+moreover, if $x_i \gc x_j$ and $x_j \gc x_k$, it is expected that
+$F_{kj} > F_{ji}$, thereby providing the same effect as proceeding
+backwards through $P_{k - r}$.
 \subsection{Model Order Selection}
 \label{sec:model_order_selection}
 There are a variety of methods to choose the filter orders $p_i$ and
-$p_j$ \hl{TODO: cite some more}, we will focus in particular on the
-Bayesian Information Criteria (BIC).  The BIC is substantially more
-conservative than the Akaiake Information Criteria, and since we are
-searching for \textit{sparse graphs}, we therefore prefer the BIC. For
-the bivariate case we focus for simplicity on $p_i = p_j$ and write
-simply\footnote{We use the same $p$ for the bivariate case, but this
-  need not be the same as the corresponding univariate estimate}
-$x_{ij}^{(p)}$, in which case the BIC, which we seek to
-\textit{minimize} over $p$ is given by:
+$p_j$ (see e.g. \cite{lutkepohl2005new}), but we will focus in
+particular on the Bayesian Information Criteria (BIC).  The BIC is
+substantially more conservative than the popular alternative Akaiake
+Information Criteria (the BIC is also asymptotically consistent), and
+since we are searching for \textit{sparse graphs}, we therefore prefer
+the BIC, where we seek to \textit{minimize} over $p$:
 
 \begin{equation}
   \label{eqn:bic}
   \begin{aligned}
-    BIC_{\text{univariate}}(p) &= T \ln \xi_i(p) + p\ln T,\\
-    BIC_{\text{bivariate}}(p) &= T \ln \xi_{ij}(p) + 2p\ln T.\\
+    BIC_{\text{univariate}}(p) &= \ln\ \xi_i(p) + p\frac{\ln T}{T},\\
+    BIC_{\text{bivariate}}(p) &= \ln \det \widehat{\Sigma}_{ij}(p) + 4p\frac{\ln T}{T},\\
   \end{aligned}
 \end{equation}
 
+where $\widehat{\Sigma}_{ij}(p)$ is the $2 \times 2$ residual
+covariance matrix for the $\VAR(p)$ model of $(x_i(t), x_j(t))$.  The
+bivariate errors $\xi_{ij}(p)$ and $\xi_{ji}(p)$ are the diagonal
+entries of $\widehat{\Sigma}_{ij}(p)$.
+
 We carry this out by a simple direct search on each model order
-between $1$ and some prescribed $p_\text{max}$.  In practice it is
+between $0$ and some prescribed $p_\text{max}$.  In practice it is
 sufficient to pick $p_\text{max}$ ad-hoc or via some simple heuristic
-(e.g. plotting the sequence $BIC(p)$ over $p$), and we will review in
-Section \ref{sec:efficient_model_estimation} an algorithm to carry out
-this search efficiently.
-
-% \begin{algorithm}
-%   \caption{BIC Model Selection Algorithm}
-%   \label{alg:maximize_bic}
-
-%   \SetKwInOut{Input}{input}
-%   \SetKwInOut{Output}{output}
-%   \SetKwInOut{Initialize}{initialize}
-%   \DontPrintSemicolon
-
-%   \BlankLine
-%   \Input{$T$ samples of WSS processes $x_i(t), x_j(t)$.  A maximum possible lag $p_{\text{max}}$.}
-%   \Output{Model orders $p_i$ and $p$ for models in Hypotheses $H_0$ and $H_1$ respectively.}
-%   \Initialize{
-%     $BIC_{\text{univariate}} = -\infty$\\
-%     $BIC_{\text{bivariate}} = -\infty$\\
-%   }
-
-%   \# \texttt{Find $p_i$}\\
-%   \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
-%     $\xi_i(p) = $\ \texttt{fit\_univariate}$(x_i(t), p)$ \texttt{ \# Fit model for $H_0$}\\
-%     $bic_p = -(T - p - 1) \ln \xi_i(p) - p\ln(T - p - 1)$\\
-%     \If{$bic_p > BIC_{\text{univariate}}$}{
-%       $BIC_{\text{univariate}} = bic_p$\\
-%       \texttt{continue}\\
-%     } \Else{
-%       $p_i = p - 1$\\
-%       \texttt{break}\\
-%     }
-%   }
-
-%   \BlankLine
-%   \# \texttt{Find $p$}\\
-%   \For{$p \in \{1, 2, \ldots, p_{\text{max}}\}$}{
-%     $\xi_{ij}(p) = $\ \texttt{fit\_biivariate}$(x_i(t), x_j(t), p)$ \texttt{ \# Fit model for $H_1$}\\
-%     $bic_p = -(T - p - 1) \ln \xi_{ij}(p) - 2p\ln(T - p - 1)$\\
-%     \If{$bic_p > BIC_{\text{bivariate}}$}{
-%       $BIC_{\text{biivariate}} = bic_p$\\
-%       \texttt{continue}\\
-%     }\Else{
-%       $p = p - 1$\\
-%       \texttt{break}\\
-%     }
-%   }
-%     \Return{$p_i, p$}
-% \end{algorithm}
+e.g. plotting the sequence $BIC(p)$ over $p$, though it is not
+technically possible to guarantee that the optimal $p$ is chosen
+(since there can in general be arbitrarily long lags from one variable
+to another).
 
 \subsection{Efficient Model Estimation}
 \label{sec:efficient_model_estimation}
 In practice, the vast majority of computational effort involved in
 implementing our estimation algorithm is spent calculating the error
-estimates $\xi_i(p_i)$ and $\xi_{ij}(p, p)$.  This requires fitting a
-total of $n^2p_{\text{max}}$ autoregressive models, where the most
+estimates $\xi_i(p_i)$ and $\xi_{ij}(p_{ij})$.  This requires fitting
+a total of $n^2p_{\text{max}}$ autoregressive models, where the most
 naive algorithm (e.g. solving a least squares problem for each model)
 for this task will consume $O(n^2p_{\text{max}}^4T)$ time, it is
 possible to carry out this task in a much more modest
-$O(n^2p_{\text{max}}^2 ) + O(n^2p_{\text{max}}T)$ time.
-
-Firstly, we estimate the sequence of Covariance
-matrices\footnote{The particular indexing and normalization given in
-  equation \ref{eqn:covariance_estimate} is critical to ensure
-  $\widehat{R}$ is positive semidefinite.  The estimate can be viewed
-  as calculating the covariance sequence of a signal multiplied by a
-  rectangular window.}
+$O(n^2p_{\text{max}}^2 ) + O(n^2p_{\text{max}}T)$ time via the
+autocorrelation method which deploys the following autocovariance
+estimates in the Yule-Walker equations:\footnote{The particular
+  indexing and normalization given in equation
+  \ref{eqn:covariance_estimate} is critical to ensure $\widehat{R}$ is
+  positive semidefinite.  The estimate can be viewed as calculating
+  the covariance sequence of a signal multiplied by a rectangular
+  window.}
 
 \begin{equation}
   \label{eqn:covariance_estimate}
   \widehat{R}_x(\tau) = \frac{1}{T}\sum_{t = \tau + 1}^T x(t) x(t - \tau)^\T;\ \tau = 0, \ldots, p_{\text{max}},
 \end{equation}
 
-an $O(n^2p_{\text{max}}T)$ operation.  Secondly, the variance
-estimates $\xi_i(p)$ for $p = 1, \ldots, p_{\text{max}}$ can be
-evaluated in $O(p_{\text{max}}^2)$ time each by applying the
-Levinson-Durbin recursion to $\widehat{R}_{ii}(tau)$, which
-effectively estimates a sequence of $AR$ models, producing $\xi_i(p)$
-as a side-effect (see
+These covariance estimates constitute the $O(n^2p_{\text{max}}T)$
+operation.  Given these particular estimates, the variances $\xi_i(p)$
+for $p = 1, \ldots, p_{\text{max}}$ can be evaluated in
+$O(p_{\text{max}}^2)$ time each by applying the Levinson-Durbin
+recursion to $\widehat{R}_{ii}(\tau)$, which effectively estimates a
+sequence of $AR$ models, producing $\xi_i(p)$ as a side-effect (see
 \cite{hayes_statistical_digital_signal_processing} and
 \cite{levinson_durbin_recursion}).
 
-Similarly, the variance estimates $\xi_{ij}$ and $\xi_{ji}$ can be
-obtained by estimating $\frac{(n + 1)n}{2}$ bivariate AR models, again
-in $O(p_{\text{max}}^2)$ via Whittle's generalized LD recursion
+Similarly, the variance estimates $\widehat{\Sigma}_{ij}(p)$ (which
+include $\xi_{ij}$ and $\xi_{ji}$) can be obtained by estimating
+$\frac{(n + 1)n}{2}$ bivariate AR models, again in
+$O(p_{\text{max}}^2)$ time via Whittle's generalized Levinson-Durbin
+recursion\footnote{We have made use of standalone tailor made
+  implementations of these algorithms, available at
+  \textsf{github.com/RJTK/Levinson-Durbin-Recursion}.}
 \cite{whittle_generalized_levinson_durbin}.
 
 
 \subsection{Edge Probabilities and Error Rate Controls}
+\label{sec:error_rate_control}
 Denote $F_{ij}$ the Granger-causality statistic of equation
 \ref{eqn:gc_statistics} with model orders chosen by the methods of
 Section \ref{sec:model_order_selection}.  Note that this statistic is
-asymptotically $\chi^2(p)$ distributed, and denote by $G$ the
-$\chi^2(p)$ cumulative distribution function.  We will define the matrix
+asymptotically $\chi^2(p_{ij})$ distributed, and denote by $G$ the
+cumulative distribution function thereof.  We will define the matrix
 
 \begin{equation}
   \label{eqn:edge_inclusion_probability}
@@ -2039,23 +2229,86 @@ The value $\delta$ can be chosen by a variety of methods, in our case
 we apply the Benjamini Hochberg criteria \cite{benjamini_hochberg}
 \cite{all_of_statistics} to control the false discovery rate of
 pairwise edges to a level $\alpha$ (where we generally take
-$\alpha = 0.05$).
+$\alpha = 0.05$).  Applying the extremely simple Bonferroni method is
+overly conservative for this application.
 
-\section{Structure Learning}
-\label{sec:structure_learning}
-\subsection{Local Search Heuristics}
+\subsection{Finite Sample Recovery Algorithm}
+\label{sec:finite_pwgc}
+
+After the graph topology $\widehat{\gcg}$ has been estimated via
+Algorithm \ref{alg:finite_pwgc}, we refit the entire model with the
+specified sparsity pattern directly via ordinary least squares.
+Producing graph estimates which are not strongly causal can be
+achieved out by performing sequential estimates
+$\widehat{x}_1(t), \widehat{x}_2(t), \ldots$ by estimating a strongly
+causal graph with the residuals of the previous model as input, and
+then refitting on the estimated sparsity pattern.  However we reserve
+any analysis of this scheme for future work.
+
+\begin{algorithm}
+    \SetKwInOut{Input}{input}
+    \SetKwInOut{Output}{output}
+    \SetKwInOut{Initialize}{initialize}
+    \DontPrintSemicolon
+
+    \BlankLine
+    \caption{Finite Sample Pairwise Graph Recovery (PWGC)}
+    \label{alg:finite_pwgc}
+    \Input{Estimates of pairwise Granger-causality statistics $F_{ij}$
+      (eqn \ref{eqn:gc_statistics}).  Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}).  Hypothesis testing threshold $\delta$ chosen via the Benjamini-Hochberg criterion (Section \ref{sec:error_rate_control})}
+    \Output{A strongly causal graph $\widehat{\gcg}$}
+    \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
+      $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
+      $k = 1$ \texttt{\# a counter used only for notation}}
+
+    \BlankLine
+
+    $W_\delta \leftarrow \{(i, j)\ |\ P_{ji} > 1 - \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
+    $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total node incident probability}\\
+    $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) < \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Nodes with fewest incident edges}\\
+    \If{$P_0 = \emptyset$}{
+      $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) \le \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Ensure non-empty}
+    }
+    \BlankLine
+
+    \While{$S \ne \emptyset$}{
+      $S \leftarrow S \setminus P_{k - 1}$ \texttt{\# remove processed nodes}\\
+      % $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
+      $\mathcal{I}_k \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$\\
+      $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) < \ceil{\text{min}(\mathcal{I}_k)}\}$\\
+      \If{$P_k = \emptyset$}{
+        $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) \le \ceil{\text{min}(\mathcal{I}_k)}\}$
+      }
+      \;
+      \texttt{\# add strongest edges, maintaining strong causality}\\
+      $U_k \leftarrow \bigcup_{r = 1}^k P_{k - r}$ \texttt{\# Include all forward edges}\\
+      \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in U_k \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$} {
+        \If{$\mathsf{is\_strongly\_causal}(E \cup \{(i, j)\})$} {
+          \texttt{\# }$\mathsf{is\_strongly\_causal}$ \texttt{can be implemented by keeping}\\
+          \texttt{\# track of ancestor / descendant relationships}\\
+          $E \leftarrow E \cup \{(i, j)\}$
+        }
+      }
+      $k \leftarrow k + 1$\\
+    }
+    \Return{$([n], E)$}
+\end{algorithm}
+
+% \section{Structure Learning}
+% \label{sec:structure_learning}
+% \subsection{Local Search Heuristics}
 
 
-\subsection{Edge-Wise Grouped LASSO}
-Minimize the sparsity promoting regularized least squares problem and choose the hyper-parameters against the Akaike information criteria.
+% \subsection{Edge-Wise Grouped LASSO}
+% Minimize the sparsity promoting regularized least squares problem and choose the hyper-parameters against the Akaike information criteria.
 
-\begin{equation}
-  L(\lambda, p) \defeq \underset{B}{\text{minimize}}\ \frac{1}{T}\sum_{t = 1}^T||x(t) - \sum_{\tau = 1}^pB(\tau)x(t - \tau)||_2^2 + \lambda \sum_{i, j}\big[\alpha||B_{i, j}||_2 + (1 - \alpha)||B_{i, j}||_1\big]
-\end{equation}
+% \begin{equation}
+%   L(\lambda, p) \defeq \underset{B}{\text{minimize}}\ \frac{1}{T}\sum_{t = 1}^T||x(t) - \sum_{\tau = 1}^pB(\tau)x(t - \tau)||_2^2 + \lambda \sum_{i, j}\big[\alpha||B_{i, j}||_2 + (1 - \alpha)||B_{i, j}||_1\big]
+% \end{equation}
 
-\begin{equation}
-  \underset{\lambda, p}{\text{minimize}}\ L(\lambda, p) + \mathsf{AIC}(B^{(\lambda, p)})
-\end{equation}
+% \begin{equation}
+%   \underset{\lambda, p}{\text{minimize}}\ L(\lambda, p) + \mathsf{AIC}(B^{(\lambda, p)})
+% \end{equation}
 
 % \subsection{Bayesian Posterior Thresholding}
 % Consider the Bayesian model
@@ -2075,7 +2328,7 @@ Minimize the sparsity promoting regularized least squares problem and choose the
 % Since we have in mind applications where $n$ is large, sampling posterior probabilities can be prohibitively burdensome, so we can instead fit the mean-field variational approximation $p(B, G, \sigma\ |\ X) \approx q_Gq_Bq_\sigma$ and subsequently apply a thresholding operation to the posterior edge inclusion probabilities under $q_G$.
 
 % \subsection{Pairwise Minimum Error Spanning Trees}
-% Inspired by theorem \ref{thm:tree_recovery}, we propose the following
+% Inspired by theorem \ref{scg_recovery}, we propose the following
 % structure learning heuristic.
 
 % %% This algorithm should perform coordinate descent or jointly refit all the trees.
@@ -2088,8 +2341,8 @@ Minimize the sparsity promoting regularized least squares problem and choose the
 %   \item{Repeat over $k$ until a stopping criteria is met}
 % \end{enumerate}
 
-\subsection{Layered Strongly Causal Graphs}
-It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, and cannot be applied directly to real data.  Instead, we convert the algorithm into an heuristic and observe it's performance experimentally.  We first consider the heuristic version of Algorithm \ref{alg:pwgr} in Algorithm \ref{alg:pwgr_heuristic} and show that is a well defined procedure (note that $\ceil{x}$ denotes the integer ceiling function):
+% \subsection{Layered Strongly Causal Graphs}
+% It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, and cannot be applied directly to real data.  Instead, we convert the algorithm into an heuristic and observe it's performance experimentally.  We first consider the heuristic version of Algorithm \ref{alg:pwgr} in Algorithm \ref{alg:pwgr_heuristic} and show that is a well defined procedure (note that $\ceil{x}$ denotes the integer ceiling function):
 
 % \begin{proposition}
 %   Algorithm \ref{alg:pwgr_heuristic} terminates in at most $n$ iterations and returns a strongly causal graph $\widehat{\gcg}$.
@@ -2110,148 +2363,314 @@ It is clearn that Algorithm \ref{alg:pwgr} is a purely theoretical construct, an
 %   \hl{TODO -- this is probably not even true}
 % \end{proof}
 
-\begin{algorithm}
-  \SetKwInOut{Input}{input}
-  \SetKwInOut{Output}{output}
-  \SetKwInOut{Initialize}{initialize}
-  \DontPrintSemicolon
+% \begin{algorithm}
+%   \SetKwInOut{Input}{input}
+%   \SetKwInOut{Output}{output}
+%   \SetKwInOut{Initialize}{initialize}
+%   \DontPrintSemicolon
 
-  \BlankLine
-  \caption{Graph Recovery Heuristic $\mathsf{pw\_scg}(F, P, \alpha)$}
-  \label{alg:pwgr_heuristic}
-  \Input{Estimates of pairwise Granger-causaltiy statistics $F_{ij}$ (eqn \ref{eqn:gc_statistics}), Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}), threshold $\delta$.}
-  \Output{A strongly causal graph $\widehat{\gcg}$}
-  \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
-    $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
-    $k = 1$ \texttt{\# a counter used only for notation}}
+%   \BlankLine
+%   \caption{Graph Recovery Heuristic $\mathsf{pw\_scg}(F, P, \alpha)$}
+%   \label{alg:pwgr_heuristic}
+%   \Input{Estimates of pairwise Granger-causaltiy statistics $F_{ij}$ (eqn \ref{eqn:gc_statistics}), Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}), threshold $\delta$.}
+%   \Output{A strongly causal graph $\widehat{\gcg}$}
+%   \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
+%     $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
+%     $k = 1$ \texttt{\# a counter used only for notation}}
 
-  \BlankLine
+%   \BlankLine
 
-  $W_\delta \leftarrow \{(i, j)\ |\ P_{ji} > 1 - \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
-  $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total node incident probability}\\
-  $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) < \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Nodes with fewest incident edges}\\
-  \If{$P_0 = \emptyset$}{
-    $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) \le \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Ensure non-empty}
-  }
-  \BlankLine
+%   $W_\delta \leftarrow \{(i, j)\ |\ P_{ji} > 1 - \delta, F_{ji} > F_{ij}\}$  \texttt{\# candidate edges}\\
+%   $\mathcal{I}_0 \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# total node incident probability}\\
+%   $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) < \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Nodes with fewest incident edges}\\
+%   \If{$P_0 = \emptyset$}{
+%     $P_0 \leftarrow \{i \in S\ |\ \mathcal{I}_0(i) \le \ceil{\text{min}(\mathcal{I}_0)}\}$ \texttt{\# Ensure non-empty}
+%   }
+%   \BlankLine
 
-  \While{$S \ne \emptyset$}{
-    $S \leftarrow S \setminus P_{k - 1}$ \texttt{\# remove processed nodes}\\
-    % $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
-    $\mathcal{I}_k \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$\\
-    $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) < \ceil{\text{min}(\mathcal{I}_k)}\}$\\
-    \If{$P_k = \emptyset$}{
-      $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) \le \ceil{\text{min}(\mathcal{I}_k)}\}$
-    }
-    \;
-    \texttt{\# add strongest edges, maintaining strong causality}\\
-    $U_k \leftarrow \bigcup_{r = 1}^k P_{k - r}$ \texttt{\# Include all forward edges}\\
-    \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in U_k \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$} {
-      \If{$\mathsf{is\_strongly\_causal}(E \cup \{(i, j)\})$} {
-        $E \leftarrow E \cup \{(i, j)\}$
-      }
-    }
-    $k \leftarrow k + 1$\\
-  }
-  \Return{$([n], E)$}
-\end{algorithm}
+%   \While{$S \ne \emptyset$}{
+%     $S \leftarrow S \setminus P_{k - 1}$ \texttt{\# remove processed nodes}\\
+%     % $\mathcal{I}_k \leftarrow \big(\sum_{j \in S: (j, i) \in W_\delta} F_{ij}, \mathsf{\ for\ }i \in S \big)$ \texttt{\# intra-}$S$ \texttt{incident strength}\\
+%     $\mathcal{I}_k \leftarrow \big(\sum_{j\in S: (j, i) \in W_\delta} P_{ij}, \mathsf{\ for\ }i \in S \big)$\\
+%     $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) < \ceil{\text{min}(\mathcal{I}_k)}\}$\\
+%     \If{$P_k = \emptyset$}{
+%       $P_k \leftarrow \{i \in S\ |\ \mathcal{I}_k(i) \le \ceil{\text{min}(\mathcal{I}_k)}\}$
+%     }
+%     \;
+%     \texttt{\# add strongest edges, maintaining strong causality}\\
+%     $U_k \leftarrow \bigcup_{r = 1}^k P_{k - r}$ \texttt{\# Include all forward edges}\\
+%     \For{$(i, j) \in \mathsf{sort}\Big(\{(i, j) \in U_k \times P_k\ |\ (i, j) \in W_\delta\} \mathsf{\ by\ descending\ } F_{ji}\Big)$} {
+%       \If{$\mathsf{is\_strongly\_causal}(E \cup \{(i, j)\})$} {
+%         $E \leftarrow E \cup \{(i, j)\}$
+%       }
+%     }
+%     $k \leftarrow k + 1$\\
+%   }
+%   \Return{$([n], E)$}
+% \end{algorithm}
 
-\begin{algorithm}
-  \SetKwInOut{Input}{input}
-  \SetKwInOut{Output}{output}
-  \SetKwInOut{Initialize}{initialize}
-  \DontPrintSemicolon
+% \begin{algorithm}
+%   \SetKwInOut{Input}{input}
+%   \SetKwInOut{Output}{output}
+%   \SetKwInOut{Initialize}{initialize}
+%   \DontPrintSemicolon
 
-  \BlankLine
-  \caption{Filter Estimator}
-  \label{alg:Bz_estimate}
-  \Input{$T$ samples from a WSS process $x: \{x(t)\}_{t = 1}^T$\\
-    Maximum iterations $M$\\
-    Sparsity parameters $\{(\delta_m\, b_m, R_m)\}_{m = 1}^M$}
-  \Output{Linear one-step-ahead estimator $\widehat{\B}(z)$}
-  \Initialize{$\epsilon^{(0)}(t) = x(t)$ \texttt{\# initial error process}\\
-    $m = 1$ \texttt{\# iteration counter}}
-  \BlankLine
-  \For{$m = 1, \ldots, M$}{
-    $F \leftarrow \mathsf{pwgc}(\epsilon^{(m - 1)}(t))$ \texttt{\# estimate pairwise Granger-causality statistics}\\
-    $\widehat{\gcg}_m \leftarrow \mathsf{pw\_scg}(F, \delta_m, b_m, R_m)$ \texttt{\# graph estimate (Algorithm \ref{alg:pwgr_heuristic})}\\
-    $\widehat{\B}^{(m)}(z) \leftarrow \mathsf{estimate\_B}(\epsilon^{(m - 1)}(t), \widehat{\gcg}_m)$ \texttt{\# Estimate filter with topology} $\widehat{\gcg}_m$\\
-    $\epsilon^{(m)}(t) \leftarrow \epsilon^{(m - 1)}(t) - \widehat{\B}^{(m)}(z)\epsilon^{(m - 1)}(t)$ \texttt{\# updated error process}\\
-  }
-  \BlankLine
-  $\widehat{\B}(z) \leftarrow \widehat{\B}^{(M)}(z) \prod_{k = 1}^{M - 1}\big(I - \widehat{\B}^{(M - k)}(z)\big)$ \texttt{\# compute total filter}\\
-  \Return{$\widehat{\B}(z)$}
-\end{algorithm}
+%   \BlankLine
+%   \caption{Filter Estimator}
+%   \label{alg:Bz_estimate}
+%   \Input{$T$ samples from a WSS process $x: \{x(t)\}_{t = 1}^T$\\
+%     Maximum iterations $M$\\
+%     Sparsity parameters $\{(\delta_m\, b_m, R_m)\}_{m = 1}^M$}
+%   \Output{Linear one-step-ahead estimator $\widehat{\B}(z)$}
+%   \Initialize{$\epsilon^{(0)}(t) = x(t)$ \texttt{\# initial error process}\\
+%     $m = 1$ \texttt{\# iteration counter}}
+%   \BlankLine
+%   \For{$m = 1, \ldots, M$}{
+%     $F \leftarrow \mathsf{pwgc}(\epsilon^{(m - 1)}(t))$ \texttt{\# estimate pairwise Granger-causality statistics}\\
+%     $\widehat{\gcg}_m \leftarrow \mathsf{pw\_scg}(F, \delta_m, b_m, R_m)$ \texttt{\# graph estimate (Algorithm \ref{alg:pwgr_heuristic})}\\
+%     $\widehat{\B}^{(m)}(z) \leftarrow \mathsf{estimate\_B}(\epsilon^{(m - 1)}(t), \widehat{\gcg}_m)$ \texttt{\# Estimate filter with topology} $\widehat{\gcg}_m$\\
+%     $\epsilon^{(m)}(t) \leftarrow \epsilon^{(m - 1)}(t) - \widehat{\B}^{(m)}(z)\epsilon^{(m - 1)}(t)$ \texttt{\# updated error process}\\
+%   }
+%   \BlankLine
+%   $\widehat{\B}(z) \leftarrow \widehat{\B}^{(M)}(z) \prod_{k = 1}^{M - 1}\big(I - \widehat{\B}^{(M - k)}(z)\big)$ \texttt{\# compute total filter}\\
+%   \Return{$\widehat{\B}(z)$}
+% \end{algorithm}
 
 \section{Empirical Evaluation}
-We have implemented simple empirical experiments in Python
-\cite{scipy}, in particular we leverage the LASSO implementation from
+\label{sec:empirical_evaluation}
+We have implemented our empirical experiments in Python \cite{scipy},
+in particular we leverage the LASSO implementation from
 \texttt{sklearn} \cite{sklearn} and the random graph generators from
-\texttt{networkx} \cite{networkx}.  We run the same experiment on
-three separate graph topologies having $n = 75$ nodes: a tree (which
-is strongly causal), a random directed acyclic graph, and an Erdos
-Renyi random graph with edge inclusion probability of $2 / n$.
+\texttt{networkx} \cite{networkx}.  We run experiments using two
+separate graph topologies having $n$ nodes: a strongly causal graph
+(SCG) and a directed acyclic graph (DAG).  These are generated
+respectively by drawing a random tree and a random Erdos Renyi graph
+(with edge probability $q = \frac{2}{n}$ resulting in approximately
+the same number of edges for the SCG as for the DAG), then creating a
+directed graph by directing edges from lower numbered nodes to higher
+numbered nodes.
 
 We populate each of the edges (including self loops) with random
 linear filters constructed by placing $5$ transfer function poles
-uniformly at random in a disc of radius $3 / 4$ (which guarantees
-stability for acyclic graphs).  The resulting system is driven by
-i.i.d. Gaussian random vectors, each component having random variance
-$\sigma_i^2 = 1/2 + r_i$ where $r_i \sim \text{exp}(1/2)$.  Results
-are obtained for $50$ random iterations per each of $6$ dataset
-lengths $T \in \{100, 500, 1000, 2500, 5000, 10000\}$.
+(i.e. $p = 5$) uniformly at random in a disc of radius $3 / 4$ (which
+guarantees stability for acyclic graphs).  The resulting system is
+driven by i.i.d. Gaussian random noise, each component having random
+variance $\sigma_i^2 = 1/2 + r_i$ where $r_i \sim \text{exp}(1/2)$.
+We set $p_{\text{max}} = 15$.  Results and representative graphs are
+collected in Figures \ref{fig:random_graph_topologies},
+\ref{fig:simulation_results_comparison1},
+\ref{fig:simulation_results_comparison2},
+\ref{fig:simulation_results_scaling_and_small_T},
+\ref{fig:simulation_results_dense}.
 
-The pairwise causality function $\mathsf{pwgc}$ of Algorithm
-\ref{alg:Bz_estimate} are obtained via the residuals
-$\mathbf{\epsilon}_{ij}$ of the model
-$\mathbf{x}_i = \mathbf{X}_{ij}\widehat{\beta_{}} +
-\mathbf{\epsilon}_{ij}$ estimated via ordinary least squares, where
-$\mathbf{X}_{ij}$ includes $10$ lagged values of processes $i$ and
-$j$.
+We compare our results against the LASSO.  Motivated by scaling, we
+split the squared error term into separate terms, one for each group of
+incident edges on a node, and estimate the collection of $n$ incident
+filters $\big\{\B_{ij}(z)\big\}_{j = 1}^n$ that minimizes
+$\xi_i^{\text{LASSO}}$ in the following:
 
-The function $\mathsf{estimate_B}$ in Algorithm \ref{alg:Bz_estimate}
-is carried out via the LASSO \cite{tibshirani2015statistical}, with
-the regularization parameter being chosen to minimize the Bayesian
-information criteria, a more conservative heuristic than the AIC.
+\begin{equation}
+  \begin{aligned}
+  \xi_i^{\text{LASSO}}(\lambda) &= \underset{B}{\text{min}}\ \frac{1}{T}\sum_{t = p + 1}^T\big(x_i(t) - \sum_{\tau = 1}^p\sum_{j = 1}^n B_{i, j}(\tau) x(t - \tau)\big)^2 + \lambda \sum_{\tau = 1}^p \sum_{j = 1}^n |B_{ij}(\tau)|\\
+  \xi_i^{\text{LASSO}} &= \underset{\lambda \ge 0}{\text{min}}\ \xi_i^{\text{LASSO}}(\lambda) + \mathsf{BIC}\big(B_i^{\text{LASSO}}(\lambda)\big)\\
+  \end{aligned}
+\end{equation}
+
+where we are choosing $\lambda$, the regularization parameters, via the BIC.
 
 \begin{figure}
   \centering
-  \caption{Simulation Results and Representitive Random Graph Topologies}
-  \label{fig:simulation_results}
-
-  \begin{subfigure}[b]{0.30\textwidth}
+  \caption{Representative Random Graph Topologies}
+  \label{fig:random_graph_topologies}
+  \begin{subfigure}[b]{0.3\textwidth}
     \caption{Random SCG}
     \includegraphics[width=\linewidth]{example_scg.pdf}
   \end{subfigure}
-  \begin{subfigure}[b]{0.30\textwidth}
-    \caption{Random DAG}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \caption{Random DAG $(q = \frac{2}{n})$}
     \includegraphics[width=\linewidth]{example_dag.pdf}
   \end{subfigure}
-  \begin{subfigure}[b]{0.30\textwidth}
-    \caption{Erdos-Renyi Graph}
-    \includegraphics[width=\linewidth]{example_gnp.pdf}
-  \end{subfigure}
-
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{random_scg_simulation.pdf}
-    % \missingfigure{}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{random_dag_simulation.pdf}
-    % \missingfigure{}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.30\textwidth}
-    % \includegraphics[width=\linewidth]{random_gnp_simulation.pdf}
-    \missingfigure{}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \caption{Random DAG $(q = \frac{4}{n})$}
+    \includegraphics[width=\linewidth]{example_dag_q.pdf}
   \end{subfigure}
 \end{figure}
+
+\begin{remark}[Graph Topologies]
+  We depict in Figure \ref{fig:random_graph_topologies} the topologies
+  of random graphs used in our empirical evaluation.  For values of
+  $q$ close to $\frac{2}{n}$, the resulting random graphs tend to have
+  a topology which is, at least qualitatively, close to the SCG.  As
+  the value of $q$ increases, the random graphs deviate farther from
+  the SCG topology, and we therefore expect the LASSO to outperform
+  PWGC for larger values of $q$.  This can be observed in Figure
+  \ref{fig:simulation_results_dense}, at least where performance is
+  measured by the support recovery (i.e. via the MCC).
+\end{remark}
+
+\begin{remark}[MCC as a Support Recovery Measurement]
+  We apply Matthew's Correlation Coefficient (MCC)
+  \cite{matthews1975comparison} as a statistic for measuring support
+  recovery performance.  This statistic synthesizes the confusion
+  matrix into a single score appropriate for unbalanced labels and is
+  calibrated to fall into the range $[-1, 1]$ with $1$ being perfect
+  performance, $0$ being the performance of random guessing, and $-1$
+  being perfectly opposed.
+\end{remark}
+
+\begin{remark}[Error Measurement]
+  We we estimate the 1-step ahead prediction error by forming the variance matrix estimate
+
+  \begin{equation*}
+    \widehat{\Sigma}_v \defeq \frac{1}{T_{\text{out}}} \sum_{t = 1}^{T_{\text{out}}} (x(t) - \widehat{x}(t))(x(t) - \widehat{x}(t))^\T
+  \end{equation*}
+
+  on a long stream of out-of-sample data.  We then report the quantity
+
+  \begin{equation*}
+    \frac{\ln \tr \widehat{\Sigma}_v}{\ln \tr \Sigma_v}
+  \end{equation*}
+
+  where $\widehat{\Sigma}_v = \Sigma_v$ is the best possible performance.
+\end{remark}
+
+\begin{figure}
+  \centering
+  \caption{PWGC Compared Against AdaLASSO \cite{adaptive_lasso_zou2006} (SCG)}
+  \label{fig:simulation_results_comparison1}
+  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_scg_pmax15_simulation.pdf}
+
+  {\scriptsize Comparison of PWGC and LASSO for $\VAR(p)$ model
+    estimation.  We make comparisons against both the MCC and the
+    relative log mean-squared prediction error
+    $\frac{\ln\tr \widehat{\Sigma}_v}{\ln\tr \Sigma_v}$.  Results
+    in Figure \ref{fig:simulation_results_comparison1} are for systems
+    guaranteed to satisfy the assumptions required for Theorem
+    \ref{thm:scg_recovery}.}
+\end{figure}
+
+\begin{figure}
+  \caption{PWGC vs adaLASSO (DAG, $q = \frac{2}{n}$)}
+  \label{fig:simulation_results_comparison2}
+  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_dag_pmax15_simulation.pdf}
+  {\scriptsize Figure \ref{fig:simulation_results_comparison2}
+    provides results for systems which do not guarantee the
+    assumptions of Theorem \ref{thm:scg_recovery}, though the graph
+    has a similar level of sparsity.}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \caption{PWGC Scaling and Small Sample Performance}
+  \label{fig:simulation_results_scaling_and_small_T}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Fixed $T$, increasing $n$ (SCG)}
+    \label{fig:simulation_results_scaling}
+    \includegraphics[width=\linewidth]{new_increasing_n_simulation.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{MCC Comparison for $T \le 100$}
+    \label{fig:small_T_comparison}
+    \includegraphics[width=\linewidth]{new_mcc_comparison001.pdf}
+  \end{subfigure}
+
+  {\scriptsize Figure \ref{fig:simulation_results_scaling} measures
+    support recovery performance as the number of nodes $n$ increases,
+    and the edge proportion as well as the number of samples $T$ is
+    held fixed.  Remarkably, the degradation as $n$ increases is
+    limited, it is primarily the graph topology (SCG or non-SCG) as
+    well as the level of sparsity (measured by $q$) which are the
+    determining factors for support recovery performance.
+
+    Figure \ref{fig:small_T_comparison} provides a support recovery
+    comparison for very small values of, $T$ typical for many
+    applications.}
+\end{figure}
+
+\begin{figure}
+  \caption{Fixed $T, n$, increasing edges $q$ (DAG)}
+  \label{fig:simulation_results_dense}
+  \includegraphics[width=\linewidth]{dag_increasing_q_small_T_alasso_simulation.pdf}
+
+  {\scriptsize Figure \ref{fig:simulation_results_dense} provides a
+    comparison between PWGC and AdaLASSO as the density of graph edges
+    (as measured by $q$) increases.  For reference,
+    $\frac{2}{n} = 0.04$ has approximately the same level of sparsity
+    as the SCGs we simulated.  As $q$ increases, the AdaLASSO
+    outperforms PWGC as measured by the MCC.  However, PWGC maintains
+    superior performance for 1-step-ahead prediction.  We speculate
+    that this is a result of fitting the sparsity pattern recovered by
+    PWGC via OLS which directly seeks to optimize this metric, whereas
+    the LASSO is encumbered by the sparsity inducing penalty.}
+\end{figure}
+
+In reference to figure \ref{fig:simulation_results_comparison1} it
+should not be overly surprising that our PWGC algorithm performs
+better than the LASSO for the case of a strongly causal graph, since
+in this case the assumptions which guarantee the correctness of
+Algorithm \ref{alg:finite_pwgc} hold.  However, the performance is
+still markedly superior in the case of a more general DAG.  We would
+conjecture that a DAG having a similar degree of sparsity as an SCG is
+likely to be ``close'' to an SCG.  Figure
+\ref{fig:simulation_results_dense} illustrates the severe (expected)
+degradation in performance as the number of DAG edges increases while
+the number of data samples $T$ remains fixed.  For larger values $q$
+in this plot, the number of edges in the graph is comparable to the
+number of data samples.
+
+In regards scalability, we have observed that performing the $O(n^2)$
+pairwise Granger-causality calculations consumes the vast majority
+($> 90\%$) of the computation time.  Since this step is trivially
+parallelizable, our algorithm also scales well with multiple cores or
+multiple machines.  Figure \ref{fig:simulation_results_scaling} is a
+demonstration of this scalability, where we are able to estimate
+graphs having over $1500$ nodes (over $2.25 \times 10 ^6$ possible
+edges) using only $T = 500$ data points, granted, an SCG on this many
+nodes is extremely sparse.  However, it is certainly possible to
+improve the scalability of the LASSO as applied to time series data by
+taking advantage of the block-Toeplitz covariance structure.
 
 \section{Application}
 \label{sec:application}
 \section{Conclusion}
 \label{sec:conclusion}
-% Extensions to transfer entropy?.  Case of time varying statistics?.  Develop sparse estimators for SS models (\cite{barnett2015granger})?.  Apply MIO for the Whittle relaxation?
+In this paper we have argued that considering particular topological
+properties of Granger-causality networks can provide substantial
+theoretical insights as well as computational benefits.  In
+particular, the notion of a strongly-causal graph has been exploited
+to establish conditions under which pairwise causality testing alone
+is sufficient for recovering a complete Granger-causality graph.
+Moreover, examples from the literature suggest that such topological
+assumptions may be reasonable in some applications and secondly, even
+when the strong-causality assumption is not met, we have provided some
+empirical evidence to suggest that our pairwise testing algorithm PWGC
+can still outperform the LASSO and adaLASSO, both of which are
+commonly employed in applications.  Application to more general graphs
+may also be within reach via an iterative graph building process,
+i.e. estimating a sequence of SCGs via PWGC applied to the residuals
+of the previous model.
 
+We emphasize that the causality graph topology is one of the key
+defining features of time series analysis in comparison to standard
+multivariate regression and therefore advocate for further study of
+how different topological assumptions may impact the recovery of
+causality graphs.  For example, are there provable guarantees on the
+error rate of PWGC when applied to non strongly-causal graphs?
+Computationally, can constraint systems or cunning adaptive weighting
+schemes impose useful prior knowledge about graph topology for the
+LASSO algorithm?  In another direction, it is known that the more
+general notion of transfer entropy reduces to Granger-causality in the
+case of Gaussian data \cite{barnett2009granger}, do our results extend
+to causality networks defined via transfer entropy?  Finally, the work
+of \cite{barnett2015granger} has established the superiority of
+Granger-causality testing in state space models (as opposed to pure
+autoregressions) in many cases.  Combining this work with our PWGC
+algorithm (by modifying the approach described in Section
+\ref{sec:pairwise_hypothesis_testing}) therefore is likely to enable
+application to very large networks of time series data which are not
+well approximated by finite $\VAR(p)$ models.
+
+\clearpage
 \printbibliography
 \end{document}
 
