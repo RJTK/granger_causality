@@ -797,6 +797,8 @@ def get_residual_graph(G_hat):
 
 def estimate_dense_graph(X, max_lag=10,
                          max_T=None, method="lasso"):
+    # TODO: Replace this with ts_lasso
+
     _, n = X.shape
     G = make_complete_digraph(n)
     G = attach_X(G, X)

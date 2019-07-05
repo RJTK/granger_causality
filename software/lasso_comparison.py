@@ -126,7 +126,7 @@ def simple_lasso():
     return
 
 
-def lasso_mcc_comparison():
+def lasso_mcc_comparison(showfig=False):
     np.random.seed(0)
     n_nodes, p_lags, p_max = 50, 5, 15
     alpha = 0.05
@@ -204,14 +204,14 @@ def lasso_mcc_comparison():
                      mcc_pwgc_dag_q4, mcc_lasso_dag_q4,
                      title=("MCC Comparison on $n = {}$ nodes"
                             "".format(n_nodes)),
-                     lasso_title="Adaptive LASSO", show_results=True,
+                     lasso_title="Adaptive LASSO", show_results=showfig,
                      save_file=["../figures/new_mcc_comparison001.pdf",
                                 "../figures/jpgs_pngs/new_mcc_comparison001.png"]
                     )
     return
 
 
-def lasso_comparison(simulation_name, graph_type):
+def lasso_comparison(simulation_name, graph_type, showfig=False):
     np.random.seed(0)
     n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 2
@@ -284,7 +284,7 @@ def lasso_comparison(simulation_name, graph_type):
 
     plot_results(
         D_MCC_pwgc, D_errs_pwgc, D_MCC_lasso, D_errs_lasso,
-        D_true_errs,
+        D_true_errs, show_results=showfig,
         title=("Test Errors against T (Random {} graph on "
                "$n = {}$ nodes)".format(graph_type, n_nodes)),
         lasso_name="Adaptive LASSO",

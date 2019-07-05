@@ -2,6 +2,10 @@
 
 % TODO: read this https://lemire.me/blog/rules-to-write-a-good-research-paper/
 
+% TODO: Are we, in this setting, immune to confounders?  We are removing
+%       all bi-directional edges, so it seems likely that we are?  Can we state
+%       any theorem about this?
+
 %% bibliography stuff -- this needs come before the preamble inclusion
 \usepackage[backend=bibtex,sorting=none]{biblatex}
 \usepackage{enumitem}
@@ -148,7 +152,9 @@ One of the key improvements to the original LASSO algorithm is the
 adaptive (i.e. weighted) ``adaLASSO'' \cite{adaptive_lasso_zou2006},
 for which oracle results (i.e. asymptotic support recovery) are
 established under less restrictive conditions than for the vanilla
-LASSO \cite{wainwright2009sharp}.%   Success of the LASSO has lead to
+LASSO.  Our experimental comparisons in Section
+\ref{sec:empirical_evaluation} are against the
+adaLASSO. % Success of the LASSO has lead to
 % the famous ``bet on sparsity'' principle ``Use a procedure that does
 % well in sparse problems, since no procedure does well in dense
 % problems.''  \cite{tibshirani2015statistical}.
@@ -180,29 +186,30 @@ The principle contributions of this paper are as follows: firstly, in
 section \ref{sec:theory} we study \textit{pairwise} Granger-causality
 relations, providing novel theorems connecting the structure of the
 causality graph to the pairwise ``causality flow'' in the system, as
-well as a characterization of the sparsity pattern of matrices arising
-in the Wold decomposition, generalizing in some sense the notion of
-``feedback-free'' processes studied by \cite{caines1975feedback} in
-close connection with Granger-causality.  We establish sufficient
-conditions (sections \ref{sec:strongly_causal_graphs},
-\ref{sec:persistent_systems}) under which a fully conditional
-Granger-causality graph can be recovered from pairwise tests alone
-(sec \ref{sec:pairwise_algorithm}).  Secondly, we propose in section
-\ref{sec:structure_learning} a graph search heuristic which implements
-our theoretical results to finite data samples, specifying and
-summarizing appropriate methods for hypothesis testing (section
-\ref{sec:pairwise_hypothesis_testing}), model order selection (section
-\ref{sec:model_order_selection}), computationally efficient estimation
-(section \ref{sec:efficient_model_estimation}), and error rate
-controls (section \ref{sec:error_rate_control}).  Our heuristics are
-compared against the LASSO algorithm in Section
+well as an interpretation in terms of the graph topology of the
+sparsity pattern of matrices arising in the Wold decomposition,
+generalizing in some sense the notion of ``feedback-free'' processes
+studied by \cite{caines1975feedback} in close connection with
+Granger-causality.  We establish sufficient conditions (sections
+\ref{sec:strongly_causal_graphs}, \ref{sec:persistent_systems}) under
+which a fully conditional Granger-causality graph can be recovered
+from pairwise tests alone (sec \ref{sec:pairwise_algorithm}).
+Secondly, we propose in section \ref{sec:structure_learning} a graph
+search heuristic which implements our theoretical results to finite
+data samples, specifying and summarizing appropriate methods for
+hypothesis testing (section \ref{sec:pairwise_hypothesis_testing}),
+model order selection (section \ref{sec:model_order_selection}),
+computationally efficient estimation (section
+\ref{sec:efficient_model_estimation}), and error rate controls
+(section \ref{sec:error_rate_control}).  Our heuristics are compared
+against the adaLASSO algorithm in Section
 \ref{sec:empirical_evaluation}.  We stress the scalability of our
 algorithm which is capable of comfortably handling hundreds or
 thousands of nodes on a single machine, as opposed to standard LASSO
 algorithms which do not take advantage of the special structure
 associated with stationary time series data.  In section
-\ref{sec:application} we develop an example application.  And provide
-concluding remarks on further open problems in our concluding section
+\ref{sec:application} we develop an example application.  Concluding
+remarks on further open problems and extentions are provided in Section
 \ref{sec:conclusion}.  \todo{do an application}
 
 % \cite{yuan2006model} as well as local search hill
@@ -215,10 +222,10 @@ Consider the space $L_2(\Omega)$, the usual Hilbert space of finite
 variance random variables over a probability space
 $(\Omega, \mathcal{F}, \mathbb{P})$ having inner product
 $\inner{x}{y} = \E[xy]$.  We will work with a discrete time and
-wide-sense stationary (WSS) vector valued process $x(t)$ (with
-$t \in \Z$) with elements taking values in $L_2$.  We suppose that
-$x(t)$ has zero mean, $\E x(t) = 0$, and has absolutely summable
-matrix valued covariance sequence
+wide-sense stationary (WSS) $n$-dimensional vector valued process
+$x(t)$ (with $t \in \Z$) where the $n$ elements take values in $L_2$.  We
+suppose that $x(t)$ has zero mean, $\E x(t) = 0$, and has absolutely
+summable matrix valued covariance sequence
 $R(\tau) \overset{\Delta}{=} \E x(t)x(t - \tau)^\T$ with an absolutely
 continuous spectral density $S(\omega)$:
 
@@ -243,7 +250,7 @@ such a process
   \label{eq:hilbert_space_defn}
   \begin{aligned}
     % \H^x &= \cl \{\sum_{\tau = -T}^T a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, T \in \N\} \subseteq L_2(\Omega),\\
-    \H_t^x &= \cl \{\sum_{\tau = 0}^T a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, T \in \N\} \subseteq L_2(\Omega)\\
+    \H_t^x &= \cl \{\sum_{\tau = 0}^p a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, p \in \N\} \subseteq L_2(\Omega)\\
     H_t^x &= \{a x(t)\ |\ a \in \R\} \subseteq L_2(\Omega),
   \end{aligned}
 \end{equation}
@@ -254,7 +261,7 @@ spaces are separable, and as closed subspaces of a Hilbert space they
 are themselves Hilbert.  We will denote the spaces generated in
 analogous ways by particular components of $x$ as e.g.
 $\H_t^{(i, j)}$, $\H_t^{i}$ or by all but particular components as
-e.g. $\H_t^{-j}$.
+$\H_t^{-j}$.
 
 As a consequence of the Wold decomposition theorem \cite{lindquist},
 every WSS sequence has the moving average $MA(\infty)$
@@ -271,10 +278,10 @@ where $c(t)$ is a purely deterministic sequence\footnote{the purely
   processes a single sample $c(t_0)$ is enough to determine $c(t)$ for
   every $t$.  For example,
   $c(t) = \text{sin}(2\pi t + \Theta);\; \Theta \sim \mathcal{U}[-\pi,
-  \pi]$}, $v(t)$ is an uncorrelated sequence and $A(0) = I$.  We
-will assume that $c(t) = 0$, which in practice is to say that it has
-been accurately estimated and removed.  We additionally require that
-this representation can be inverted to yield the $\VAR(\infty)$ form
+  \pi]$}, $v(t)$ is an uncorrelated sequence and $A(0) = I$.  We will
+assume that $c(t) = 0$, which in practice is to say that the process
+has been detrended.  We additionally require that this representation
+can be inverted to yield the $\VAR(\infty)$ form
 
 \begin{equation}
   \label{eqn:ar_representation}
@@ -307,6 +314,7 @@ which is referred to as a lack of instantaneous feedback in $x(t)$.
 We formally state our setup to conclude this section:
 
 \begin{definition}[Basic Setup]
+  \label{def:basic_setup}
   The process $x(t)$ is an $n$ dimensional wide sense stationary
   process having invertible $\VAR(\infty)$ representation
   \eqref{eqn:ar_representation} where $v(t)$ is sequentially
@@ -320,10 +328,11 @@ We formally state our setup to conclude this section:
 
 \begin{definition}[Granger Causality]
   \label{def:granger_causality}
-  For the WSS series $x(t)$ we say that component $x_j$
+  For the WSS series $x(t)$ satisfying the assumptions of Definition
+  \ref{def:basic_setup} we will say that component $x_j$
   \textit{Granger-Causes} (GC) component $x_i$ (with respect to $x$)
-  and write $x_j \gc x_i$ if given Hilbert spaces
-  $\H_{t - 1}$, $\H^{-j}_{t - 1}$
+  and write $x_j \gc x_i$ if given Hilbert spaces $\H_{t - 1}$,
+  $\H^{-j}_{t - 1}$
 
 \begin{equation}
   \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{-j}_{t - 1}},
@@ -420,7 +429,7 @@ of conditional orthogonality is used throughout.
   \begin{enumerate}
     \item{$x_j \ngc x_i$}
     \item{$\forall \tau \in \N_+\ B_{ij}(\tau) = 0$ i.e. $\B_{ij}(z) = 0$}
-    \item{$\mathcal{F}_{j \rightarrow i} \defeq \ln\frac{\xi_i}{\xi_{ij}} = 0$}
+    \item{$F_{ij} \defeq \big(\frac{\xi_i}{\xi_{ij}} - 1\big) = 0$}
     \item{$\H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j} \iff H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j}$}
     \item{$\linE{x_i(t)}{\H_{t - 1}^{-j}} = \linE{x_i(t)}{\H_{t - 1}}$}
     % \item{\hl{Wold $A(\tau)$ condition}}
@@ -518,14 +527,15 @@ convenient reference.
   \textit{directed} graphs, where the edges
   $\gcge \subseteq V \times V$ are \textit{ordered} pairs.
 
-  A (directed) \textit{path} (of length $r$) between nodes $i, j$,
-  denoted $\gcgpath{i}{j}$, is a sequence
+  A (directed) \textit{path} (of length $r$) from node $i$ to node
+  $j$, denoted $\gcgpath{i}{j}$, is a sequence
   $a_0, a_1, \ldots, a_{r - 1}, a_r$ with $a_0 = i$ and $a_r = j$ such
-  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \gcge$.
+  that $\forall\ 0 \le k \le r\ (a_k, a_{k + 1}) \in \gcge$, and where
+  $(a_k, a_{k - 1})$ are \textit{distinct} for $0 \le k < r$.
 
   A \textit{cycle} is a path of length $2$ or more between a node and
-  itself.  An edge between a node and itself $(i, i)$ (which is not a
-  cycle) is referred to as a \textit{loop}.
+  itself.  An edge between a node and itself $(i, i) \in \gcge$ (which
+  is not a cycle) is referred to as a \textit{loop}.
 
   A graph $\gcg$ is a \textit{directed acyclic graph} (DAG) if it is a
   directed graph and does not contain any cycles.
@@ -533,13 +543,14 @@ convenient reference.
 
 \begin{definition}[Parents, Grandparents, Ancestors]
   A node $j$ is a \textit{parent} of node $i$ if $(j, i) \in \gcge$.
-  The set of all $i$'s parents will be denoted $\pa{i}$.
+  The set of all $i$'s parents will be denoted $\pa{i}$, and we
+  explicitly exclude loops as a special case, that is,
+  $i \not\in \pa{i}$ even if $(i, i) \in \gcge$.
 
   The set of level $\ell$ \textit{grandparents} of node $i$, denoted
   $\gpn{\ell}{i}$, is the set such that $j \in \gpn{\ell}{i}$ if and
   only if there is a \textit{directed path} of length $\ell$ in $\gcg$
   from $j$ to $i$.  Clearly, $\pa{i} = \gpn{1}{i}$.
-
 
   Finally, the set of \textit{level $\ell$ ancestors} of $i$:
   $\ancn{\ell}{i} = \bigcup_{\lambda \le \ell}\gpn{\lambda}{i}$ is the
@@ -548,11 +559,10 @@ convenient reference.
   to $i$.  The set of \textit{all ancestors} of $i$
   (i.e. $\ancn{n}{i}$) is denoted simply $\anc{i}$.
 
-  Note that since loops are not considered paths, it is not possible
-  for a node to be it's own parent.  However, unless $\gcg$ is a DAG,
-  a node can be it's own ancestor.  We will ocassionally need to
-  explicitly exclude $i$ from $\anc{i}$, in which case we will write
-  $\anc{i}\setminus \{i\}$.
+  Recall that we do not allow a node to be it's own parent, however
+  unless $\gcg$ is a DAG, a node can be it's own ancestor.  We will
+  ocassionally need to explicitly exclude $i$ from $\anc{i}$, in which
+  case we will write $\anc{i}\setminus \{i\}$.
 \end{definition}
 
 Our principle object of study will be a graph determined by
@@ -583,8 +593,8 @@ a time lag of $k$ steps, this is exemplified in the inversion formula
 \ref{eqn:lsi_inversion}.
 
 An elementary theorem connecting the adjacency matrix with paths will
-allow us to deduce the sparsity pattern of $\A(z)$.  We omit proof,
-though it follows easily by induction:
+allow us to deduce the sparsity pattern of $\A(z)$.  Proof follows
+easily by induction:
 
 \begin{lemma}
   \label{lem:adj_matrix}
@@ -599,9 +609,12 @@ though it follows easily by induction:
 % maybe that is good enough?
 
 From the $\VAR$ representation of $x(t)$ there is clearly a tight
-relationship between each node and it's parent nodes, the following
-proposition is analogous to the definition of feedback free processes
-of \cite{caines1975feedback}:
+relationship between each node and it's parent nodes, the relationship
+is quantified through the sparsity pattern of $B(z)$.  Similarly, the
+following proposition is analogous to the definition of feedback free
+processes of \cite{caines1975feedback} and provides an interpretation
+of the sparsity pattern of $A(z)$ (from the MA representation of
+$x(t)$) in terms of the causality graph $\gcg$.
 
 % % When is this guaranteed w.r.t. the full system?
 % Furthermore, if the filter $\B_{ii}$ is invertible, we can write
@@ -656,8 +669,12 @@ This statement is ultimately about the sparsity pattern in the Wold
 decomposition matrices $A(\tau)$ since
 $x_i(t) = \sum_{\tau = 0}^\infty \sum_{j = 1}^n A_{ij}(\tau)v_j(t -
 \tau)$.  The proposition states that if $j \not \in \anc{i}$ then
-$\A_{ij}(z) = 0$, however the implication
-$j \in \anc{i} \implies \A_{ij}(z)$ need not hold.
+$\A_{ij}(z) = 0$.
+
+\todo{Do we have $A_{ij}(z) \ne 0 \implies j \in \anc{i}$?}
+
+% TODO: ???
+% , however the implication $j \in \anc{i} \implies \A_{ij}(z) \ne 0$ need not hold.
 
 % \begin{proof}
 %   The formula (\ref{eqn:parent_expansion}) was established in the
@@ -743,8 +760,8 @@ $j \in \anc{i} \implies \A_{ij}(z)$ need not hold.
 Recall that Granger-causality in general must be understood with
 respect to a particular universe of observations.  If $x_j \gc x_i$
 with respect to $x_{-k}$, it may not hold with respect to $x$.  For
-example, $x_k$ may be a common ancestor which when observed completely
-explains the connection from $x_j$ to $x_i$.  In this paper we study
+example, $x_k$ may be a common ancestor which when observed, completely
+explains the connection from $x_j$ to $x_i$.  In this section we study
 \textit{pairwise} Granger-causality, and seek to understand when
 knowledge of pairwise relations is sufficient to deduce the true fully
 conditional relations of $\gcg$.
@@ -765,6 +782,7 @@ Finally, motivated from a practical standpoint to analyze causation in
 large systems, we will seek to construct practical estimation
 procedures based purely on pairwise causality tests since the
 computation of such pairwise relations is somewhat easier.
+\todo{Reconsider this paragraph}
 
 The following is a fundamental building block:
 
@@ -845,10 +863,17 @@ effectively eliminates the possibility presented in this example.
 
 \begin{proposition}
   \label{prop:ancestor_properties}
-  If in a Granger-causality graph $\gcg$ we have $j \pwgc i$ then
+  If in a Granger-causality graph $\gcg$ where $j \pwgc i$ then
   $j \in \anc{i}$ or $\exists k \in \anc{i} \cap\anc{j}$ which is a
   confounder of $(i, j)$.
 \end{proposition}
+
+\begin{remark}
+  The interpretation of this proposition is that for $j \pwgc i$ then
+  there must either be ``causal flow'' from $j$ to $i$
+  ($j \in \anc{i}$) or there must be a confounder $k$ through which
+  common information is received.
+\end{remark}
 
 \begin{proof}
   We will prove by way of contradiction.  To this end, suppose that
@@ -940,7 +965,7 @@ effectively eliminates the possibility presented in this example.
 An interesting corollary is the following:
 
 \begin{corollary}
-  If the graph $\gcg$ is acyclic and if $j \pwgc i$ and $i \pwgc j$ then $\exists k \in \anc{i} \cap \anc{j}$ confounding $(i, j)$.
+  If the graph $\gcg$ is a DAG then $j \pwgc i, i \pwgc j \implies \exists k \in \anc{i} \cap \anc{j}$ confounding $(i, j)$.
 \end{corollary}
 
 It seems reasonable to expect a converse of proposition
@@ -1054,7 +1079,7 @@ time series networks, that is, the topology of $\gcg$.
   \label{def:strongly_causal}
   We will say that a Granger-causality graph $\gcg$ is
   \textit{strongly causal} if there is at most 1 directed path between
-  any two nodes.  Strongly Causal Graphs will be referred to as ``SCGs''.
+  any two nodes.  Strongly Causal Graphs will be referred to as SCGs.
 \end{definition}
 
 Examples of strongly causal graphs include directed trees (or
@@ -1225,7 +1250,9 @@ important property essentially strengthens proposition
 % \end{lemma}
 
 In light of proposition \ref{prop:sc_graph_common_anc}, the following
-provides a partial converse to proposition \ref{prop:ancestor_properties}.
+provides a partial converse to proposition
+\ref{prop:ancestor_properties}, and supports the intuition of ``causal
+flow'' through paths in $\gcg$.
 
 \begin{proposition}
   \label{prop:pwgc_anc}
@@ -1320,8 +1347,8 @@ surprisingly, not true in a general graph.
   Granger-causality does not suffer any difficulty with so-called
   ``colliders'', that is, the topology $i \rightarrow k \leftarrow j$
   will never result in $i \pwgc j$ or $j \pwgc i$.  This is evidently
-  an advantage of the \textit{temporal} nature of Granger causality --
-  ``information'' cannot flow backwards along the edges of $\gcg$.
+  an advantage of the \textit{temporal} nature of Granger -- there is
+  no backwards causal flow along the edges of $\gcg$.
 \end{remark}
 
 \begin{example}
@@ -1373,7 +1400,7 @@ some ``memory'' of the past.
 
   i.e. the ``first'' and ``last'' coefficients of the filter $\B(z)$,
   where $\tau_\infty(\B) \defeq \infty$ if the filter has an infinite
-  impulse response.
+  length.
 \end{definition}
 
 \begin{definition}[Persistent]
@@ -1385,20 +1412,22 @@ some ``memory'' of the past.
 \begin{remark}
   In the context of Granger-causality, ``most'' systems should be
   persistent.  In particular, $\mathsf{\VAR}(p)$ models are likely to
-  be persistent since these naturally result in equivalent an
+  be persistent since these naturally result in an equivalent
   $\mathsf{MA}(\infty)$ representation, except for the pathological
   case where $\B(z)$ is Nilpotent.
 
   Moreover, persistence is not the weakest condition necessary for the
-  results of this section, but we opt to avoid unnecessarily
-  complicated definitions.
+  results of this section, the condition
+  $\tau_0(\A_{jk}) < \tau_\infty(\A_{ik})$ for each $i, j, k$ such
+  that $k \in \anc{i} \cap \anc{j}$ is enough.
+  \todo{Write something on the intuition here.}
 \end{remark}
 
 \begin{example}
   process $x(t)$ generated by the $\VAR(1)$ model\footnote{Recall that
     any $\VAR(p)$ model with $p < \infty$ can be written as a
     $\VAR(1)$ model, so we lose little generality in considering this
-    case.}  having $\B(z) = Bz^{-1}$ where $B$, we will examine
+    case.}  having $\B(z) = Bz^{-1}$, we will examine
   conditions that guarantee persistence.  Pick any
   $i \in [n], j \in \anc{i} \setminus \{i\}$, then the stability of
   $B$ allows us to write
@@ -1440,22 +1469,25 @@ some ``memory'' of the past.
   $f(r) = 0\ \forall r \ge N$, it would need to be the case that
 
   \begin{equation*}
-    \Dg(\lambda)^r \lambda = Vz
+    \Dg(\bm{\lambda})^r \bm{\lambda} = Vz
   \end{equation*}
 
   had a solution in $z$ for every $r \ge N$, where $V$ is an
-  $n \times n - 1$ full-rank matrix spanning the nullspace of $\beta$.
-  That is, iterates of $\Dg(\lambda)$ applied to $\lambda$ would need
-  to remain inside $\mathcal{N}(\beta)$.  This would imply that
+  $n \times n - 1$ full-rank matrix spanning the nullspace of $\beta$,
+  and $\bm{\lambda} = (\lambda_1, \ldots, \lambda_n)$. That is,
+  iterates of $\Dg(\bm{\lambda})$ applied to $\bm{\lambda}$ would need to remain
+  inside $\beta$'s nullspace.  This would imply that
 
   \begin{equation*}
-    VV^\dagger \lambda^{r + 1} = \lambda^{r + 1},
+    VV^\dagger \bm{\lambda}^{r + 1} = \bm{\lambda}^{r + 1},
   \end{equation*}
 
-  i.e. that $\lambda^{r + 1}$ is an eigenvector of $VV^\dagger$ for an
-  infinite number of integers $r$.  However, since there can only be a
-  finite number of (unit length) eigenvectors, this cannot be the case
-  unless every eigenvalue $(\lambda_1, \ldots, \lambda_n)$ were equal.
+  i.e. that $\bm{\lambda}^{r + 1}$ is an eigenvector of $VV^\dagger$
+  for an infinite number of integers $r$ (the exponentiation is to be
+  understood as a pointwise operation).  However, since there can only
+  be a finite number of (unit length) eigenvectors, this cannot be the
+  case unless every eigenvalue $(\lambda_1, \ldots, \lambda_n)$ were
+  equal.
 
   \todo{This may remain true for any matrix with at least 2 distinct eigenvalues}
   We can conclude by stating that a $\VAR(1)$ system corresponding to
@@ -2425,7 +2457,11 @@ guarantees stability for acyclic graphs).  The resulting system is
 driven by i.i.d. Gaussian random noise, each component having random
 variance $\sigma_i^2 = 1/2 + r_i$ where $r_i \sim \text{exp}(1/2)$.
 We set $p_{\text{max}} = 15$.  Results and representative graphs are
-collected in Figure \ref{fig:simulation_results}.
+collected in Figures \ref{fig:random_graph_topologies},
+\ref{fig:simulation_results_comparison1},
+\ref{fig:simulation_results_comparison2},
+\ref{fig:simulation_results_scaling_and_small_T},
+\ref{fig:simulation_results_dense}.
 
 We compare our results against the LASSO.  Motivated by scaling, we
 split the squared error term into separate terms, one for each group of
@@ -2502,8 +2538,7 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
   \centering
   \caption{PWGC Compared Against AdaLASSO \cite{adaptive_lasso_zou2006} (SCG)}
   \label{fig:simulation_results_comparison1}
-  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_scg_simulation.pdf}
-
+  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_scg_pmax15_simulation.pdf}
 
   {\scriptsize Comparison of PWGC and LASSO for $\VAR(p)$ model
     estimation.  We make comparisons against both the MCC and the
@@ -2517,7 +2552,7 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
 \begin{figure}
   \caption{PWGC vs adaLASSO (DAG, $q = \frac{2}{n}$)}
   \label{fig:simulation_results_comparison2}
-  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_dag_simulation.pdf}
+  \includegraphics[width=0.95\textwidth]{new_lasso_comparison_dag_pmax15_simulation.pdf}
   {\scriptsize Figure \ref{fig:simulation_results_comparison2}
     provides results for systems which do not guarantee the
     assumptions of Theorem \ref{thm:scg_recovery}, though the graph
@@ -2526,6 +2561,8 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
 
 \begin{figure}
   \centering
+  \caption{PWGC Scaling and Small Sample Performance}
+  \label{fig:simulation_results_scaling_and_small_T}
   \begin{subfigure}[b]{0.45\textwidth}
     \caption{Fixed $T$, increasing $n$ (SCG)}
     \label{fig:simulation_results_scaling}
@@ -2534,19 +2571,19 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
   \begin{subfigure}[b]{0.45\textwidth}
     \caption{MCC Comparison for $T \le 100$}
     \label{fig:small_T_comparison}
-    \includegraphics[width=\linewidth]{new_mcc_comparison000.pdf}
+    \includegraphics[width=\linewidth]{new_mcc_comparison001.pdf}
   \end{subfigure}
 
-  {\scriptsize Figure \ref{fig:simulation_results_scaling} depicts
+  {\scriptsize Figure \ref{fig:simulation_results_scaling} measures
     support recovery performance as the number of nodes $n$ increases,
     and the edge proportion as well as the number of samples $T$ is
-    held fixed.  Remarkably, performance appears to degrade slowly in
-    $n$ -- it is the graph topology (SCG or non-SCG) as well as the
-    level of sparsity (measured by $q$) which is the main factor for
-    support recovery performance.
+    held fixed.  Remarkably, the degradation as $n$ increases is
+    limited, it is primarily the graph topology (SCG or non-SCG) as
+    well as the level of sparsity (measured by $q$) which are the
+    determining factors for support recovery performance.
 
     Figure \ref{fig:small_T_comparison} provides a support recovery
-    comparison for very small values of $T$ typical of some
+    comparison for very small values of, $T$ typical for many
     applications.}
 \end{figure}
 
