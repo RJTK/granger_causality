@@ -62,12 +62,9 @@ def main():
     G_sp500_hat = attach_X(G_sp500_hat, X)
 
     T_max = 750
-    G_sp500_hat = estimate_B(G_sp500_hat, max_lag=max_lag, method="alasso",
+    G_sp500_hat = estimate_B(G_sp500_hat, max_lag=max_lag, method="lstsqr",
                              max_T=T_max)
 
-    len_r = len(X) - T_max - max_lag
-    # for i in G_sp500_hat.nodes:
-        
     X_r = get_X(G_sp500_hat, prop="r")
 
     G_sp500_hat = nx.relabel_nodes(G_sp500_hat,
@@ -89,6 +86,8 @@ def main():
     plt.plot(X[-247:, i], color="b", alpha=0.75, linewidth=2)
     plt.plot(X_r[:, i], color="r", alpha=0.75, linewidth=1)
     plt.show()
+
+    V = [np.var(X[-247:, i]) - np.var(X_r[:, i]) for i in range(500)]
 
     deg_seq = [d for n, d in G_sp500_hat.degree()]
 
