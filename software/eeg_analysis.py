@@ -2,20 +2,16 @@ import numpy as np
 import pandas as pd
 
 import seaborn as sns
-import scipy.stats as sps
-import scipy.signal as signal
-import networkx as nx
 import os
 
-from datetime import datetime
-from scipy.stats import boxcox
 from matplotlib import pyplot as plt
 from levinson.levinson import compute_covariance, lev_durb
+from multiprocessing.pool import ThreadPool
+from threading import Lock
 
 from pwgc.gc_methods import (pwgc_estimate_graph, get_residual_graph,
                              get_X, combine_graphs, estimate_B,
                              attach_X, compute_bic, form_Xy)
-from pwgc.draw_graphs import draw_graph
 from pwgc.var_system import remove_zero_filters
 
 from matplotlib import rc as mpl_rc
@@ -36,23 +32,29 @@ channels = [
     "P2", "P3", "P4", "P5", "P6", "P7", "P8", "PO1", "PO2", "PO7", "PO8",
     "POZ", "PZ", "T7", "T8", "TP7", "TP8", "X", "Y", "nd"]
 
+thread_lock = Lock()
+
 
 def compute_all_networks():
-    adj_matrices = {"A": [], "C": []}
+    pool = ThreadPool(4)
+    pool.map(compute_and_save_networks, os.listdir("eeg"))
+    pool.close()
+    pool.join()
+    return
 
-    for subject in os.listdir("eeg"):
-        if subject[:4] == "co2a":
-            label = "A"
-        elif subject[:4] == "co2c":
-            label = "C"
-        else:
-            continue
 
-        print(subject)
-        Adj = estimate_subject_G_adj(subject)
-        adj_matrices[label].append(Adj)
-        np.save("eeg/adj_estimates/" + subject + ".npy", Adj)
-    return adj_matrices
+def compute_and_save_networks(subject):
+    print(subject)
+    if subject[:4] == "co2a":
+        pass
+    elif subject[:4] == "co2c":
+        pass
+    else:
+        return
+
+    Adj = estimate_subject_G_adj(subject)
+    np.save("eeg/adj_estimates/" + subject + ".npy", Adj)
+    return
 
 
 def network_comparison_example():
@@ -73,12 +75,30 @@ def network_comparison_example():
 
 def estimate_subject_G_adj(subject):
     folder = "eeg/" + subject + "/"
+    save_folder = "eeg/adj_matrices/" + subject + "/"
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+
     all_G_hat = []
 
     for file_name in os.listdir(folder):
-        _, _, _, G_hat = estimate_eeg_graph(folder + file_name,
-                                            post_estimate="lstsqr")
-        all_G_hat.append(G_hat)
+        try:
+            _, _, _, G_hat = estimate_eeg_graph(folder + file_name,
+                                                post_estimate="lstsqr")
+            all_G_hat.append(G_hat)
+            A_hat = make_adj_mat([G_hat])
+            np.save(save_folder + file_name + ".npy", A_hat)
+        except Exception as e:
+            # Here's a ghetto error logger
+            err = ("Caught Exception {} while trying to estimate eeg "
+                   "graph for subject {} and file {}.  We can try to "
+                   "continue...".format(e, subject, file_name))
+            print(err)
+
+            thread_lock.acquire(blocking=True, timeout=-1)
+            with open("eeg_errors.txt", "w+") as f:
+                f.write(err + "\n")
+            thread_lock.release()
 
     return make_adj_mat(all_G_hat)
 
