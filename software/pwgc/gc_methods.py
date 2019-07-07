@@ -301,13 +301,13 @@ def estimate_B(G, max_lag=10, copy_G=False,
         else:
             raise AssertionError("Bad method but should deal with it earlier!")
 
-        if len(y[max_T:]) <= 100:
-            raise ValueError(
-                "len(y) = {} is not long "
-                "enough for using max_T = {} " "samples for estimation and "
-                "the remaining for the " "out of sample error calculation. "
-                "Ensure that we have " "max_T <= len(y) - 100."
-                "".format(len(y), max_T))
+        # if len(y[max_T:]) <= 100:
+        #     raise ValueError(
+        #         "len(y) = {} is not long "
+        #         "enough for using max_T = {} " "samples for estimation and "
+        #         "the remaining for the " "out of sample error calculation. "
+        #         "Ensure that we have " "max_T <= len(y) - 100."
+        #         "".format(len(y), max_T))
 
         # Compute residuals
         r = y[max_T:] - X[max_T:] @ b
