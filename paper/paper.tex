@@ -2632,6 +2632,63 @@ taking advantage of the block-Toeplitz covariance structure.
 
 \section{Application}
 \label{sec:application}
+In this section we apply our methods to a real set of EEG data
+obtained from the ``EEG Database Data
+Set''\footnote{http://archive.ics.uci.edu/ml/datasets/EEG+Database}
+\cite{zhang1995event} on the UCI machine learning repository
+\cite{uci_mlr}.  This dataset contains 1 second long measurements of
+(64 channel) EEG signals from patients who are given visual stimuli
+and are broken into two groups: control and alcoholic.  The dataset
+then consists of
+$\mathcal{D} = \{\big(x^{(i)}(t)\big)_{t = 1}^T, y^{(i)} \}_{i = 1}^N$
+where $T = 256$, $x^{(i)}(t) \in \R^{64}$,
+$y^{(i)} \in \{\text{A}, \text{C}\}$, and \todo{fill in N} $N = ????$.
+
+We have constructed a simple pipeline for classifying each each trial
+as either ``A'' or ``C'' by first applying an iterative PWGC algorithm
+(see Algorithm \ref{alg:iterated_pwgc}) directly to the EEG data
+$x^{(i)}$ to obtain a Granger-causality graph $\widehat{G}^{(i)}$ then
+simply feeding the vectorized adjacency matrix of $\widehat{G}^{(i)}$
+through a Kernel PCA stage and then a Support Vector Machine with
+parameters fit by cross validation.
+
+While it is almost certainly possible to achieve much greater
+classification accuracy on this dataset by constructing a classifier
+to act directly on $x^{(i)}(t)$, our purpose is to demonstrate that
+relevant information is being captured by the graph estimates
+$\widehat{G}^{(i)}$.
+
+Figures \ref{fig:ar_eeg_example} and \ref{fig:eeg_oos_eeror}
+illustrate the appropriateness of modelling $x(t)$ with $\VAR$ models,
+as opposed simply to a collection of $n$ unidimensional
+autoregressiive models.  The conclusion being that the
+Granger-causality graph estimates are not purely spurious.
+
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{$\mathsf{AR}(p)$ Model Example}
+    \label{fig:ar_eeg_example}
+    \includegraphics[width=\linewidth]{eeg_estimate_example.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{OOS Error for a Single Subject}
+    \label{fig:eeg_oos_error}
+    \includegraphics[width=\linewidth]{eeg_oos_demonstration.pdf}
+  \end{subfigure}
+
+  {\scriptsize Figure \ref{fig:ar_eeg_example} provides an example of an
+  autoregressive model fir via the Levinson-Durbin algorithm (choosing
+  the system order via the BIC) on a single EEG channel.  Figure
+  \ref{fig:eeg_oos_error} demonstrates the improvement of a single
+  $\VAR$ model over independent $\mathsf{AR}$ models.
+
+  Out-of-Sample estimates are performed on data that were not used in
+  fitting the models.}
+
+
+\end{figure}
+
 \section{Conclusion}
 \label{sec:conclusion}
 In this paper we have argued that considering particular topological

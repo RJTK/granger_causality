@@ -32,6 +32,9 @@ channels = [
     "P2", "P3", "P4", "P5", "P6", "P7", "P8", "PO1", "PO2", "PO7", "PO8",
     "POZ", "PZ", "T7", "T8", "TP7", "TP8", "X", "Y", "nd"]
 
+# X, Y are "EOG" (Electro-oculogram) for eyes
+# nd is a reference electrode
+
 thread_lock = Lock()
 
 
@@ -45,9 +48,9 @@ def compute_all_networks():
 
 def compute_and_save_networks(subject):
     print(subject)
-    if subject[:4] == "co2a":
+    if subject[3] == "a":
         pass
-    elif subject[:4] == "co2c":
+    elif subject[3] == "c":
         pass
     else:
         return
@@ -142,12 +145,11 @@ def make_adj_mat(all_G_hat):
     return G_adj
 
 
-def oos_error_demonstration():
+def oos_error_demonstration(subject="co2a0000364"):
     all_V0 = []
     all_V = []
     all_V_bl = []
     all_G_hat = []
-    subject = "co2a0000364"
     folder = "eeg/" + subject + "/"
     for file_name in os.listdir(folder):
         V, V_bl, V0, G_hat = estimate_eeg_graph(folder + file_name,
@@ -305,5 +307,5 @@ def read_trial(file_name):
 if __name__== "__main__":
     # oos_example()
     # oos_error_demonstration()
-    # compute_all_networks()
+    compute_all_networks()
     pass
