@@ -261,7 +261,15 @@ def baseline_estimates(X, max_T, max_lag, plot_example=False):
     return V
 
 
-def full_graph_estimates(X, max_T, max_lag, N_iters=4, post_estimate="lstsqr"):
+def full_graph_estimates(X, max_T, max_lag, N_iters=4,
+                         r=0.9, post_estimate="lstsqr"):
+    """
+    Iterates the PWGC algorithm up to N_iters times, then performs a
+    global estimate using the method specified by post_estimate.
+    Using post_estimate="alasso" will result in post-filtering the
+    edges, using post_estimate="lstsqr" will keep the entire
+    support inferred by each iteration of PWGC.
+    """
     graph_estimates = []
 
     def _estimate(X_data):
@@ -278,7 +286,7 @@ def full_graph_estimates(X, max_T, max_lag, N_iters=4, post_estimate="lstsqr"):
         G_e, X_r = _estimate(X_r)
         graph_estimates.append(G_e)
         sv2_r = np.var(X_r)
-        if sv2_r / sv2_r_prev > 0.9:
+        if sv2_r / sv2_r_prev > r:
             break
         else:
             sv2_r_prev = sv2_r

@@ -46,47 +46,14 @@ mpl_rc("font", **font)
 mpl_rc("text", usetex=True)
 
 
-def main_Xy2():
+def logistic_regression_clf():
+    """
+    Compute and quantify the quality of a multinomial logistic regression
+    model between all subjects.
+    """
     X, y, z = load_subject_Xyz()
     le = LabelEncoder()
     y = le.fit_transform(y)
-
-    # 2
-    xform = Pipeline(
-        steps=[("pca", KernelPCA(n_components=5,
-                                 kernel="rbf",
-                                 gamma=0.75,
-                                 eigen_solver="arpack",
-                                 random_state=1,
-                                 )),
-               ("power_transform", PowerTransformer(method="yeo-johnson",
-                                                    standardize=True))])
-    X_pca = xform.fit_transform(X)
-    D_pca = pd.DataFrame(X_pca)
-    D_pca["label"] = ["Alcoholic" if yi == "A" else "Control" for yi in z]
-    pp = sns.pairplot(D_pca.iloc[::2, ], hue="label",
-                      vars=[c for c in D_pca.columns if c != "label"],
-                      plot_kws={"alpha": 0.25})
-    plt.show()
-
-    subjects = np.unique(y)
-    s0 = subjects[3]
-    s1 = subjects[-1]
-
-    sel = np.logical_or(y == s0, y == s1)
-    _y = y[sel]
-    _X = X[sel]
-    qt = QuantileTransformer(output_distribution="normal")
-    K = Nystroem(kernel="poly", gamma=0.75, degree=4, coef0=1.0, n_components=500,
-                 random_state=0)\
-                 .fit_transform(_X)
-    K = qt.fit_transform(K)
-
-    pls = PLSRegression(n_components=2, scale=False)
-    pls.fit(K, _y)
-    X_pls = pls.x_scores_
-    plt.scatter(X_pls[:, 0], X_pls[:, 1], c=_y)
-    plt.show()
 
     ss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
     train_ix, valid_ix = next(ss.split(X, y))
@@ -109,7 +76,7 @@ def main_Xy2():
                   "logistic__penalty": ["l2"]}
 
     cv = RandomizedSearchCV(estimator=clf, param_distributions=param_grid,
-                            n_iter=50, n_jobs=3, cv=3, refit=True)
+                            n_iter=75, n_jobs=3, cv=3, refit=True)
     cv.fit(X_train, y_train)
 
     y_hat_valid = cv.predict(X_valid)
@@ -124,210 +91,128 @@ def main_Xy2():
               "".format(matthews_corrcoef(y_hat_valid, y_valid)))
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
-    plt.savefig("../figures/logistic_regression_confusion_matrix.pdf")
-    plt.savefig("../figures/logistic_regression_confusion_matrix.png")
+    plt.savefig("../figures/logistic_regression_confusion_matrix.pdf",
+                bbox_inches="tight", pad_inches=0)
+    plt.savefig("../figures/logistic_regression_confusion_matrix.png",
+                bbox_inches="tight", pad_inches=0)
     plt.show()
+    return
 
-    y_hat_valid_proba = cv.predict_proba(X_valid)
-    n_subjects = len(np.unique(y_valid))
-    C = np.zeros((n_subjects, n_subjects))
-    for i, label in enumerate(y_valid):
-        C[label] += y_hat_valid_proba[i]
-    C = C / np.sum(C, axis=1)[:, None]
-    plt.imshow(C)
+
+def logistic_regression_subject_pair_visualization(i=59, j=60):
+    """
+    Visualize the separation between GCGs of subjects i, j.  This
+    visualization uses the whole dataset and likely is a slight
+    overestimation of the quality of a discriminator between i, j.
+    """
+    X, y, z = load_subject_Xyz()
+    le = LabelEncoder()
+    y = le.fit_transform(y)
+
+    subjects = np.unique(y)
+    s0 = subjects[i]
+    s1 = subjects[j]
+
+    sel = np.logical_or(y == s0, y == s1)
+    _y = y[sel]
+    _X = X[sel]
+
+    qt = QuantileTransformer(output_distribution="normal")
+    kern = Nystroem(kernel="poly", gamma=0.55, degree=4, coef0=1.0, n_components=40,
+                    random_state=0)
+    K = kern.fit_transform(_X)
+    K = qt.fit_transform(K)
+
+    # pca = PCA(n_components=2)
+    # X_proj = pca.fit_transform(K)
+
+    pls = PLSRegression(n_components=2, scale=False)
+    pls.fit(K, _y)
+    X_proj = pls.x_scores_
+
+    clf = SVC(kernel="rbf")
+    param_grid = {"C": np.logspace(-2, 2, 20),
+                  "gamma": np.logspace(-2, 2, 20)}
+
+    cv = GridSearchCV(estimator=clf, param_grid=param_grid,
+                      n_jobs=3, cv=3, refit=True)
+    cv.fit(X_proj, _y)
+
+    clf = cv.best_estimator_
+    clf.probability=True
+    clf.fit(X_proj, _y)
+
+    h = .01
+    x_min, x_max = X_proj[:, 0].min() - 1, X_proj[:, 0].max() + 1
+    y_min, y_max = X_proj[:, 1].min() - 1, X_proj[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+    Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 0]
+    Z = Z.reshape(xx.shape)
+
+    sel = _y == s0
+    plt.scatter(X_proj[sel, 0], X_proj[sel, 1], c="r", marker="o",
+                label=le.inverse_transform([s0])[0])
+    plt.scatter(X_proj[~sel, 0], X_proj[~sel, 1], c="b", marker="^",
+                label=le.inverse_transform([s1])[0])
+    plt.contourf(xx, yy, Z, cmap=plt.cm.viridis, alpha=0.5,
+                 vmin=0, vmax=1)
     plt.colorbar()
+    plt.title("Separating Subjets by EEG Granger-Causality Graph")
+    plt.ylabel("PLS Projection $y$")
+    plt.xlabel("PLS Projection $x$")
+    plt.legend()
+    plt.savefig("../figures/logistic_regression_separation.png",
+                bbox_inches="tight", pad_inches=0)
+    plt.savefig("../figures/logistic_regression_separation.pdf",
+                bbox_inches="tight", pad_inches=0)
     plt.show()
 
-    # clf = SVC(kernel="poly", degree=4)
-    # param_grid = {"gamma": np.logspace(-2, 2, 25)}
-
-    # cv = RandomizedSearchCV(estimator=clf,
-    #                         param_distributions=param_grid,
-    #                         n_iter=1, n_jobs=1, cv=2)
-    # ss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
-    # train_ix, valid_ix = next(ss.split(X, y))
-    # X_valid, y_valid = X[valid_ix], y[valid_ix]
-    # X_train, y_train = X[train_ix], y[train_ix]
-    # cv.fit(X_train[::5], y_train[::5])
-
-    # plt.scatter(pls.x_scores_[:, 0], pls.x_scores_[:, 1],
-    #             alpha=0.5, c=y)
-    # plt.show()
-
-    # param_grid = {"n_estimators": [650],
-    #               "learning_rate": [0.055],
-    #               "base_estimator": [DecisionTreeClassifier(max_depth=1)]}
-    # cv = GridSearchCV(estimator=AdaBoostClassifier(),
-    #                   param_grid=param_grid,
-    #                   n_jobs=3, iid=True, cv=3,
-    #                   refit=True)
-    # cv.fit(X_train, y_train)
-
-    # # y_hat_valid = cv.predict(X_valid)
-    # # y_hat_valid = cv.fit(X_pca, y).predict(X_pca_valid)
-    # # clf = clf.fit(X_train[::5], y_train[::5])
-    # y_hat_valid = clf.predict(X_valid)
-    # acc_valid = np.mean(y_valid == y_hat_valid)
-    # print(acc_valid)
     return
 
 
-def main_Xy():
-    X, y = load_Xy_dataset()
+def logistic_regression_subject_pair(i=59, j=60, clf=None):
+    """
+    Compute and return the MCC distinguishing between
+    subjects i and j.  We also return the classifier we fit.
+    """
+    X, y, z = load_subject_Xyz()
+    le = LabelEncoder()
+    y = le.fit_transform(y)
 
-    xform = Pipeline(
-        steps=[("pca", KernelPCA(n_components=3,
-                                 kernel="rbf",
-                                 gamma=0.75,
-                                 eigen_solver="arpack",
-                                 random_state=0,
-                                 )),
-               ("power_transform", PowerTransformer(method="yeo-johnson",
-                                                    standardize=True))])
-    X_pca = xform.fit_transform(X)
-    D_pca = pd.DataFrame(X_pca)
-    D_pca["label"] = ["Alcoholic" if yi == 1 else "Control" for yi in y]
-    D_pca = D_pca[::5]
-    pp = sns.pairplot(D_pca, hue="label",
-                      vars=[c for c in D_pca.columns if c != "label"],
-                      plot_kws={"alpha": 0.25})
-    plt.show()
+    subjects = np.unique(y)
+    s0 = subjects[i]
+    s1 = subjects[j]
 
-    ss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
-    train_ix, valid_ix = next(ss.split(X, y))
-    X_valid, y_valid = X[valid_ix], y[valid_ix]
-    X_train, y_train = X[train_ix], y[train_ix]
+    sel = np.logical_or(y == s0, y == s1)
+    _y = y[sel]
+    _X = X[sel]
 
-    # pca = KernelPCA(n_components=6, kernel="rbf", gamma=0.75)
-    # X_pca = pca.fit_transform(X_train)
-    # # X_pca_valid = pca.transform()
-    # std = np.std(X_pca, axis=0)
-    # X_pca = X_pca / std
-    # X_pca = X_pca - np.mean(X_pca, axis=0)
-    # # x_pca_valid = X_pca_valid / std
+    if clf is None:
+        clf = Pipeline(
+            steps=[("kern", Nystroem(kernel="poly")),
+                   ("qt", QuantileTransformer(output_distribution="normal")),
+                   ("logistic", LogisticRegression(dual=False, solver="lbfgs",
+                                                   class_weight="balanced",
+                                                   multi_class="multinomial",
+                                                   tol=1e-3,
+                                                   max_iter=500, warm_start=True))])
+        param_grid = {"kern__gamma": np.linspace(0.2, 1.5, 20),
+                      "kern__degree": [3, 4, 5],
+                      "kern__coef0": [0.5, 1.0, 1.5],
+                      "kern__n_components": [30, 40, 50, 60],
+                      "logistic__C": np.logspace(-1, 1, 20),
+                      "logistic__penalty": ["l2"]}
 
-    # D_pca = pd.DataFrame(X_pca)
-    # D_pca["label"] = ["Alcoholic" if yi == 1 else "Control" for yi in y]
-    # pp = sns.pairplot(D_pca, hue="label",
-    #                   vars=[c for c in D_pca.columns if c != "label"],
-    #                   plot_kws={"alpha": 0.25})
-    # plt.show()
+        cv = RandomizedSearchCV(estimator=clf, param_distributions=param_grid,
+                                n_iter=75, n_jobs=3, cv=3, refit=True)
+        cv.fit(X_train, y_train)
+        final_clf = cv.best_estimator_
+    else:
+        final_clf = clf.fit(X_train, y_train)
 
-    # param_grid = {# "svm__C": np.linspace(1.0, 5.0, 250),
-    #               "svm__gamma": np.linspace(0.5, 1.5, 250),
-    #               "svm__C": np.linspace(1.0, 5.0, 250)}
-    #               # "svm__gamma": np.linspace(0.5, 1.5, 250),
-    #               # "pca__gamma": np.linspace(0.1, 1.5, 15)}
-    # cv = RandomizedSearchCV(estimator=clf,
-    #                         param_distributions=param_grid,
-    #                         n_jobs=6, iid=True, cv=3,
-    #                         refit=True, n_iter=15)
-    # cv = GridSearchCV(estimator=clf,
-    #                   param_grid=param_grid,
-    #                   n_jobs=3, iid=True, cv=3, refit=True
-    #                   )
-    # cv.fit(X_train, y_train)
-
-    # acc = []
-    # ssf = StratifiedShuffleSplit(n_splits=125, test_size=0.25, train_size=0.25)
-    # for train_ix, test_ix in ssf.split(X_pca, y):
-    #     X_train, y_train = X_pca[train_ix], y[train_ix]
-    #     cv.fit(X_train, y_train)
-    #     y_hat = cv.best_estimator_.predict(X_pca[test_ix])
-    #     acc.append(np.mean(y_hat == y[test_ix]))
-
-    # train_sizes = np.linspace(0.01, 0.5, 50)
-    # fig, ax = plot_learning_curve(
-    #     cv.best_estimator_,
-    #     "Learning Curves SVC (best estimator from 5-fold CV)",
-    #     X_pca, y, cv=10, train_sizes=train_sizes)
-    # ax.legend()
-    # # fig.savefig("../figures/svc_learning_curve.png")
-    # # fig.savefig("../figures/svc_learning_curve.pdf")
-    # plt.show()
-
-    param_grid = {"n_estimators": [650],
-                  "learning_rate": [0.055],
-                  "base_estimator": [DecisionTreeClassifier(max_depth=1)]}
-    cv = GridSearchCV(estimator=AdaBoostClassifier(),
-                      param_grid=param_grid,
-                      n_jobs=3, iid=True, cv=3,
-                      refit=True)
-
-    cv.fit(X_train, y_train)
-
-    y_hat_valid = cv.predict(X_valid)
-    # y_hat_valid = cv.fit(X_pca, y).predict(X_pca_valid)
-    # clf = clf.fit(X_train[::5], y_train[::5])
-    # y_hat_valid = clf.predict(X_valid)
-    acc_valid = np.mean(y_valid == y_hat_valid)
-    print(acc_valid)
-    return
-
-
-def main():
-    # dataset = load_dataset(avg_subjects=False)
-    # dataset = load_s2_dataset()
-
-    X = np.array(dataset["A"] + dataset["C"])
-    y = np.append(np.ones(len(dataset["A"])),
-                  np.zeros(len(dataset["C"])))
-    ss = StratifiedShuffleSplit(n_splits=1, test_size=0.5)
-    train_ix, valid_ix = next(ss.split(X, y))
-    X_valid, y_valid = X[valid_ix], y[valid_ix]
-    X, y = X[train_ix], y[train_ix]
-
-    K_rk_apx = 350
-    gk = GraphKernel(
-        kernel=[{"name": "weisfeiler_lehman", "niter": 15},
-                {"name": "subtree_wl"},
-                # {"name": "propagation"}
-                # {"name": "shortest_path", "with_labels": True}
-                ],
-        normalize=True,
-        Nystroem=K_rk_apx,
-        n_jobs=2)
-    # gk2 = GraphKernel(
-    #     kernel=[{"name": "random_walk",
-    #              "lamda": 0.5, "method_type": "baseline",
-    #              "with_labels": True
-    #              },
-    #             # {"name": "propagation"}
-    #             # {"name": "shortest_path", "with_labels": True}
-    #             ],
-    #     normalize=True,
-    #     Nystroem=K_rk_apx,
-    #     n_jobs=2)
-
-    K = gk.fit_transform(X)
-    # K2 = gk2.fit_transform(X)
-
-    # iso = Isomap(n_components=2, n_neighbors=5)
-    # K_iso = iso.fit_transform(K)
-    # plt.scatter(K_iso[:, 0], K_iso[:, 1], c=y)
-    # plt.show()
-
-    # tsne = TSNE(n_components=2)
-    # K_tsne = tsne.fit_transform(K)
-    # plt.scatter(K_tsne[:, 0], K_tsne[:, 1], c=y)
-    # plt.show()
-
-    param_grid = {"C": np.logspace(-1, 1, 25)}
-                  # "gamma": np.logspace(-6, 1, 35)}
-    cv = GridSearchCV(estimator=SVC(kernel="linear"),
-                      param_grid=param_grid,
-                      n_jobs=1, iid=True, cv=3,
-                      refit=True)
-    cv.fit(K, y)
-
-    plot_learning_curve(cv.best_estimator_, "Learning Curves SVC",
-                        K, y, cv=10)
-    plt.show()
-    K_valid = gk.transform(X_valid)
-    y_hat_valid = cv.predict(K_valid)
-    acc_valid = np.sum((y_valid == y_hat_valid) / len(y_valid))
-    print(acc_valid)
-    return
+    y_hat_valid = final_clf.predict(X_valid)
+    return matthews_corrcoef(y_valid, y_hat_valid), final_clf
 
 
 def load_Xy_dataset():
@@ -515,90 +400,11 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
     return fig, ax
 
 
-def test():
-    N = 4000
-    p = 0.4
-    N1 = int(p * N)
-    N2 = int((1 - p) * N)
+if __name__ == "__main__":
+    logistic_regression_clf()
 
-    n = 8
-    s = 1.75
-    L = np.random.normal(size=(n, 2 * n))
-    L = L @ L.T
-    X1 = np.random.normal(size=(N1, n)) @ L
-    X2 = s * np.random.normal(size=(N2, n)) @ L
-    X = np.vstack((X1, X2))
-    y = np.append(np.zeros(N1), np.ones(N2))
+    i, j = 0, 1
+    logistic_regression_subject_pair_visualization(i, j)
+    logistic_regression_subject_pair(i, j)
+    pass
 
-    # plt.scatter(X[:, 0], X[:, 1], c=y)
-    # plt.show()
-
-    # xform = Pipeline(
-    #     steps=[("pca", KernelPCA(n_components=4,
-    #                              kernel="rbf", gamma=0.75)),
-    #            ("power_transform", PowerTransformer(method="yeo-johnson",
-    #                                                 standardize=True))])
-    # X_xform = xform.fit_transform(X)
-    # plt.scatter(X_xform[:, 0], X_xform[:, 1], c=y, alpha=0.5)
-    # plt.show()
-
-    # clf = Pipeline(
-    #     steps=[("pca", KernelPCA(n_components=6,
-    #                              kernel="rbf")),
-    #            ("power_transform", PowerTransformer(method="yeo-johnson",
-    #                                                 standardize=True)),
-    #            ("qda", QuadraticDiscriminantAnalysis())
-    #            # ("svm", SVC(kernel="rbf"))
-    #     ])
-
-    clf = Pipeline(
-        steps=[("power_transform", PowerTransformer(method="yeo-johnson",
-                                                    standardize=True)),
-               ("dtc", AdaBoostClassifier(base_estimator=DecisionTreeClassifier(),
-                                          n_estimators=250))
-        ])
-
-    ss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
-    train_ix, valid_ix = next(ss.split(X, y))
-    X_valid, y_valid = X[valid_ix], y[valid_ix]
-    X_train, y_train = X[train_ix], y[train_ix]
-
-    # param_grid = {"svm__C": np.linspace(1.0, 5.0, 250),
-    #               "svm__gamma": np.linspace(0.5, 1.5, 250),
-    #               "pca__gamma": np.linspace(0.1, 1.5, 250)}
-    # param_grid = {"pca__gamma": np.linspace(0.65, 1.15, 25)}
-    #               # "knn__p": np.linspace(1.0, 5, 25)}
-    # cv = RandomizedSearchCV(estimator=clf,
-    #                         param_distributions=param_grid,
-    #                         n_jobs=1, iid=True, cv=3,
-    #                         refit=True, n_iter=10)
-    # cv = cv.fit(X_train, y_train)
-
-    clf.fit(X_train, y_train)
-    y_hat_valid = clf.predict(X_valid)
-
-    # y_hat_valid = cv.predict(X_valid)
-    acc_valid = np.mean(y_hat_valid == y_valid)
-    print(acc_valid)
-    return
-
-# GC = np.zeros((64, 64))
-# for g in dataset["C"]:
-#     GC = GC + g[0].toarray()
-
-# GC = GC / len(dataset["C"])
-
-# GA = np.zeros((64, 64))
-# for g in dataset["A"]:
-#     GA = GA + g[0].toarray()
-
-# GA = GA / len(dataset["A"])
-
-# fig, axes = plt.subplots(1, 2, sharex=True, sharey=True)
-# axes[0].imshow(GC)
-# axes[1].imshow(GA)
-# plt.show()
-
-# plt.imshow(GA - GC)
-# plt.colorbar()
-# plt.show()

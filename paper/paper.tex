@@ -12,6 +12,7 @@
 \usepackage{etex,etoolbox}
 \usepackage{hyperref}
 \usepackage{todonotes}
+\usepackage{fullpage}
 \bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
 % \usepackage{apxproof}
 
@@ -64,10 +65,15 @@
   We implement and detail finite-sample heuristics derived from our
   theory, and establish through simulation the efficiency gains (both
   statistical and computational) which can be obtained (in comparison
-  to LASSO algorithms) when structural assumptions are met.}
+  to LASSO algorithms) when structural assumptions are met.  Finally,
+  we provide an example application where we accurately discriminate
+  between subjects in an EEG study based purely on the
+  Granger-causality graphs inferred from data by our algorithms,
+  demonstrating that meaningful features are captured by the
+  Granger-causal graph topology.}
 
 \keywords{Granger-causality, causality graph, time series, vector autoregression,
-  LASSO, gene regulatory networks, network learning}
+  LASSO, gene regulatory networks, network learning, EEG}
 
 \paragraph{Acknowledgement}
 
@@ -172,7 +178,7 @@ intuitive notions of ``information flow'' through the graph.
 Moreover, we show that such graphs are perfectly recoverable with only
 \textit{pairwise} Granger-causality tests, which would otherwise suffer
 from serious confounding problems.  Our finite sample results are
-based on simulations, where we show promising results for these graphs
+based on simulations, where we show promising results for these graph
 topologies where our algorithm performs substantially better in our
 simulation setup than do competing LASSO algorithms, even for graphs
 that do not exactly satisfy our strongly-causal topology assumptions.
@@ -208,12 +214,11 @@ algorithm which is capable of comfortably handling hundreds or
 thousands of nodes on a single machine, as opposed to standard LASSO
 algorithms which do not take advantage of the special structure
 associated with stationary time series data.  In section
-\ref{sec:application} we develop an example application.  Concluding
-remarks on further open problems and extentions are provided in Section
-\ref{sec:conclusion}.  \todo{do an application}
-
-% \cite{yuan2006model} as well as local search hill
-% climbing (\hl{state here the results}).  
+\ref{sec:application} we develop an example application where a
+classifier is constructed to accurately discriminate between subjects
+in an EEG study based only on the Granger-causality graph topology
+inferred by our algorithms.  Concluding remarks on further open
+problems and extentions are provided in Section \ref{sec:conclusion}.
 
 \section{Theory}
 \label{sec:theory}
@@ -2254,6 +2259,7 @@ any analysis of this scheme for future work.
     \BlankLine
     \caption{Finite Sample Pairwise Graph Recovery (PWGC)}
     \label{alg:finite_pwgc}
+
     \Input{Estimates of pairwise Granger-causality statistics $F_{ij}$
       (eqn \ref{eqn:gc_statistics}).  Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}).  Hypothesis testing threshold $\delta$ chosen via the Benjamini-Hochberg criterion (Section \ref{sec:error_rate_control})}
     \Output{A strongly causal graph $\widehat{\gcg}$}
@@ -2519,7 +2525,7 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
 \end{remark}
 
 \begin{remark}[Error Measurement]
-  We we estimate the 1-step ahead prediction error by forming the variance matrix estimate
+  We estimate the 1-step ahead prediction error by forming the variance matrix estimate
 
   \begin{equation*}
     \widehat{\Sigma}_v \defeq \frac{1}{T_{\text{out}}} \sum_{t = 1}^{T_{\text{out}}} (x(t) - \widehat{x}(t))(x(t) - \widehat{x}(t))^\T
@@ -2637,20 +2643,71 @@ obtained from the ``EEG Database Data
 Set''\footnote{http://archive.ics.uci.edu/ml/datasets/EEG+Database}
 \cite{zhang1995event} on the UCI machine learning repository
 \cite{uci_mlr}.  This dataset contains 1 second long measurements of
-(64 channel) EEG signals from patients who are given visual stimuli
-and are broken into two groups: control and alcoholic.  The dataset
-then consists of
+(64 channel) EEG signals from patients who are given visual stimuli.
+The subjects in the study are labeled as being either ``control'' or
+``alcoholic'', however, we will ignore this label and instead focus on
+distinguishing between subjects based on the Granger-causality graphs
+inferred from the subject's trials.  Our reasoning is to focus on the
+underlying question: ``Does our PWGC algorithm uncover meaningful
+Granger-causal connections from EEG data?''.  Focusing only on the
+subject label allows us to answer this question without simultaneously
+grappeling with the physiological question of whether alcoholic
+subjects as a group have discernable differences in their EEG
+readings\footnote{Some exploratory analysis actually suggests
+  that alcoholic Granger-causality graphs are not substantively
+  different}, which is a stronger requirement than simply that there
+are meaningful distinctions between the EEG readings of subjects
+generally.
+
+The dataset consists of
 $\mathcal{D} = \{\big(x^{(i)}(t)\big)_{t = 1}^T, y^{(i)} \}_{i = 1}^N$
 where $T = 256$, $x^{(i)}(t) \in \R^{64}$,
-$y^{(i)} \in \{\text{A}, \text{C}\}$, and \todo{fill in N} $N = ????$.
+$y^{(i)} \in [N_{subjects}]$ (with $N_{subjects} = 119$), and
+$N = 10723$.  There are on average 90 trials for each subject,
+ranging between 30 and 119.
 
-We have constructed a simple pipeline for classifying each each trial
-as either ``A'' or ``C'' by first applying an iterative PWGC algorithm
-(see Algorithm \ref{alg:iterated_pwgc}) directly to the EEG data
-$x^{(i)}$ to obtain a Granger-causality graph $\widehat{G}^{(i)}$ then
-simply feeding the vectorized adjacency matrix of $\widehat{G}^{(i)}$
-through a Kernel PCA stage and then a Support Vector Machine with
+We have constructed a simple pipeline for discriminating between
+subjects by first applying an iterative PWGC algorithm (see Algorithm
+\ref{alg:iterated_pwgc}) directly to the EEG data $x^{(i)}$ to obtain
+a Granger-causality graph $\widehat{G}^{(i)}$.  We then feed the
+vectorized adjacency matrix of $\widehat{G}^{(i)}$ through a
+polynomial Kernel multinomial logistic regression model with
 parameters fit by cross validation.
+
+The iterated application of PWGC is an example of a heuristic by which
+graph estimates that aren't constrained to being strongly causal can
+be obtained.  Theoretical analysis of more sophisticated heuristics
+than PWGC (Algorithm \ref{alg:finite_pwgc}) is deferred to future work.
+
+\begin{algorithm}
+  \SetKwInOut{Input}{input}
+  \SetKwInOut{Output}{output}
+  \SetKwInOut{Initialize}{initialize}
+  \DontPrintSemicolon
+
+  \BlankLine
+  \caption{Iterated PWGC Heuristic}
+  \label{alg:iterated_pwgc}
+  
+  \Input{Data $x(t)$, maximum number of iterations $N$,
+    threshold $r \in (0, 1)$.}
+  \Output{Granger-causality graph estimate $\widehat{G}$ obtaind from
+    iterated application of PWGC Algorithm \ref{alg:finite_pwgc}}
+  \Initialize{$i = 1$, $\widehat{x}_0(t) \leftarrow x(t)$,
+    $\sigma_0 \leftarrow Var\ x(t)$}
+
+  \While{$i \le N$} {
+    Estimate $\VAR$ model via PWGC on $x_{i - 1}(t)$ to obtain $\widehat{x}_{i - 1}(t)$ and $\widehat{G}_{i - 1}$\\
+    $\epsilon_i(t) \leftarrow x_{i - 1}(t) - \widehat{x}_{i - 1}(t)$ \texttt{\# Compute residuals}\\
+    $\sigma_i^2 \leftarrow \text{MSE}\big(\epsilon_i(t)\big)$ \texttt{\# Compute MSE}\\
+    \If{$\sigma_i^2 > r \sigma_{i - 1}^2$}{
+      \texttt{break  \# Insignificant Improvement}
+    }
+    $i \leftarrow i + 1$
+  }
+  $\widehat{G} \leftarrow \bigcup_{i} \widehat{G}_{i}$ \texttt{\# Combine PWGC graph estimates}\\
+  \Return{$\widehat{G}$}
+\end{algorithm}
 
 While it is almost certainly possible to achieve much greater
 classification accuracy on this dataset by constructing a classifier
@@ -2658,7 +2715,7 @@ to act directly on $x^{(i)}(t)$, our purpose is to demonstrate that
 relevant information is being captured by the graph estimates
 $\widehat{G}^{(i)}$.
 
-Figures \ref{fig:ar_eeg_example} and \ref{fig:eeg_oos_eeror}
+Figures \ref{fig:ar_eeg_example} and \ref{fig:eeg_oos_error}
 illustrate the appropriateness of modelling $x(t)$ with $\VAR$ models,
 as opposed simply to a collection of $n$ unidimensional
 autoregressiive models.  The conclusion being that the
@@ -2677,15 +2734,61 @@ Granger-causality graph estimates are not purely spurious.
     \includegraphics[width=\linewidth]{eeg_oos_demonstration.pdf}
   \end{subfigure}
 
-  {\scriptsize Figure \ref{fig:ar_eeg_example} provides an example of an
-  autoregressive model fir via the Levinson-Durbin algorithm (choosing
-  the system order via the BIC) on a single EEG channel.  Figure
-  \ref{fig:eeg_oos_error} demonstrates the improvement of a single
-  $\VAR$ model over independent $\mathsf{AR}$ models.
+  {\scriptsize Figure \ref{fig:ar_eeg_example} provides an example of
+    an autoregressive model fir via the Levinson-Durbin algorithm
+    (choosing the system order via the BIC) on a single EEG channel.
+    Figure \ref{fig:eeg_oos_error} demonstrates the improvement of a
+    single $\VAR$ model over independent $\mathsf{AR}$ models,
+    providing evidence that intra-node edges inferred by PWGC are not
+    simply spurious.
 
   Out-of-Sample estimates are performed on data that were not used in
   fitting the models.}
+\end{figure}
 
+We provide the final results in Figure
+\ref{fig:logistic_regression_results} where the classification
+accuracy is quantified by the (multiclass) MCC of $\approx 0.20$ on a
+held out validation set consisting of $20\%$ of the data.  This MCC
+score exceeds by a modest margin the performance of randomly guessing,
+lending strong evidence to the assertion that PWGC successfully
+recovers some meaningful differences between the Granger-causality
+graphs of different subjects, particularly if we recall that there are
+generally fewer examples for each subject than there are subjects
+overall.  Moreover, distinguishing only between two particular
+subjects (as opposed to distinguishing between one subject and $118$
+other possibilities) is substantially easier -- an illustration is
+provided in Figure \ref{fig:logistic_regression_2pair} where we embed
+the data into the plane through supervised dimensionality reduction.
+In general, fitting a classifier between two subjects achieves an
+$MCC$ in excess of $0.6$ and up to $0.9$.
+
+\begin{figure}
+  \centering
+  \caption{Subject Classification from Granger-causality Graphs}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Distinguishing Individual Subjects}
+    \label{fig:logistic_regression_2pair}
+    \includegraphics[width=\linewidth]{logistic_regression_separation.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \caption{Complete Multiclass Classifier}
+    \label{fig:logistic_regression_results}
+    \includegraphics[width=\linewidth]{logistic_regression_confusion_matrix.pdf}
+
+    {\scriptsize }
+  \end{subfigure}
+
+  {\scriptsize Figure \ref{fig:logistic_regression_2pair} illustrates
+    discriminating between two particular subjects based on their
+    EEG Granger-causality graphs.  In this case $MCC = 0.75$ on held
+    out data.  Visualization is constructed by supervised
+    dimensionality reduction and is purely illustrative.
+
+    Figure \ref{fig:logistic_regression_results} provides the
+    row-normalized confusion matrix (computed on held out validation
+    data) of a multiclass logistic regression classifier used to
+    classify subjects based on their EEG Granger-causality graphs.  $MCC = 0.20$}
 
 \end{figure}
 
@@ -2699,13 +2802,19 @@ to establish conditions under which pairwise causality testing alone
 is sufficient for recovering a complete Granger-causality graph.
 Moreover, examples from the literature suggest that such topological
 assumptions may be reasonable in some applications and secondly, even
-when the strong-causality assumption is not met, we have provided some
-empirical evidence to suggest that our pairwise testing algorithm PWGC
-can still outperform the LASSO and adaLASSO, both of which are
-commonly employed in applications.  Application to more general graphs
-may also be within reach via an iterative graph building process,
-i.e. estimating a sequence of SCGs via PWGC applied to the residuals
-of the previous model.
+when the strong-causality assumption is not met, we have provided
+simulation evidence to suggest that our pairwise testing algorithm
+PWGC can still outperform the LASSO and adaLASSO, both of which are
+commonly employed in applications.  Application to inference of more
+general graphs may also be within reach via an iterative graph
+building process as suggested in Section \ref{sec:application}.
+
+Our application Section \ref{sec:application} provides strong evidence
+that PWGC is capable of uncovering meaningful features from networks
+of time series data by constructing a classifier which accurately
+discriminates between subjects in an EEG experiment based purely on
+the Granger-causality graph topology inferred by the iterated
+application of PWGC.
 
 We emphasize that the causality graph topology is one of the key
 defining features of time series analysis in comparison to standard
@@ -2723,9 +2832,10 @@ of \cite{barnett2015granger} has established the superiority of
 Granger-causality testing in state space models (as opposed to pure
 autoregressions) in many cases.  Combining this work with our PWGC
 algorithm (by modifying the approach described in Section
-\ref{sec:pairwise_hypothesis_testing}) therefore is likely to enable
-application to very large networks of time series data which are not
-well approximated by finite $\VAR(p)$ models.
+\ref{sec:pairwise_hypothesis_testing} to instead utilize state-space
+Granger-causality testing) therefore is likely to enable application
+to very large networks of time series data which are not well
+approximated by finite $\VAR(p)$ models.
 
 \clearpage
 \printbibliography
