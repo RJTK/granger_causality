@@ -17,6 +17,7 @@ from scipy.linalg import toeplitz, cho_solve, cho_factor
 from sklearn.linear_model import LassoLarsIC, LassoLarsCV, Lasso
 from sklearn.preprocessing import StandardScaler
 from spams import fistaFlat
+from ts_lasso.ts_lasso import fit_VAR
 
 from levinson import (lev_durb, whittle_lev_durb)
 
@@ -27,12 +28,14 @@ try:
     from .stat_util import benjamini_hochberg
     from .var_system import (attach_node_prop, add_self_loops,
                              remove_zero_filters, get_X,
-                             make_complete_digraph, attach_X)
+                             make_complete_digraph, attach_X,
+                             gcg_to_var)
 except ImportError:
     from stat_util import benjamini_hochberg
     from var_system import (attach_node_prop, add_self_loops,
                             remove_zero_filters, get_X,
-                            make_complete_digraph, attach_X)
+                            make_complete_digraph, attach_X,
+                            gcg_to_var)
 
 
 def estimate_b_lstsqr(X, y, ret_G=False, lmbda=np.inf):
@@ -803,9 +806,40 @@ def estimate_dense_graph(X, max_lag=10,
     _, n = X.shape
     G = make_complete_digraph(n)
     G = attach_X(G, X)
-    assert np.all(X == get_X(G))
 
     estimate_B(G, max_lag, copy_G=False, max_T=max_T, method=method)
+    G = remove_zero_filters(G, "b_hat(z)", copy_G=False)
+    return G
+
+
+def alasso_fista_estimate_dense_graph(X, max_lag=10, max_T=None, nu=1.25,
+                                      eps=1e-3, full_path=False):
+    T, n = X.shape
+    if max_T is None:
+        max_T = T
+
+    B, _, _, _ = fit_VAR(X[:max_T, :], max_lag, nu=nu, eps=eps,
+                         full_path=full_path)
+
+    G = make_complete_digraph(n)
+    G = attach_X(G, X)
+
+    for i in range(n):
+        for j in range(n):
+            b_hatz = B[:, i, j]
+            G[j][i]["b_hat(z)"] = b_hatz
+
+    if max_T < T:
+        p = len(B)
+        z0 = np.hstack([X[max_T - tau] for tau in range(1, p + 1)])
+        var_sys = gcg_to_var(G, filter_attr="b_hat(z)", assert_stable=False)
+        var_sys.reset(x_0=z0)
+        R = var_sys.compute_residuals(X[max_T:])
+        for i in G.nodes:
+            r = R[:, i]
+            G.nodes[i]["r"] = r
+            G.nodes[i]["sv^2_hat"] = np.var(r)
+
     G = remove_zero_filters(G, "b_hat(z)", copy_G=False)
     return G
 

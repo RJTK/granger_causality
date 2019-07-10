@@ -15,7 +15,7 @@ from var_system import (random_gnp_dag, drive_gcg, get_errors,
 from gc_methods import (compute_pairwise_gc, estimate_B, pw_scg,
                         estimate_graph, full_filter_estimator,
                         compute_covariances, compute_xi, fast_compute_xi,
-                        normalize_gc_score)
+                        normalize_gc_score, fast_compute_pairwise_gc)
 from draw_graphs import draw_graph_estimates
 from stat_util import benjamini_hochberg
 

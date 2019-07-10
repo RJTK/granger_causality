@@ -11,9 +11,9 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from plotting_helpers import COLOR1, COLOR2, plotting_model
 
 from matplotlib import rc as mpl_rc
-font = {"family" : "normal",
-        "weight" : "bold",
-        "size"   : 22}
+font = {"family": "normal",
+        "weight": "bold",
+        "size": 22}
 
 mpl_rc("font", **font)
 mpl_rc("text", usetex=True)  # TODO: Fix my fonts
@@ -23,7 +23,8 @@ from pwgc.var_system import (random_gnp_dag, drive_gcg, get_errors,
                              get_X, attach_node_prop, gcg_to_var)
 from pwgc.gc_methods import (compute_pairwise_gc, estimate_B, pw_scg,
                              estimate_graph, full_filter_estimator,
-                             compute_MCC_score, estimate_dense_graph)
+                             compute_MCC_score, estimate_dense_graph,
+                             alasso_fista_estimate_dense_graph)
 
 
 class TrackErrors:
@@ -126,7 +127,7 @@ def simple_lasso():
     return
 
 
-def lasso_mcc_comparison(showfig=False):
+def lasso_mcc_comparison(simulation_name, showfig=False, fista=False):
     np.random.seed(0)
     n_nodes, p_lags, p_max = 50, 5, 15
     alpha = 0.05
@@ -144,7 +145,6 @@ def lasso_mcc_comparison(showfig=False):
     random_dag_graph_q4 = lambda: random_gnp_dag(
         n_nodes, p_lags, pole_rad=0.75,
         edge_prob=edge_prob_q4)
-
 
     def make_test_data(T, graph_type="DAG"):
         sv2_true = 0.5 + np.random.exponential(0.5, size=n_nodes)
@@ -184,9 +184,12 @@ def lasso_mcc_comparison(showfig=False):
             G_hat_pwgc = estimate_graph(X[:T], G, max_lags=p_max,
                                         method="lstsqr", alpha=alpha,
                                         fast_mode=fast_mode, F_distr=True)
-            G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
-                                               max_T=T,
-                                               method="alasso")
+            if fista:
+                G_hat_lasso = alasso_fista_estimate_dense_graph(
+                    X, max_lag=p_max, max_T=T)
+            else:
+                G_hat_lasso = estimate_dense_graph(
+                    X, max_lag=p_max, max_T=T, method="alasso")
 
             errs_pwgc.update(G, G_hat_pwgc, sv2_true, N_iter, T_iter)
             errs_lasso.update(G, G_hat_lasso, sv2_true, N_iter, T_iter)
@@ -205,23 +208,18 @@ def lasso_mcc_comparison(showfig=False):
                      title=("MCC Comparison on $n = {}$ nodes"
                             "".format(n_nodes)),
                      lasso_title="Adaptive LASSO", show_results=showfig,
-                     save_file=["../figures/new_mcc_comparison001.pdf",
-                                "../figures/jpgs_pngs/new_mcc_comparison001.png"]
+                     save_file=["../figures/{}.pdf".format(simulation_name),
+                                "../figures/jpgs_pngs/{}.png".format(simulation_name)]
                     )
     return
 
 
-def lasso_comparison(simulation_name, graph_type, showfig=False):
+def lasso_comparison(simulation_name, graph_type, showfig=False, fista=False):
     np.random.seed(0)
-    n_nodes, p_lags, p_max = 50, 5, 15
+    n_nodes, p_lags, p_max = 50, 5, 5
     alpha, N_iters = 0.05, 2
 
-    # T_iters = list(map(int, np.logspace(2, 3, 20)))
-    # T_iters = list(map(int, np.linspace(30, 5000, 20)))
     T_iters = list(map(int, np.linspace(50, 5000, 200)))
-    # T_iters = [50 + 100 * k for k in range(1, 99)]
-    # T_iters = [50 + 40 * k for k in range(1, 21)]
-    # T_iters = [50 + 100 * k for k in range(1, 99, 1)]
     # T_iters = [20, 40, 80, 100, 150, 250, 500]
 
     # NOTE: We use only X[T:] to estimate the error
@@ -272,9 +270,12 @@ def lasso_comparison(simulation_name, graph_type, showfig=False):
                                         method="lstsqr", alpha=alpha,
                                         fast_mode=True, F_distr=False)
 
-            G_hat_lasso = estimate_dense_graph(X, max_lag=p_max,
-                                               max_T=T,
-                                               method="alasso")
+            if fista:
+                G_hat_lasso = alasso_fista_estimate_dense_graph(
+                    X, max_lag=p_max, max_T=T, eps=1e-3, full_path=False)
+            else:
+                G_hat_lasso = estimate_dense_graph(
+                    X, max_lag=p_max, max_T=T, method="alasso")
 
             errs_pwgc.update(G, G_hat_pwgc, sv2_true, N_iter, T_iter)
             errs_lasso.update(G, G_hat_lasso, sv2_true, N_iter, T_iter)
@@ -450,6 +451,8 @@ def plot_mcc_results(t, mcc_pwgc_scg, mcc_lasso_scg,
 
 
 if __name__ == "__main__":
-    lasso_comparison("lasso_comparison_scg_pmax15", "SCG")
-    lasso_comparison("lasso_comparison_dag_pmax15", "DAG")
-    lasso_mcc_comparison()
+    # lasso_comparison("lasso_comparison_scg_pmax15_fista", "SCG", fista=True)
+    # lasso_comparison("lasso_comparison_dag_pmax15_fista", "DAG", fista=True)
+    # lasso_mcc_comparison(
+    #     "lasso_mcc_comparison_fista", showfig=True, fista=True)
+    # pass

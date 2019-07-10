@@ -531,12 +531,32 @@ class VAR:
         # Output matrix to be returned
         Y = np.empty((T, n))
         for t in range(T):
-            y = np.dot(self._B, self._z) + u[t, :]  # Next output
+            y = self.estimate_next_step() + u[t, :]
             Y[t, :] = y
-            self._z = np.roll(self._z, n)  # Update system state
-            self._z[:n] = y
+            self.update_state(y)
         self.x = self._z[:n]  # System output
         return Y
+
+    def estimate_next_step(self):
+        return np.dot(self._B, self._z)
+
+    def update_state(self, x):
+        self._z = np.roll(self._z, self.n)
+        self._z[:self.n] = x
+        return
+
+    def compute_residuals(self, X):
+        T, n = X.shape
+        assert n == self.n
+
+        R = np.zeros((T, n))
+        for t in range(T):
+            x = X[t, :]
+            x_hat = self.estimate_next_step()
+            r = x - x_hat
+            R[t, :] = r
+            self.update_state(x)
+        return R
 
 
 def _symmetric_sum(A_list, k):
