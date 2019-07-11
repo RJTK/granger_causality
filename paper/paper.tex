@@ -11,8 +11,9 @@
 \usepackage{enumitem}
 \usepackage{etex,etoolbox}
 \usepackage{hyperref}
-\usepackage{todonotes}
 \usepackage{fullpage}
+\setlength{\marginparwidth}{2cm}
+\usepackage{todonotes}
 \bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
 % \usepackage{apxproof}
 
@@ -674,9 +675,7 @@ This statement is ultimately about the sparsity pattern in the Wold
 decomposition matrices $A(\tau)$ since
 $x_i(t) = \sum_{\tau = 0}^\infty \sum_{j = 1}^n A_{ij}(\tau)v_j(t -
 \tau)$.  The proposition states that if $j \not \in \anc{i}$ then
-$\A_{ij}(z) = 0$.
-
-\todo{Do we have $A_{ij}(z) \ne 0 \implies j \in \anc{i}$?}
+$\A_{ij}(z) = 0$.  
 
 % TODO: ???
 % , however the implication $j \in \anc{i} \implies \A_{ij}(z) \ne 0$ need not hold.
@@ -731,30 +730,29 @@ $\A_{ij}(z) = 0$.
   \end{equation*}
 
   where $(I - \B(z))^{-1} = \A(z)$ due to the uniqueness of
-  (\ref{eqn:wold}).  Since $\B(z)$ is stable, that is
-  $|\lambda_{\text{max}}(B(z))| < 1$, for every $|z| \le 1$ we have
+  (\ref{eqn:wold}).  Since $\B(z)$ is stable we have
 
   \begin{equation}
     \label{eqn:resolvant_inv}
-    (I - \B(z))^{-1} = \sum_{k = 0}^\infty \B(z)^k,
+    (I - \B(z))^{-1} = \sum_{k = 0}^\infty \B(z)^k.
   \end{equation}
 
-  where we can apply the Cayley-Hamilton theorem to write the infinite
-  sum of \eqref{eqn:resolvant_inv} in terms of \textit{finite} powers
-  of $\B$.
+  Invoking the Cayley-Hamilton theorem allows writing the infinite sum
+  of \eqref{eqn:resolvant_inv} in terms of \textit{finite} powers of
+  $\B$.
 
-  Let $S$ be a $0-1$ matrix containing the sparsity pattern of
-  $\B(z)$, from lemma \ref{lem:adj_matrix} $S$ is the transpose of the
-  adjacency matrix for $\gcg$ and hence $(S^k)_{ij}$ is non-zero if
-  and only if $j \in \gpn{k}{i}$, and therefore $\B(z)^k_{ij} = 0$ if
-  $j \not \in \gpn{k}{i}$.  Finally, since
-  $\anc{i} = \bigcup_{k = 1}^n\gpn{k}{i}$ we see that $\A_{ij}(z)$ is
-  zero if $j \not\in \anc{i}$.
+  Let $S$ be a matrix with elements in $\{0, 1\}$ which represents the
+  sparsity pattern of $\B(z)$, from lemma \ref{lem:adj_matrix} $S$ is
+  the transpose of the adjacency matrix for $\gcg$ and hence
+  $(S^k)_{ij}$ is non-zero if and only if $j \in \gpn{k}{i}$, and
+  therefore $\B(z)^k_{ij} = 0$ if $j \not \in \gpn{k}{i}$.  Finally,
+  since $\anc{i} = \bigcup_{k = 1}^n\gpn{k}{i}$ we see that
+  $\A_{ij}(z)$ is zero if $j \not\in \anc{i}$.
 
   Thence
 
   \begin{align*}
-    x_i(t) &= (I - \B(z))^{-1}v(t)\\
+    x_i(t) &= [(I - \B(z))^{-1}v(t)]_i\\
     &= \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
     &= \A_{ii}(z) v_i(t) + \sum_{\substack{j \in \anc{i} \\ j \ne i}} \A_{ij}(z) v_j(t)
   \end{align*}
@@ -779,15 +777,15 @@ conditional relations of $\gcg$.
 
 This notion is of interest for a variety of reasons.  From a purely
 conceptual standpoint, we will see how the notion can in some sense
-capture the idea of ``flow of information'' in the underlying graph.
-It may also be useful for reasoning about what the conditions under
-which \textit{unobserved} components of $x(t)$ may or may not
-interfere with inference in the actually observed components.
-Finally, motivated from a practical standpoint to analyze causation in
-large systems, we will seek to construct practical estimation
-procedures based purely on pairwise causality tests since the
-computation of such pairwise relations is somewhat easier.
-\todo{Reconsider this paragraph}
+capture the idea of ``flow of information'' in the underlying graph,
+in the sense that if $j \in \anc{i}$ we expect that $j \pwgc i$.  It
+may also be useful for reasoning about the conditions under which
+\textit{unobserved} components of $x(t)$ may or may not interfere with
+inference in the actually observed components.  Finally, motivated
+from a practical standpoint to analyze causation in large systems, we
+will seek to construct practical estimation procedures based purely on
+pairwise causality tests since the computation of such pairwise
+relations is somewhat easier.
 
 The following is a fundamental building block:
 
@@ -807,10 +805,10 @@ The following is a fundamental building block:
 \end{lemma}
 
 \begin{remark}
-  Note that $H_t^{(i)} \perp \H_t^{(j)}$ states that the
-  \textit{present} of $x_i(t)$ is uncorrelated with $x_j(t)$,
-  but we need not have $\H_t^{(i)} \perp \H_t^{(j)}$ since
-  $i \in \anc{j}$ is not excluded.
+  Note that $H_t^{(i)} \perp \H_t^{(j)}$ states that the \textit{present}
+  of $x_i(t)$ is uncorrelated with the whole history of $x_j(t)$, but
+  we need not have $\H_t^{(i)} \perp \H_t^{(j)}$ since $i \in \anc{j}$ is
+  not excluded.
 \end{remark}
 
 \begin{proof}
@@ -847,13 +845,13 @@ The following is a fundamental building block:
   $\E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)] = 0$.
 \end{proof}
 
-The previous proposition can be strengthened significantly for the
-case of Granger-causality.  Note that it is possible to have some
-$k \in \anc{i} \cap \anc{j}$ where still $j \npwgc i$, consider for example
-the three node graph $k \rightarrow i \rightarrow j$ where
-clearly $k \in \anc{i}\cap\anc{j}$ but $j \npwgc i$.  We must
-introduce the concept of a \textit{confounding} variable, which
-effectively eliminates the possibility presented in this example.
+The previous proposition can be strengthened significantly; notice
+that it is possible to have some $k \in \anc{i} \cap \anc{j}$ where still
+$j \npwgc i$, an example is furnished by the three node graph
+$k \rightarrow i \rightarrow j$ where clearly
+$k \in \anc{i}\cap\anc{j}$ but $j \npwgc i$.  We must introduce the concept
+of a \textit{confounding} variable, which effectively eliminates the
+possibility presented in this example.
 
 \begin{definition}[Confounder]
   A node $k$ will be referred to as a \textit{confounder} of nodes
@@ -907,7 +905,7 @@ effectively eliminates the possibility presented in this example.
     C_2(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} \ne \emptyset, k \ne i\}.
   \end{align*}
 
-  We notice that for any $u$ having the properties $a, b$ above, we
+  We notice that for any $u$ having the properties $(a), (b)$ above, we
   must have $C_2(u) = \emptyset$ since if $k \in C_2(u)$ then
   $\exists w \in \anc{i} \cap \anc{k}$ s.t. $i \not \in \anc{k}$ and
   therefore there must be a path $\gcgpath{w}{k} \rightarrow u$ which
@@ -956,15 +954,15 @@ effectively eliminates the possibility presented in this example.
     \inner{x_i(t)}{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1) - \linE{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
   \end{equation*}
 
-  which follows from Lemma \ref{lem:ancestor_uncorrelated}.
-  Finally, for $k \in C_1(j)$ the case $k = i$ is immediate (since the
-  error in estimating $\Phi(z)\B_{ii}(z)x_i(t)$ given
-  $\H_{t - 1}^{(i)}$ is $0$), so suppose $k \ne i$.  We know from
-  above that $k$ inherits the key properties referred to as $a, b$ and
-  therefore we can recursively expand $k$ in the same way as in
-  equation (\ref{eqn:xj_partition_expansion}).  Continuing this
-  recursion for each $k \in C_1(j)$ (where $k \ne i$) must eventually
-  terminate since $i \in \anc{k}$.
+  which follows from Lemma \ref{lem:ancestor_uncorrelated}.  Finally,
+  for $k \in C_1(j)$ the case $k = i$ is immediate (since the error in
+  estimating $\Phi(z)\B_{ii}(z)x_i(t)$ given $\H_{t - 1}^{(i)}$ is
+  $0$), so suppose $k \ne i$.  We know from above that $k$ inherits the
+  key properties referred to as $(a)$ and $(b)$ above and therefore we
+  can recursively expand $k$ in the same way as in equation
+  (\ref{eqn:xj_partition_expansion}).  Continuing this recursion for
+  each $k \in C_1(j)$ (where $k \ne i$) must eventually terminate since
+  $i \in \anc{k}$.
 \end{proof}
 
 An interesting corollary is the following:
@@ -1352,7 +1350,7 @@ surprisingly, not true in a general graph.
   Granger-causality does not suffer any difficulty with so-called
   ``colliders'', that is, the topology $i \rightarrow k \leftarrow j$
   will never result in $i \pwgc j$ or $j \pwgc i$.  This is evidently
-  an advantage of the \textit{temporal} nature of Granger -- there is
+  an advantage of the \textit{temporal} nature of Granger-causality -- there is
   no backwards causal flow along the edges of $\gcg$.
 \end{remark}
 
@@ -1391,8 +1389,7 @@ In section \ref{sec:strongly_causal_graphs} we obtained a converse to
 part $(a)$ of proposition \ref{prop:ancestor_properties} via the
 notion of a strongly causal graph topology.  In this section, we
 complete a converse by adding the additional requirement we refer to
-as ``persistence''.  This condition requires that each node maintains
-some ``memory'' of the past.
+as ``persistence''.
 
 \begin{definition}[Lag Function]
   Given a causal filter $\B(z) = \sum_{\tau = 0}^\infty b(\tau)z^{-\tau}$
@@ -1405,13 +1402,16 @@ some ``memory'' of the past.
 
   i.e. the ``first'' and ``last'' coefficients of the filter $\B(z)$,
   where $\tau_\infty(\B) \defeq \infty$ if the filter has an infinite
-  length.
+  length, and $\tau_0(\B) \defeq \infty$ if $\B(z) = 0$.
 \end{definition}
 
+This interpretation of the following persistence condition is that
+each node stores some ``memory'' of the past.
+
 \begin{definition}[Persistent]
-  We will say that a WSS process $x(t)$ with Granger-causality graph
-  $\gcg$ is \textit{persistent} if for every $i \in [n]$, every
-  $k \in \anc{i}$ we have $\tau_\infty(\A_{ik}) = \infty$.
+  We will say that the process $x(t)$ with Granger-causality graph
+  $\gcg$ is \textit{persistent} if for every $i \in [n]$ and every
+  $k \in \anc{i}$ we have $\tau_0(\A_{ik}) < \infty$ and $\tau_\infty(\A_{ik}) = \infty$.
 \end{definition}
 
 \begin{remark}
@@ -1423,9 +1423,11 @@ some ``memory'' of the past.
 
   Moreover, persistence is not the weakest condition necessary for the
   results of this section, the condition
-  $\tau_0(\A_{jk}) < \tau_\infty(\A_{ik})$ for each $i, j, k$ such
-  that $k \in \anc{i} \cap \anc{j}$ is enough.
-  \todo{Write something on the intuition here.}
+  $\tau_0(\A_{jk}) < \tau_\infty(\A_{ik})$ for each $i, j, k$ such that
+  $k \in \anc{i} \cap \anc{j}$ is enough.  The intuition being that nodes
+  $i$ and $j$ are not receiving temporally disjoint information from
+  $k$.
+
 \end{remark}
 
 \begin{example}
@@ -1478,7 +1480,7 @@ some ``memory'' of the past.
   \end{equation*}
 
   had a solution in $z$ for every $r \ge N$, where $V$ is an
-  $n \times n - 1$ full-rank matrix spanning the nullspace of $\beta$,
+  $n \times n - 1$ full-rank matrix whose columns span the nullspace of $\beta$,
   and $\bm{\lambda} = (\lambda_1, \ldots, \lambda_n)$. That is,
   iterates of $\Dg(\bm{\lambda})$ applied to $\bm{\lambda}$ would need to remain
   inside $\beta$'s nullspace.  This would imply that
@@ -1494,10 +1496,9 @@ some ``memory'' of the past.
   case unless every eigenvalue $(\lambda_1, \ldots, \lambda_n)$ were
   equal.
 
-  \todo{This may remain true for any matrix with at least 2 distinct eigenvalues}
-  We can conclude by stating that a $\VAR(1)$ system corresponding to
-  matrix $B$ is guaranteed to be persistent if $B$ is diagonalizable
-  and has more than $1$ distinct eigenvalue.
+  We see from this example that the collection of $\VAR(1)$ systems
+  which are not persistent are pathological, in the sense that their
+  system matrices have zero measure when viewed as a subset of $\R^{n^2}$.
 \end{example}
 
 \begin{lemma}
@@ -1550,7 +1551,7 @@ some ``memory'' of the past.
   \end{align*}
 \end{corollary}
 \begin{proof}
-  The final equivalence follows immediately from the Lemma.  For the first equivalence we have
+  The final equivalence follows immediately from Lemma \ref{lem:time_lag_cancellation}.  For the first equivalence we have
 
   \begin{align*}
     \linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} &= 0\ \forall \text{ strictly causal } F(z)\\
@@ -1569,8 +1570,9 @@ some ``memory'' of the past.
 
 \begin{proposition}
   \label{prop:persistence_converse}
-  Suppose $\gcg$ is a strongly causal DAG and that $x(t)$ is persistent, then if $k$
-  confounds $(i, j)$ we have $i \pwgc j$ and $j \pwgc i$.
+  Suppose $\gcg$ is a strongly causal DAG and that $x(t)$ is
+  persistent, then if there exists a $k$ which confounds $(i, j)$ we
+  have $i \pwgc j$ and $j \pwgc i$.
 \end{proposition}
 \begin{proof}
   We will show that $j \pwgc i$, the other being symmetric.  First
@@ -1610,20 +1612,21 @@ some ``memory'' of the past.
 
   \todo{This is clearly not immediately evident}
 
-  Evidently, this is $0$ for each $F$ if and only if
-  $\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} = 0$ and
-  $\inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} = 0$, which by
+  This is $0$ for every $F$ if and only if for all $F$ and
+  $\forall k \in \anc{i} \cap \anc{j}$ we have
+  $$\linE{F(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}} = 0$$ and
+  $$\inner{F(z)\A_{jk}(z)v_k(t)}{\A_{ik}(z)v_k(t)} = 0,$$ which by
   Corollary \ref{cor:time_lag_cancellation} occurs if and only if
-  $\tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})$, which is impossible
-  since in general $\tau_0(\A_{jk}) < \infty$ and for a persistent
-  system $\tau_\infty(\A_{ik}) = \infty$.
+  $\tau_0(\A_{jk}) \ge \tau_\infty(\A_{ik})$, which is impossible since by persistence
+  $\tau_0(\A_{jk}) < \infty$ and  $\tau_\infty(\A_{ik}) = \infty$.
 \end{proof}
 
 \subsection{Recovering $\gcg$ via Pairwise Tests}
 \label{sec:pairwise_algorithm}
 In this section we will show that if the $\gcg$ of a persistent
 process is a strongly causal DAG, then it is possible to recover
-$\gcg$ via pairwise tests alone.
+$\gcg$ via pairwise tests alone.  This is the main conclusion of the
+theoretical analysis in this paper.
 
 % This is an interesting fact in and
 % of itself, but also has some implications for applications since
@@ -1709,9 +1712,9 @@ pairwise edge (no edge, unidirectional, bidirectional).
   The algorithm proceeds first with the parentless nodes $1, 2$ on the
   initial iteration where the edge $(1, 3)$ is added to $E$.  On the
   next iteration, the edges $(3, 4), (2, 4), (3, 5)$ are added, and
-  the false edges $(1, 4), (1, 5)$ is excluded due to the paths
+  the false edges $(1, 4), (1, 5)$ are excluded due to the paths
   $1 \rightarrow 3 \rightarrow 4$ and $1 \rightarrow 3 \rightarrow 5$
-  already present.  Finally, edge $(4, 6)$ is added, and the false
+  already being present.  Finally, edge $(4, 6)$ is added, and the false
   $(1, 6), (3, 6), (2, 6)$ edges are similarly excluded due to the
   ordering of the inner loop.
   
@@ -2119,10 +2122,11 @@ residuals\footnote{This quantity is often denoted $\widehat{\sigma}$,
 and similarly for $\xi_{ij}(p)$.  We test $F_{ij}(p)$ against a
 $\chi^2(p)$ distribution.
 
-If disturbances are Gaussian, we will have the convergence
+If the estimation procedure is consistent, we will have the following
+convergence (in $\P$ or a.s.):
 
 \begin{equation}
-  F_{ij}(p) \overset{\P}{\rightarrow}
+  F_{ij}(p) \rightarrow
   \left\{
     \begin{array}{ll}
       0;\ x_j \npwgc x_i\\
@@ -2141,13 +2145,13 @@ $F_{kj} > F_{ji}$, thereby providing the same effect as proceeding
 backwards through $P_{k - r}$.
 \subsection{Model Order Selection}
 \label{sec:model_order_selection}
-There are a variety of methods to choose the filter orders $p_i$ and
-$p_j$ (see e.g. \cite{lutkepohl2005new}), but we will focus in
-particular on the Bayesian Information Criteria (BIC).  The BIC is
-substantially more conservative than the popular alternative Akaiake
-Information Criteria (the BIC is also asymptotically consistent), and
-since we are searching for \textit{sparse graphs}, we therefore prefer
-the BIC, where we seek to \textit{minimize} over $p$:
+There are a variety of methods to choose the filter order $p$ (see
+e.g. \cite{lutkepohl2005new}), but we will focus in particular on the
+Bayesian Information Criteria (BIC).  The BIC is substantially more
+conservative than the popular alternative Akaiake Information Criteria
+(the BIC is also asymptotically consistent), and since we are
+searching for \textit{sparse graphs}, we therefore prefer the BIC,
+where we seek to \textit{minimize} over $p$:
 
 \begin{equation}
   \label{eqn:bic}
@@ -2163,35 +2167,44 @@ bivariate errors $\xi_{ij}(p)$ and $\xi_{ji}(p)$ are the diagonal
 entries of $\widehat{\Sigma}_{ij}(p)$.
 
 We carry this out by a simple direct search on each model order
-between $0$ and some prescribed $p_\text{max}$.  In practice it is
+between $0$ and some prescribed $p_\text{max}$, resulting in a
+collection $p_{ij}$ of model order estimates.  In practice, it is
 sufficient to pick $p_\text{max}$ ad-hoc or via some simple heuristic
 e.g. plotting the sequence $BIC(p)$ over $p$, though it is not
-technically possible to guarantee that the optimal $p$ is chosen
-(since there can in general be arbitrarily long lags from one variable
-to another).
+technically possible to guarantee that the optimal $p$ is less than
+the chosen $p_\text{max}$ (since there can in general be arbitrarily
+long lags from one variable to another).
 
 \subsection{Efficient Model Estimation}
 \label{sec:efficient_model_estimation}
 In practice, the vast majority of computational effort involved in
 implementing our estimation algorithm is spent calculating the error
-estimates $\xi_i(p_i)$ and $\xi_{ij}(p_{ij})$.  This requires fitting
-a total of $n^2p_{\text{max}}$ autoregressive models, where the most
+estimates $\xi_i(p_i)$ and $\xi_{ij}(p_{ij})$.  This requires fitting a
+total of $n^2p_{\text{max}}$ autoregressive models, where the most
 naive algorithm (e.g. solving a least squares problem for each model)
 for this task will consume $O(n^2p_{\text{max}}^4T)$ time, it is
 possible to carry out this task in a much more modest
 $O(n^2p_{\text{max}}^2 ) + O(n^2p_{\text{max}}T)$ time via the
-autocorrelation method which deploys the following autocovariance
-estimates in the Yule-Walker equations:\footnote{The particular
-  indexing and normalization given in equation
-  \ref{eqn:covariance_estimate} is critical to ensure $\widehat{R}$ is
-  positive semidefinite.  The estimate can be viewed as calculating
-  the covariance sequence of a signal multiplied by a rectangular
-  window.}
+autocorrelation method
+\cite{hayes_statistical_digital_signal_processing} which substitutes
+the following autocovariance estimates in the Yule-Walker
+equations:\footnote{The particular indexing and normalization given in
+  equation \ref{eqn:covariance_estimate} is critical to ensure
+  $\widehat{R}$ is positive semidefinite.  The estimate can be viewed
+  as calculating the covariance sequence of a signal multiplied by a
+  rectangular window.}
 
 \begin{equation}
   \label{eqn:covariance_estimate}
   \widehat{R}_x(\tau) = \frac{1}{T}\sum_{t = \tau + 1}^T x(t) x(t - \tau)^\T;\ \tau = 0, \ldots, p_{\text{max}},
 \end{equation}
+
+It is imperative that the first index in the summation is $\tau + 1$, as
+opposed perhaps to $p_\text{max}$ and that the normalization is
+$1 / T$, as opposed perhaps to $1 / (T - p_\text{max})$, in order to
+guarantee that $\widehat{R}_x(\tau)$ forms a valid (i.e. positive
+definite) covariance sequence.  This results in some bias, however the
+dramatic computational speedup is worth it for our purposes.
 
 These covariance estimates constitute the $O(n^2p_{\text{max}}T)$
 operation.  Given these particular estimates, the variances $\xi_i(p)$
@@ -2211,21 +2224,21 @@ recursion\footnote{We have made use of standalone tailor made
   \textsf{github.com/RJTK/Levinson-Durbin-Recursion}.}
 \cite{whittle_generalized_levinson_durbin}.
 
-
 \subsection{Edge Probabilities and Error Rate Controls}
 \label{sec:error_rate_control}
 Denote $F_{ij}$ the Granger-causality statistic of equation
 \ref{eqn:gc_statistics} with model orders chosen by the methods of
-Section \ref{sec:model_order_selection}.  Note that this statistic is
-asymptotically $\chi^2(p_{ij})$ distributed, and denote by $G$ the
-cumulative distribution function thereof.  We will define the matrix
+Section \ref{sec:model_order_selection}.  We assume that this
+statistic is asymptotically $\chi^2(p_{ij})$ distributed (the
+disturbances are Gaussian), and denote by $G$ the cumulative
+distribution function thereof.  We will define the matrix
 
 \begin{equation}
   \label{eqn:edge_inclusion_probability}
   P_{ij} = G(F_{ij}),
 \end{equation}
 
-to be the matrix of pairwise edge inclusion probabilities.  This is
+to be the matrix of pairwise edge inclusion P-values.  This is
 motivated by the hypothesis test where the hypothesis $H_0$ will be
 rejected (and thence we will conclude that $x_j \pwgc x_i$) if
 $P_{ij} > 1 - \delta$.
@@ -2234,8 +2247,7 @@ The value $\delta$ can be chosen by a variety of methods, in our case
 we apply the Benjamini Hochberg criteria \cite{benjamini_hochberg}
 \cite{all_of_statistics} to control the false discovery rate of
 pairwise edges to a level $\alpha$ (where we generally take
-$\alpha = 0.05$).  Applying the extremely simple Bonferroni method is
-overly conservative for this application.
+$\alpha = 0.05$).
 
 \subsection{Finite Sample Recovery Algorithm}
 \label{sec:finite_pwgc}
@@ -2243,12 +2255,14 @@ overly conservative for this application.
 After the graph topology $\widehat{\gcg}$ has been estimated via
 Algorithm \ref{alg:finite_pwgc}, we refit the entire model with the
 specified sparsity pattern directly via ordinary least squares.
-Producing graph estimates which are not strongly causal can be
-achieved out by performing sequential estimates
-$\widehat{x}_1(t), \widehat{x}_2(t), \ldots$ by estimating a strongly
-causal graph with the residuals of the previous model as input, and
-then refitting on the estimated sparsity pattern.  However we reserve
-any analysis of this scheme for future work.
+
+We note that producing graph estimates which are not strongly causal
+can potentially be achieved by performing sequential estimates
+$\widehat{x}_1(t), \widehat{x}_2(t), \ldots$ estimating a strongly causal
+graph with the residuals of the previous model as input, and then
+refitting on the combined sparsity pattern.  We experiment with this
+heuristic in our example application of Section \ref{sec:application},
+but reserve theoretical analysis for future work.
 
 \begin{algorithm}
     \SetKwInOut{Input}{input}
@@ -2469,10 +2483,12 @@ collected in Figures \ref{fig:random_graph_topologies},
 \ref{fig:simulation_results_scaling_and_small_T},
 \ref{fig:simulation_results_dense}.
 
-We compare our results against the LASSO.  Motivated by scaling, we
-split the squared error term into separate terms, one for each group of
-incident edges on a node, and estimate the collection of $n$ incident
-filters $\big\{\B_{ij}(z)\big\}_{j = 1}^n$ that minimizes
+We compare our results against the adaptive LASSO
+\cite{adaptive_lasso_zou2006}, which outperformed substantially both
+the LASSO and the grouped LASSO.  Motivated by scaling, we split the
+squared error term into separate terms, one for each group of incident
+edges on a node, and estimate the collection of $n$ incident filters
+$\big\{\B_{ij}(z)\big\}_{j = 1}^n$ that minimizes
 $\xi_i^{\text{LASSO}}$ in the following:
 
 \begin{equation}
@@ -2559,6 +2575,7 @@ where we are choosing $\lambda$, the regularization parameters, via the BIC.
   \caption{PWGC vs adaLASSO (DAG, $q = \frac{2}{n}$)}
   \label{fig:simulation_results_comparison2}
   \includegraphics[width=0.95\textwidth]{new_lasso_comparison_dag_pmax15_simulation.pdf}
+
   {\scriptsize Figure \ref{fig:simulation_results_comparison2}
     provides results for systems which do not guarantee the
     assumptions of Theorem \ref{thm:scg_recovery}, though the graph
@@ -2619,10 +2636,15 @@ still markedly superior in the case of a more general DAG.  We would
 conjecture that a DAG having a similar degree of sparsity as an SCG is
 likely to be ``close'' to an SCG.  Figure
 \ref{fig:simulation_results_dense} illustrates the severe (expected)
-degradation in performance as the number of DAG edges increases while
+degradation in performance as the number of edges increases while
 the number of data samples $T$ remains fixed.  For larger values $q$
 in this plot, the number of edges in the graph is comparable to the
 number of data samples.
+
+We have also paid close attention to the performance of PWGC in the
+very small sample ($T \le 100$) regime (see Figure
+\ref{fig:small_T_comparison}), as this is the regime many applications
+must contend with.
 
 In regards scalability, we have observed that performing the $O(n^2)$
 pairwise Granger-causality calculations consumes the vast majority
@@ -2630,11 +2652,9 @@ pairwise Granger-causality calculations consumes the vast majority
 parallelizable, our algorithm also scales well with multiple cores or
 multiple machines.  Figure \ref{fig:simulation_results_scaling} is a
 demonstration of this scalability, where we are able to estimate
-graphs having over $1500$ nodes (over $2.25 \times 10 ^6$ possible
-edges) using only $T = 500$ data points, granted, an SCG on this many
-nodes is extremely sparse.  However, it is certainly possible to
-improve the scalability of the LASSO as applied to time series data by
-taking advantage of the block-Toeplitz covariance structure.
+graphs having over $1500$ nodes (over $2.25 \times 10 ^6$ possible edges)
+using only $T = 500$ data points, granted, an SCG on this many nodes
+is extremely sparse.
 
 \section{Application}
 \label{sec:application}
@@ -2646,18 +2666,18 @@ Set''\footnote{http://archive.ics.uci.edu/ml/datasets/EEG+Database}
 (64 channel) EEG signals from patients who are given visual stimuli.
 The subjects in the study are labeled as being either ``control'' or
 ``alcoholic'', however, we will ignore this label and instead focus on
-distinguishing between subjects based on the Granger-causality graphs
-inferred from the subject's trials.  Our reasoning is to focus on the
-underlying question: ``Does our PWGC algorithm uncover meaningful
-Granger-causal connections from EEG data?''.  Focusing only on the
-subject label allows us to answer this question without simultaneously
-grappeling with the physiological question of whether alcoholic
-subjects as a group have discernable differences in their EEG
-readings\footnote{Some exploratory analysis actually suggests
-  that alcoholic Granger-causality graphs are not substantively
-  different}, which is a stronger requirement than simply that there
-are meaningful distinctions between the EEG readings of subjects
-generally.
+\textit{distinguishing between subjects} based on the
+Granger-causality graphs inferred from the subject's trials.  Our
+reasoning is to focus on the underlying question: ``Does our PWGC
+algorithm uncover meaningful Granger-causal connections from EEG
+data?''.  Focusing only on the subject label allows us to answer this
+question without simultaneously grappeling with the physiological
+question of whether alcoholic subjects as a group have discernable
+differences in their EEG readings\footnote{Some exploratory analysis
+  actually suggests that alcoholic Granger-causality graphs are not
+  substantively different}, which is a stronger requirement than
+simply that there are meaningful distinctions between the EEG readings
+of subjects generally.
 
 The dataset consists of
 $\mathcal{D} = \{\big(x^{(i)}(t)\big)_{t = 1}^T, y^{(i)} \}_{i = 1}^N$
@@ -2674,10 +2694,13 @@ vectorized adjacency matrix of $\widehat{G}^{(i)}$ through a
 polynomial Kernel multinomial logistic regression model with
 parameters fit by cross validation.
 
-The iterated application of PWGC is an example of a heuristic by which
-graph estimates that aren't constrained to being strongly causal can
-be obtained.  Theoretical analysis of more sophisticated heuristics
-than PWGC (Algorithm \ref{alg:finite_pwgc}) is deferred to future work.
+\begin{remark}
+  The iterated application of PWGC is an example of a heuristic by
+  which graph estimates that aren't constrained to being strongly
+  causal can be obtained.  We defer to future work the theoretical
+  analysis of more sophisticated heuristics, or algorithms appropriate
+  for different topological assumptions.
+\end{remark}
 
 \begin{algorithm}
   \SetKwInOut{Input}{input}
@@ -2713,7 +2736,9 @@ While it is almost certainly possible to achieve much greater
 classification accuracy on this dataset by constructing a classifier
 to act directly on $x^{(i)}(t)$, our purpose is to demonstrate that
 relevant information is being captured by the graph estimates
-$\widehat{G}^{(i)}$.
+$\widehat{G}^{(i)}$.  That is, that the latent structure
+$\widehat{G}^{(i)}$ may provide scientifically relevant insights, as
+opposed to simply being a feature for classification tasks.
 
 Figures \ref{fig:ar_eeg_example} and \ref{fig:eeg_oos_error}
 illustrate the appropriateness of modelling $x(t)$ with $\VAR$ models,
@@ -2737,10 +2762,11 @@ Granger-causality graph estimates are not purely spurious.
   {\scriptsize Figure \ref{fig:ar_eeg_example} provides an example of
     an autoregressive model fir via the Levinson-Durbin algorithm
     (choosing the system order via the BIC) on a single EEG channel.
-    Figure \ref{fig:eeg_oos_error} demonstrates the improvement of a
-    single $\VAR$ model over independent $\mathsf{AR}$ models,
-    providing evidence that intra-node edges inferred by PWGC are not
-    simply spurious.
+    Linear autoregressive models appear qualitatively to be adequate
+    for this data.  Figure \ref{fig:eeg_oos_error} demonstrates the
+    improvement of a unified $\VAR$ model over independent
+    $\mathsf{AR}$ models, providing evidence that intra-node edges
+    inferred by PWGC are not simply spurious.
 
   Out-of-Sample estimates are performed on data that were not used in
   fitting the models.}
@@ -2748,20 +2774,21 @@ Granger-causality graph estimates are not purely spurious.
 
 We provide the final results in Figure
 \ref{fig:logistic_regression_results} where the classification
-accuracy is quantified by the (multiclass) MCC of $\approx 0.20$ on a
-held out validation set consisting of $20\%$ of the data.  This MCC
-score exceeds by a modest margin the performance of randomly guessing,
+accuracy is quantified by the (multiclass) MCC of $\approx 0.20$ on a held
+out validation set consisting of $20\%$ of the data.  This MCC score
+exceeds by a modest margin the performance of randomly guessing,
 lending strong evidence to the assertion that PWGC successfully
 recovers some meaningful differences between the Granger-causality
 graphs of different subjects, particularly if we recall that there are
 generally fewer examples for each subject than there are subjects
 overall.  Moreover, distinguishing only between two particular
 subjects (as opposed to distinguishing between one subject and $118$
-other possibilities) is substantially easier -- an illustration is
-provided in Figure \ref{fig:logistic_regression_2pair} where we embed
-the data into the plane through supervised dimensionality reduction.
-In general, fitting a classifier between two subjects achieves an
-$MCC$ in excess of $0.6$ and up to $0.9$.
+others) is substantially easier -- an illustration is provided in
+Figure \ref{fig:logistic_regression_2pair} where we embed the data
+into the plane through supervised dimensionality reduction.  In
+general, fitting a simple classifier between two subjects achieves an
+$MCC$ in excess of $0.6$ and up to $0.9$, even when the same
+hyperparameters are carried over for different pairs of subjects.
 
 \begin{figure}
   \centering
@@ -2809,12 +2836,12 @@ commonly employed in applications.  Application to inference of more
 general graphs may also be within reach via an iterative graph
 building process as suggested in Section \ref{sec:application}.
 
-Our application Section \ref{sec:application} provides strong evidence
-that PWGC is capable of uncovering meaningful features from networks
-of time series data by constructing a classifier which accurately
-discriminates between subjects in an EEG experiment based purely on
-the Granger-causality graph topology inferred by the iterated
-application of PWGC.
+Our application in Section \ref{sec:application} provides strong
+evidence that PWGC is capable of uncovering meaningful features from
+networks of time series data by constructing a classifier which
+accurately discriminates between subjects in an EEG experiment based
+purely on the Granger-causality graph topology inferred by the
+iterated application of PWGC.
 
 We emphasize that the causality graph topology is one of the key
 defining features of time series analysis in comparison to standard
