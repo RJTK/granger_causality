@@ -11,14 +11,14 @@ auto/
 *.bbl
 *.bcf
 *.blg
-*.pdf
 *.fmt
 *.csv
 *data/
 *ETFs/
 *Stocks/
-*.png
 *.jpg
 *.pyc
 *.dot
 *.prof
+*.png
+*.pdf
