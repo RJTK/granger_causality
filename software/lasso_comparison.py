@@ -26,6 +26,9 @@ from pwgc.gc_methods import (compute_pairwise_gc, estimate_B, pw_scg,
                              compute_MCC_score, estimate_dense_graph,
                              alasso_fista_estimate_dense_graph)
 
+# NOTE: The FISTA version does pretty badly.  I'm not yet entirely sure why,
+# NOTE: but I have a hard time trusting my own implementation.
+
 
 class TrackErrors:
     def __init__(self, N_iters, T_iters, n_nodes):
@@ -216,7 +219,7 @@ def lasso_mcc_comparison(simulation_name, showfig=False, fista=False):
 
 def lasso_comparison(simulation_name, graph_type, showfig=False, fista=False):
     np.random.seed(0)
-    n_nodes, p_lags, p_max = 50, 5, 5
+    n_nodes, p_lags, p_max = 50, 5, 15
     alpha, N_iters = 0.05, 2
 
     T_iters = list(map(int, np.linspace(50, 5000, 200)))
