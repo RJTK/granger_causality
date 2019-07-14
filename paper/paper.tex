@@ -787,62 +787,111 @@ will seek to construct practical estimation procedures based purely on
 pairwise causality tests since the computation of such pairwise
 relations is somewhat easier.
 
-The following is a fundamental building block:
+\begin{lemma}
+  \label{lem:separated_ancestor_uncorrelated}
+  Consider distinct nodes $i, j$ in a Granger-causality graph
+  $\gcg$.  If
+
+  \begin{enumerate}[label=(\alph*)]
+    \item{$j \not\in \anc{i}$ and $i \not\in \anc{j}$}
+    \item{$\anc{i}\cap\anc{j} = \emptyset$}
+  \end{enumerate}
+
+  then $\H_t^{(i)} \perp \H_t^{(j)}$, that is,
+  $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  Moreover,
+  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_{t - 1}^i} = 0$.
+\end{lemma}
+
+\begin{remark}
+  The possibility that there exist nodes sharing both $i$ and $j$ as
+  ancestors is not excluded, the point being that the temporal nature
+  of Granger-causality eliminates the problems caused by ``colliders''
+  (in the language of Pearl's causal calculus
+  \cite{pearl2009causality}) in static causal inference.
+\end{remark}
+
+\begin{proof}
+  We show directly that
+  $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  To this end,
+  fix $s, \tau \ge 0$, then by expanding with equation \eqref{eqn:ancestor_expansion} we have
+
+  \begin{align*}
+    \E x_i(t - s)x_j(t - \tau)
+    &= \E \big(\A_{ii}(z)v_i(t - s)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
+    &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\E[\big(\A_{ik}(z)v_k(t - s)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)]\\
+    &+ \sum_{\substack{k \in \anc{j} \\ k \ne j}}\E[\big(\A_{ii}(z)v_i(t - s)\big) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
+    &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\sum_{\substack{\ell \in \anc{j} \\ \ell \ne j}}\E[\big(\A_{ik}(z)v_k(t - s)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)].
+  \end{align*}
+  
+  Keeping in mind that $v(t)$ is an isotropic and uncorrelated
+  sequence we see that each of these above four terms are 0: the
+  first term since $i \ne j$, the second and third since
+  $j \not\in \anc{i}$ and $i \not\in \anc{j}$ and finally the fourth since
+  $\anc{i} \cap \anc{j} = \emptyset$.
+\end{proof}
+
+It is possible for components of $x(t)$ to be correlated at some time
+lags without resulting in pairwise causality:
 
 \begin{lemma}
   \label{lem:ancestor_uncorrelated}
-  Consider distinct nodes $i, j$ in a Granger-causality graph
-  $\gcg$.  Then, if
+  Consider distinct nodes $i, j$ in a Granger-causality graph $\gcg$.
+  If
 
   \begin{enumerate}[label=(\alph*)]
     \item{$j \not\in \anc{i}$}
     \item{$\anc{i}\cap\anc{j} = \emptyset$}
   \end{enumerate}
 
-  then $H_t^{(i)} \perp \H_t^{(j)}$, that is,
-  $\forall \tau \in \Z_+\ \E[x_i(t)x_j(t - \tau)] = 0$.  Moreover,
-  this implies that $j \npwgc i$.
+  then $j \npwgc i$.
 \end{lemma}
-
-\begin{remark}
-  Note that $H_t^{(i)} \perp \H_t^{(j)}$ states that the \textit{present}
-  of $x_i(t)$ is uncorrelated with the whole history of $x_j(t)$, but
-  we need not have $\H_t^{(i)} \perp \H_t^{(j)}$ since $i \in \anc{j}$ is
-  not excluded.
-\end{remark}
-
 \begin{proof}
-  We show directly that
-  $\forall \tau \in \Z_+\ \E[x_i(t)x_j(t - \tau)] = 0$.  To this end,
-  fix $\tau \ge 0$, then by expanding with equation \eqref{eqn:parent_expansion} we have
-
-  \begin{align*}
-    \E x_i(t)x_j(t - \tau) &= \E \big(\A_{ii}(z)v_i(t)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
-    &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\E[\big(\A_{ik}(z)v_k(t)\big)v_j(t - \tau)] + \sum_{\substack{k \in \anc{j} \\ k \ne j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
-    &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\sum_{\substack{\ell \in \anc{j} \\ \ell \ne j}}\E[\big(\A_{ik}(z)v_k(t)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)].
-  \end{align*}
-
-% (i.e.
-%   $\forall \tau \in \Z,\ k \ne \ell \Rightarrow \E v_k(t)v_\ell(t -
-%   \tau) = 0$ and
-%   $\forall \tau \in \Z\setminus\{0\}\ \E v_i(t)v_i(t - \tau) = 0$),
-  
-  Keeping in mind that $v(t)$ is an isotropic and uncorrelated
-  sequence we will see that each of these above four terms are 0.  The
-  first term since $i \ne j$.  The second since $j \not\in \anc{i}$.
-  The fourth since $\anc{i} \cap \anc{j} = \emptyset$.  For the third
-  term, it is possible that $i \in \anc{j}$, which requires more care.
-
-  Similarly as before we can see immediately that
+  By Theorem \ref{thm:granger_causality_equivalences} it suffices to show that
 
   \begin{equation*}
-    \sum_{\substack{k \in \anc{j} \\ k \ne j}}\E[v_i(t) \big(\A_{jk}(z) v_k(t - \tau)\big)] = \E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)].
+    \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}{x_j(t) - \linE{x_j(t)}{\H_{t - 1}^i}} = 0,
   \end{equation*}
 
-  However, $k \ne \ell \Rightarrow A_{k\ell}(0) = 0$ (i.e.
-  $\A(z) = I + A(1)z^{-1} + \cdots$) so $\A_{ji}(z)v_i(t - \tau)$ is
-  strictly earlier in time (for $\tau \ge 0$) than $v_i(t)$ and hence
-  $\E[v_i(t)\big(\A_{ji}(z)v_i(t - \tau)\big)] = 0$.
+  which by the orthogonality principle is equivalent to
+
+  \begin{equation}
+    \label{eqn:proof_inner0}
+    \inner{x_i(t)}{x_j(t) - \linE{x_j(t)}{\H_{t - 1}^i}} = 0.
+  \end{equation}
+
+  Define the disjoint sets
+
+  \begin{align*}
+    C_0(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, k \ne i \}\\
+    C_1(u) &= \{k \in \pa{u}\ |\ i \in \anc{k} \text{ or } k = i \}.
+  \end{align*}
+
+  We can then expand the parents of $j$ using Equation \ref{eqn:parent_expansion} as
+
+  \begin{equation*}
+    x_j(t) = v_j(t) + \sum_{k \in C_0(j)} B_{jk}(z) x_k(t) + \sum_{k \in C_1(j)} B_{jk}(z) x_k(t),
+  \end{equation*}
+
+  which when substituted into the left hand side of Equation
+  \ref{eqn:proof_inner0} results (by Lemma
+  \ref{lem:separated_ancestor_uncorrelated}) in
+
+  \begin{equation*}
+    \inner{x_i(t)}{\sum_{k \in C_1(j)} B_{jk}(z) x_k(t) - \sum_{k \in C_1(j)} \linE{B_{jk}(z) x_k(t)}{\H_{t - 1}^i}}.
+  \end{equation*}
+
+  We can continue this process recursively (i.e. split each
+  $k \in C_1(j)$ into $C_0(k)$ and $C_1(k)$) which must eventually
+  terminate with $C_1(u) = \{i\}$.  Therefore, there exists some
+  causal filter $\Phi(z)$ such that Equation \ref{eqn:proof_inner0} is
+  equivalent to
+
+  \begin{equation}
+    \label{eqn:proof_inner0}
+    \inner{x_i(t)}{\Phi(z)x_i(t) - \linE{\Phi(z)x_i(t)}{\H_{t - 1}^i}},
+  \end{equation}
+
+  which is $0$ since $\linE{\Phi(z)x_i(t)}{\H_{t - 1}^i} = \Phi(z)x_i(t)$.
 \end{proof}
 
 The previous proposition can be strengthened significantly; notice

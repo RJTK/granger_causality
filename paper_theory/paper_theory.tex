@@ -1,21 +1,44 @@
-\documentclass[12pt]{article}
+\documentclass{statsoc}
+% \usepackage{mathtime}
+\usepackage{ccfonts,eulervm}
+% \usepackage[T1]{fontenc}
+% \usepackage[lite]{belleek}
+% \fontfamily{belleek}
+% \usepackage[math]{belleek}
+% \usepackage{concretemath-fonts}
+
+% ---------------------------------------------------------------------------------------------------------------------------------
+% The statsoc style file is broken?
+% I have copied this code straight from stack overflow
+% https://tex.stackexchange.com/questions/351768/problem-with-statsoc-class-and-pdflatex
+\usepackage{geometry}
+
+\geometry{
+  textwidth=33pc,
+  textheight=\dimexpr48\baselineskip+\topskip\relax,
+  marginparsep=11pt,
+  marginparwidth=107pt,
+  footnotesep=6.65pt,
+  headheight=9pt,
+  headsep=9pt,
+  footskip=30pt,
+}
+% ---------------------------------------------------------------------------------------------------------------------------------
+
+% \usepackage{natbib}
+\bibliographystyle{chicago}
 
 % TODO: Are we, in this setting, immune to confounders?  We are removing
 %       all bi-directional edges, so it seems likely that we are?  Can we state
 %       any theorem about this?
 
 %% bibliography stuff -- this needs come before the preamble inclusion
-\usepackage[backend=bibtex,sorting=none]{biblatex}
 \usepackage{enumitem}
 \usepackage{etex,etoolbox}
 \usepackage{hyperref}
 \usepackage{fullpage}
 \setlength{\marginparwidth}{2cm}
 \usepackage{todonotes}
-\bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
-% \usepackage{apxproof}
-
-% \bibliography{\string~global_bib.bib}
 
 \def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
 \def\ngc{\overset{\text{GC}}{\nrightarrow}}  % Negated Granger causality arrow
@@ -40,19 +63,108 @@
 \newcommand{\dist}[2]{\mathsf{d}(#1, #2)}  % Distance between things
 \newcommand{\gcgpath}[2]{#1 \rightarrow \cdots \rightarrow #2}  % A shorter path command
 
-\input{\string~/Documents/academics/global_academics/latex_preamble}
-% \input{\string~latex_preamble}
+% \usepackage{fullpage}
+\usepackage{framed}
+
+% Figures
+\usepackage{graphicx}
+\usepackage{caption}  % This is not recommended?
+\usepackage{subcaption}
+% \usepackage{wrapfig}
+% \usepackage{svg}
+
+% Math packages, theorem definitions and numbering
+\usepackage{amsmath}
+\usepackage{amssymb}
+% \usepackage{amsthm}
+% \usepackage{mathrsfs} % Fancy scripted font
+% \usepackage{bm}  % Bold math
+
+% Misc packages
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+\usepackage{algorithm2e} %{algorithm} environment
+\usepackage{soul}  % \hl highlighting
+\usepackage{color}
+\usepackage{mathtools}  % For my \ceil function
+
+% Theorems (with italics)
+% \theoremstyle{plain}  % Style definition removes italics
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+
+% \theoremstyle{definition}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\newtheorem{assumptions}{Assumptions}
+
+% keywords
+\providecommand{\keywords}[1]{\textbf{\textit{Keywords---}} #1}
+
+% General
+\def\defeq{\overset{\Delta}{=}}  % Equal with triangle
+\def\cl{\mathsf{cl\ }}  % Closure
+\newcommand{\sgn}[1]{\mathsf{sgn}(#1)}  % sign function
+
+% Calculus
+\def\d{\mathsf{d}}  % Differential operator
+
+% Functions
+\def\ln{\mathsf{ln\ }}  % Natural logarithm
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}  % Ceiling
+
+% Probability
+\def\H{\mathcal{H}}  % Hilbert space
+\def\E{\mathbb{E}}  % Expectation
+\def\Var{\text{Var}}  % Variance
+\def\P{\mathbb{P}}  % Probability Measure
+\def\F{\mathcal{F}}  % A sigma algebra
+\def\sX{\mathcal{X}}  % Another sigma algebra
+\def\KL{\mathbf{D}_{KL}}  % KL divergence
+\def\bF{\mathbf{F}}  % Whole F-meas space
+
+% Standard sets
+\def\Z{\mathbb{Z}}  % Set of integers
+\def\R{\mathbb{R}}  % Set of real numbers
+\def\C{\mathbb{C}}  % Set of complex numbers
+\def\N{\mathbb{N}}  % Set of natural numbers
+\def\ball{\mathbb{B}}  % Open ball
+\def\clball{\overline{\ball}}  % Closed ball
+
+% Linear algebra
+\def\rk{\mathsf{rk }}  % The rank
+\def\tr{\mathsf{tr }}  % The trace
+\def\T{\mathsf{T}}  % Transpose notation
+\def\c{\mathsf{c}}  % complement
+\def\dg{\mathsf{dg }}   %  Diagonal vector of a matrix
+\def\Dg{\mathsf{Dg }}   %  Diagonal matrix from a vector
+\def\ind{\mathbf{1}}  % Ones vector or indicator
+\def\matvec{\textbf{vec}}  % Vector operator
+\def\<{\langle}  % < Inner product
+\def\>{\rangle}  % > Inner product
+\newcommand{\inner}[2]{\langle #1, #2 \rangle}  % Inner product
+\newcommand{\innerT}[2]{#1^\T #2}  % Inner product for finite vectors
 
 \graphicspath{{../figures/}}
 
-\title{Graph Topological Aspects of Granger Causal Network Learning }
-\author{R. J. Kinnear \\
-  \small\href{mailto:ryan@kinnear.ca}{ryan@kinnear.ca} \\
-  \small\url{https://github.com/RJTK} \and R. R. Mazumdar \\
-  \small\href{mailto:mazum@uwaterloo.ca}{mazum@uwaterloo.ca} }
+\title{Graph Topological Aspects of Granger Causal Network Learning}
+\author[Author 1 {\it et al.}]{R. J. Kinnear}
+\address{
+  University of Waterloo,
+  Waterloo,
+  Canada.}
+\email{Ryan@Kinnear.ca}
+
+\author{R. R. Mazumdar}
+\address{
+  University of Waterloo,
+  Waterloo,
+  Canada.}
 
 \begin{document}
-\maketitle
+
 \abstract{We study Granger-causality in the context of wide-sense
   stationary time series, where our focus is on the topological
   aspects of the underlying causality graph.  We establish sufficient
@@ -73,7 +185,7 @@ We acknowledge the support of the Natural Sciences and Engineering Research Coun
 \clearpage
 
 % \tableofcontents
-% \clearpage
+\clearpage
 
 \section{Introduction and Review}
 \label{sec:introduction}
@@ -556,7 +668,7 @@ inference in the actually observed components.  Finally, motivated
 from a practical standpoint to analyze causation in large systems,
 practical estimation procedures based purely on pairwise causality
 tests are of interest since the computation of such pairwise relations
-is substantially easier..
+is substantially easier.
 
 \begin{lemma}
   \label{lem:separated_ancestor_uncorrelated}
@@ -795,88 +907,86 @@ It seems reasonable to expect a converse of proposition
 \ref{prop:ancestor_properties} to hold, i.e.
 $j \in \anc{i} \Rightarrow j \pwgc i$.  Unfortunately, this is not the
 case in general, as different paths through $\gcg$ can lead to
-cancellation (see example \ref{ex:diamond_cancellation}).  In fact, we
-do not even have $j \in \pa{i} \Rightarrow j \pwgc i$ (see example
-\ref{ex:lag_cancellation}).
+cancellation (see Figure \ref{fig:diamond_cancellation}).  In fact, we
+do not even have $j \in \pa{i} \Rightarrow j \pwgc i$ (see Figure
+\ref{fig:lag_cancellation}).
 
-\begin{example}
-  \label{ex:diamond_cancellation}
-  Firstly, on $n = 4$ nodes, ``diamond'' shapes can lead to cancellation on paths of length 2:
+% \begin{example}
+%   \label{ex:diamond_cancellation}
+%   Firstly, on $n = 4$ nodes, ``diamond'' shapes can lead to cancellation on paths of length 2:
 
-\begin{equation*}
-  x(t) =
-  \left[
-    \begin{array}{cccc}
-      0 & 0 & 0 & 0\\
-      a & 0 & 0 & 0\\
-      -a & 0 & 0 & 0\\
-      0 & 1 & 1 & 0\\
-    \end{array}
-  \right] x(t - 1) + v(t),
-\end{equation*}
+% \begin{equation*}
+%   x(t) =
+%   \left[
+%     \begin{array}{cccc}
+%       0 & 0 & 0 & 0\\
+%       a & 0 & 0 & 0\\
+%       -a & 0 & 0 & 0\\
+%       0 & 1 & 1 & 0\\
+%     \end{array}
+%   \right] x(t - 1) + v(t),
+% \end{equation*}
 
-with $\E v(t) = 0,\ \E v(t)v(t - \tau)^\T = \delta_\tau I$.
+% with $\E v(t) = 0,\ \E v(t)v(t - \tau)^\T = \delta_\tau I$.
 
-By directly calculating
+% By directly calculating
 
-\begin{align*}
-  x_4(t) &= x_2(t - 1) + x_3(t - 1) + v_4(t)\\
-         &= ax_1(t - 2) + av_2(t - 1) - ax_1(t - 2) -av_3(t - 1) + v_4(t)\\
-         &= a(v_2(t - 1) - v_3(t - 1)) + v_4(t),
-\end{align*}
+% \begin{align*}
+%   x_4(t) &= x_2(t - 1) + x_3(t - 1) + v_4(t)\\
+%          &= ax_1(t - 2) + av_2(t - 1) - ax_1(t - 2) -av_3(t - 1) + v_4(t)\\
+%          &= a(v_2(t - 1) - v_3(t - 1)) + v_4(t),
+% \end{align*}
 
-we see that, since $v(t)$ is isotropic white noise, $1 \npwgc 4$.  The problem here is that there are multiple paths from $x_1$ to $x_4$.
-\end{example}
+% we see that, since $v(t)$ is isotropic white noise, $1 \npwgc 4$.  The problem here is that there are multiple paths from $x_1$ to $x_4$.
+% \end{example}
 
 \begin{figure}
   \centering
-  \begin{subfigure}[b]{0.45\textwidth}
+  \begin{subfigure}[b]{0.35\textwidth}
     \includegraphics[width=\linewidth]{example1.pdf}
-    \caption{Graph Corresponding to Example \ref{ex:diamond_cancellation}}
+    \caption{Example multiple path cancellation: $j \in \anc{i} \nRightarrow j \pwgc i$}
     \label{fig:diamond_cancellation}
-    \centering{$j \in \anc{i} \nRightarrow j \pwgc i$}
   \end{subfigure}
-  \begin{subfigure}[b]{0.45\textwidth}
+  \begin{subfigure}[b]{0.35\textwidth}
     \includegraphics[width=\linewidth]{example2.pdf}
-    \caption{Graph Corresponding to Example \ref{ex:lag_cancellation}}
+    \caption{Example cancellation from time lag: $j \in \pa{i} \nRightarrow j \pwgc i$}
     \label{fig:lag_cancellation}
-    \centering{$j \in \pa{i} \nRightarrow j \pwgc i$}
   \end{subfigure}
 \end{figure}
 
-\begin{example}
-  \label{ex:lag_cancellation}
-  A second example on $n = 3$ nodes is also worth examining, in this case
-  cancellation is a result of differing time lags.
+% \begin{example}
+%   \label{ex:lag_cancellation}
+%   A second example on $n = 3$ nodes is also worth examining, in this case
+%   cancellation is a result of differing time lags.
 
-\begin{equation*}
-  x(t) =
-  \left[
-    \begin{array}{ccc}
-      0 & 0 & 0\\
-      -a & 0 & 0\\
-      0 & 1 & 0\\
-    \end{array}
-  \right] x(t - 1) +
-  \left[
-    \begin{array}{ccc}
-      0 & 0 & 0\\
-      0 & 0 & 0\\
-      a & 0 & 0\\
-    \end{array}
-  \right] x(t - 2) + v(t)
-\end{equation*}
+% \begin{equation*}
+%   x(t) =
+%   \left[
+%     \begin{array}{ccc}
+%       0 & 0 & 0\\
+%       -a & 0 & 0\\
+%       0 & 1 & 0\\
+%     \end{array}
+%   \right] x(t - 1) +
+%   \left[
+%     \begin{array}{ccc}
+%       0 & 0 & 0\\
+%       0 & 0 & 0\\
+%       a & 0 & 0\\
+%     \end{array}
+%   \right] x(t - 2) + v(t)
+% \end{equation*}
 
-Then
+% Then
 
-\begin{align*}
-  x_2(t) &= v_2(t) - ax_1(t - 1)\\
-  x_3(t) &= v_3(t) + x_2(t - 1) + ax_1(t - 2)\\
-  \Rightarrow x_3(t) &= v_2(t - 1) + v_3(t),
-\end{align*}
+% \begin{align*}
+%   x_2(t) &= v_2(t) - ax_1(t - 1)\\
+%   x_3(t) &= v_3(t) + x_2(t - 1) + ax_1(t - 2)\\
+%   \Rightarrow x_3(t) &= v_2(t - 1) + v_3(t),
+% \end{align*}
 
-and again $1 \npwgc 3$.
-\end{example}
+% and again $1 \npwgc 3$.
+% \end{example}
 
 \subsection{Strongly Causal Graphs}
 \label{sec:strongly_causal_graphs}
@@ -1717,8 +1827,8 @@ Due to constraints on space, we report upon details for practical
 finite sample implementation as well as more extensive simulation
 results and an application to EEG data elsewhere \todo{where?}.
 
-\clearpage
-\printbibliography
+% \bibliography{\string~global_bib.bib}
+\bibliography{\string~/Documents/academics/global_academics/global_bib}
 \end{document}
 
 %%% Local Variables:
