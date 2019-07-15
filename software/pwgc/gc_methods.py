@@ -939,6 +939,12 @@ def compute_MCC_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
     return mcc
 
 
+def compute_fdr_score(N_edges, N_hat_edges, N_intersect_edges, n_nodes):
+    TP, TN, FP, FN = compute_tp_tn(N_edges, N_hat_edges, N_intersect_edges,
+                                   n_nodes)
+    return FP / (TP + FP)
+
+
 def _compute_mcc(TP, TN, FP, FN):
     mcc = (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) *
                                         (TN + FP) * (TN + FN))
