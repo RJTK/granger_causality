@@ -88,6 +88,12 @@ def _estimate_b_lasso(G, X, y):
     return w
 
 
+n, p = 1000 + int(1e4), int(1e4)
+b = np.random.normal(size=p) * np.random.binomial(1, 0.2, size=p)
+X = np.random.normal(size=(n, p))
+y = X @ b + 0.1 * np.random.randn(n)
+
+
 def _standardize_X(f):
     def _f(X, *args, **kwargs):
         _X = X - np.mean(X, axis=0)[None, :]
@@ -567,7 +573,7 @@ def _par_fast_compute_pairwise_gc(n, T, R, k_cores=2):
 
 # TODO: P_j should be an n x n array
 # TODO: Tune alpha by Benjamini Hochberg criterion
-def pw_scg(F, P_edge, alpha):
+def pw_scg(F, P_edge, alpha, eliminate_bidirectional=False):
     """
     Graph recovery heuristic
 
@@ -635,6 +641,7 @@ def pw_scg(F, P_edge, alpha):
 
     n = F.shape[0]
     S = set(range(n))
+
     # Larger value means more confident about an edge
     P_edge[P_edge < 1 - alpha] = 0
 
@@ -644,8 +651,15 @@ def pw_scg(F, P_edge, alpha):
 
     # ------------- Initialization -------------
     # Set of candidate edges
-    W_set = {(i, j) for (i, j) in product(S, S)
-             if (F[j, i] >= F[i, j] and P_edge[j, i] > 0)}
+    if eliminate_bidirectional:
+        W_set = {(i, j) for (i, j) in product(S, S)
+                 if (F[j, i] >= F[i, j] and
+                     P_edge[j, i] > 0 and
+                     P_edge[i, j] == 0)}
+    else:
+        W_set = {(i, j) for (i, j) in product(S, S)
+                 if (F[j, i] >= F[i, j] and
+                     P_edge[j, i] > 0)}
 
     # Predecessor edges of a node, i.e. W[i] = {j | (j, i) \in W}
     W_pred = {i: [j for j in S if (j, i) in W_set]
@@ -799,16 +813,20 @@ def get_residual_graph(G_hat):
     return G_hat
 
 
-def estimate_dense_graph(X, max_lag=10,
-                         max_T=None, method="lasso"):
+def estimate_dense_graph(X, max_lag=10, max_T=None, method="lasso",
+                         post_ols=False):
     # TODO: Replace this with ts_lasso
 
     _, n = X.shape
     G = make_complete_digraph(n)
     G = attach_X(G, X)
 
-    estimate_B(G, max_lag, copy_G=False, max_T=max_T, method=method)
+    G = estimate_B(G, max_lag, copy_G=False, max_T=max_T, method=method)
     G = remove_zero_filters(G, "b_hat(z)", copy_G=False)
+    if post_ols:
+        # Uses the LASSO scheme only for model selection
+        # and then refits the whole thing with OLS.  
+        G = estimate_B(G, max_lag, copy_G=False, max_T=max_T, method="lstsqr")
     return G
 
 

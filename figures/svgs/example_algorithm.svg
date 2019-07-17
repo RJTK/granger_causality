@@ -158,29 +158,6 @@
        apply_no_weight="true"
        apply_with_weight="true"
        only_selected="false" />
-    <radialGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient11137"
-       id="radialGradient11139"
-       cx="87.180206"
-       cy="160.2104"
-       fx="87.180206"
-       fy="160.2104"
-       r="19.182291"
-       gradientTransform="matrix(1,0,0,1.3068966,19.826035,-81.069065)"
-       gradientUnits="userSpaceOnUse" />
-    <linearGradient
-       inkscape:collect="always"
-       id="linearGradient11137">
-      <stop
-         style="stop-color:#000000;stop-opacity:1;"
-         offset="0"
-         id="stop11133" />
-      <stop
-         style="stop-color:#000000;stop-opacity:0;"
-         offset="1"
-         id="stop11135" />
-    </linearGradient>
     <marker
        inkscape:stockid="Arrow2Mend"
        orient="auto"
@@ -447,6 +424,29 @@
        apply_no_weight="true"
        apply_with_weight="true"
        only_selected="false" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient11137"
+       id="radialGradient11139"
+       cx="87.180206"
+       cy="160.2104"
+       fx="87.180206"
+       fy="160.2104"
+       r="19.182291"
+       gradientTransform="matrix(0.82203747,0,0,0.90676533,35.490844,-17.738863)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient11137">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop11133" />
+      <stop
+         style="stop-color:#000000;stop-opacity:0;"
+         offset="1"
+         id="stop11135" />
+    </linearGradient>
   </defs>
   <sodipodi:namedview
      id="base"
@@ -455,9 +455,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="5.6568542"
-     inkscape:cx="396.46393"
-     inkscape:cy="637.90615"
+     inkscape:zoom="4"
+     inkscape:cx="422.01241"
+     inkscape:cy="655.98622"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -475,7 +475,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -483,13 +483,6 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
-    <rect
-       style="opacity:0.02;fill:url(#radialGradient11139);fill-opacity:1;stroke:none;stroke-width:0.75;stroke-miterlimit:4;stroke-dasharray:none"
-       id="rect9659"
-       width="38.364582"
-       height="50.138542"
-       x="87.823952"
-       y="103.24012" />
     <circle
        id="path12"
        cx="100.10176"
@@ -674,5 +667,12 @@
        inkscape:connector-curvature="0"
        inkscape:path-effect="#path-effect22571-97"
        inkscape:original-d="m 101.15272,138.9816 c 2.6136,-0.81559 5.22716,-1.63077 7.84066,-2.44551 1.61145,-2.24182 3.22307,-4.48355 4.83453,-6.72467" />
+    <rect
+       style="opacity:0.02000002;fill:url(#radialGradient11139);fill-opacity:1;stroke:none;stroke-width:0.56641394;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect9659"
+       width="31.537123"
+       height="34.787674"
+       x="91.387688"
+       y="110.14053" />
   </g>
 </svg>
