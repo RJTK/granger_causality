@@ -7,6 +7,7 @@
 \usepackage{apptools}
 \AtAppendix{\counterwithin{lemma}{section}}
 \AtAppendix{\counterwithin{definition}{section}}
+\AtAppendix{\counterwithin{equation}{section}}
 \externaldocument{paper_theory}
 
 \usepackage{geometry}
@@ -171,12 +172,18 @@ We detail the methods used for our simulations and finite sample
 implementation in Section \ref{sec:structure_learning} and provide
 additional simulation results in Section \ref{apx:simulation}.
 
+References to equations, lemmas, etc., in this document are prefixed
+with their section, whereas prefix-free equation numbers refer to the
+main document.  e.g. ``Equation (1)'' refers to the first equation in
+the main document, and ``Equation (A.1)'' refers to the first equation
+in this document.
+
 Code will be made available at
 \url{https://github.com/RJTK/granger_causality}, as well as
 accompanying this supplementary material.
 
 \section{Proofs}
-\subsection{Ancillary Results}
+\subsection{Preparatory Results}
 \label{apx:ancillary_results}
 \begin{theorem}[Granger Causality Equivalences \ref{thm:granger_causality_equivalences}]
   The following are equivalent:
@@ -203,9 +210,9 @@ accompanying this supplementary material.
   to consider $y = x_i(t)$ by linearity, then since
   $H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$ we have
   $(x_i(t) - \linE{x_i(t)}{\H_{t = 1}^{-j}}) = v_i(t)$ since
-  $\B_{ij}(z) = 0$ and $v_i(t) \perp \H_{t - 1}$.  $(c) \iff (d)$ is a result
-  of the equivalence in Definition
-  \ref{lem:conditional_orthogonality_equivalence}.  And,
+  $\B_{ij}(z) = 0$.  The result follows since
+  $v_i(t) \perp \H_{t - 1}$.  $(c) \iff (d)$ is a result of the equivalence
+  in Definition \ref{lem:conditional_orthogonality_equivalence}.  And,
   $(d) \implies (a)$ follows directly from the Definition.
 \end{proof}
 
@@ -250,16 +257,10 @@ accompanying this supplementary material.
   (\ref{eqn:wold}).
 \end{proposition}
 
-This statement is ultimately about the sparsity pattern in the Wold
-decomposition matrices $A(\tau)$ since
-$x_i(t) = \sum_{\tau = 0}^\infty \sum_{j = 1}^n A_{ij}(\tau)v_j(t -
-\tau)$.  The proposition states that if $j \not \in \anc{i}$ then
-$\A_{ij}(z) = 0$.  
-
 \begin{proof}
   Equation \eqref{eqn:parent_expansion} is immediate from the
-  $\VAR(\infty)$ representation of \eqref{eqn:ar_representation} and
-  Theorem \ref{thm:granger_causality_equivalences}, we are left to
+  $\VAR(\infty)$ representation of Equation \eqref{eqn:ar_representation}
+  and Theorem \ref{thm:granger_causality_equivalences}, we are left to
   demonstrate \eqref{eqn:ancestor_expansion}.
   
   From equation (\ref{eqn:ar_representation}), which we are assuming
@@ -269,8 +270,8 @@ $\A_{ij}(z) = 0$.
     x(t) = (I - \B(z))^{-1} v(t),
   \end{equation*}
 
-  where $(I - \B(z))^{-1} = \A(z)$ due to the uniqueness of
-  (\ref{eqn:wold}).  Since $\B(z)$ is stable we have
+  where necessarily $(I - \B(z))^{-1} = \A(z)$ due to the uniqueness
+  of the Wold decomposition.  Since $\B(z)$ is stable we have
 
   \begin{equation}
     \label{eqn:resolvant_inv}
@@ -292,7 +293,8 @@ $\A_{ij}(z) = 0$.
   Therefore
 
   \begin{align*}
-    x_i(t) &= [(I - \B(z))^{-1}v(t)]_i = \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
+    x_i(t) &= [(I - \B(z))^{-1}v(t)]_i\\
+           &= \sum_{j = 1}^n \A_{ij}(z) v_j(t)\\
            &= \A_{ii}(z) v_i(t) + \sum_{\substack{j \in \anc{i} \\ j \ne i}} \A_{ij}(z) v_j(t)
   \end{align*}
 \end{proof}
@@ -309,19 +311,20 @@ $\A_{ij}(z) = 0$.
 
   then $\H_t^{(i)} \perp \H_t^{(j)}$, that is,
   $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  Moreover,
-  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_{t - 1}^i} = 0$.
+  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^i} = 0$.
 \end{proposition}
 
 \begin{proof}
   We show directly that
-  $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  To this end,
-  fix $s, \tau \ge 0$, then by expanding with equation \eqref{eqn:ancestor_expansion} we have
+  $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  To this end, fix
+  $s, \tau \ge 0$, then by expanding with Equation
+  \eqref{eqn:ancestor_expansion} we have
 
   \begin{align*}
     \E x_i(t - s)x_j(t - \tau)
     &= \E \big(\A_{ii}(z)v_i(t - s)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)\\
     &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\E[\big(\A_{ik}(z)v_k(t - s)\big)\big(\A_{jj}(z)v_j(t - \tau)\big)]\\
-    &+ \sum_{\substack{k \in \anc{j} \\ k \ne j}}\E[\big(\A_{ii}(z)v_i(t - s)\big) \big(\A_{jk}(z) v_k(t - \tau)\big)]\\
+    &+ \sum_{\substack{\ell \in \anc{j} \\ \ell \ne j}}\E[\big(\A_{ii}(z)v_i(t - s)\big) \big(\A_{j\ell}(z) v_\ell(t - \tau)\big)]\\
     &+ \sum_{\substack{k \in \anc{i} \\ k \ne i}}\sum_{\substack{\ell \in \anc{j} \\ \ell \ne j}}\E[\big(\A_{ik}(z)v_k(t - s)\big)\big(\A_{j\ell}(z)v_\ell(t - \tau)\big)].
   \end{align*}
   
@@ -330,6 +333,29 @@ $\A_{ij}(z) = 0$.
   first term since $i \ne j$, the second and third since
   $j \not\in \anc{i}$ and $i \not\in \anc{j}$ and finally the fourth since
   $\anc{i} \cap \anc{j} = \emptyset$.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:vj_perp}
+  Consider distinct nodes $i, j$ in a Granger-causality graph $\gcg$.
+  If $j \not \in \anc{i}$, then $\H_t^{v_j} \perp \H_{t}^{i}$, and therefore
+  for any causal filter $\Phi(z)$ we have
+
+  \begin{align*}
+    \linE{\Phi(z)v_j(t)}{\H_{t - 1}^i} &= 0\\
+    \inner{x_i(t)}{\Phi(z)v_j(t)} & = 0.
+  \end{align*}
+\end{lemma}
+\begin{proof}
+  Fix $\tau, s \ge 0$, then by expanding with Equation \ref{eqn:ancestor_expansion}
+
+  \begin{align*}
+    \E[x_i(t - \tau)v_j(t - s)] &= \E[\big(\A_{ii}(z)v_i(t) + \sum_{k \in \anc{i}}\A_{ik}(z)v_k(t) \big) v_j(t - s)]\\
+    &= 0.
+  \end{align*}
+
+  This follows since $i \ne j$ and $j \not \in \anc{i}$ and $v(t)$ is
+  isotrophic and uncorrelated.
 \end{proof}
 
 \begin{proposition}
@@ -348,50 +374,104 @@ $\A_{ij}(z) = 0$.
   By Theorem \ref{thm:granger_causality_equivalences} it suffices to show that
 
   \begin{equation*}
-    \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}{x_j(t) - \linE{x_j(t)}{\H_{t - 1}^i}} = 0.
+    \forall \psi \in \H_{t - 1}^j\ \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}{\psi - \linE{\psi}{\H_{t - 1}^i}} = 0.
   \end{equation*}
 
-  which by the orthogonality principle is equivalent to
+  which by the orthogonality principle and by representing
+  $\psi \in \H_{t - 1}^j$ via the action of some strictly causal filter
+  $\Phi(z)$ on $x_j(t)$ is equivalent to
 
   \begin{equation}
     \label{eqn:proof_inner0}
-    \inner{x_i(t)}{x_j(t) - \linE{x_j(t)}{\H_{t - 1}^i}} = 0.
+    \inner{x_i(t)}{\Phi(z)x_j(t) - \linE{\Phi(z)x_j(t)}{\H_{t - 1}^i}} = 0.
   \end{equation}
 
-  Define the disjoint sets
-
-  \begin{align*}
-    C_0(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, k \ne i \}\\
-    C_1(u) &= \{k \in \pa{u}\ |\ i \in \anc{k} \text{ or } k = i \}.
-  \end{align*}
-
-  We can then expand the parents of $j$ using Equation \ref{eqn:parent_expansion} as
+  If we expand $x_j(t)$ using Equation \eqref{eqn:ancestor_expansion},
+  the left hand side of \eqref{eqn:proof_inner0} becomes
 
   \begin{equation*}
-    x_j(t) = v_j(t) + \sum_{k \in C_0(j)} B_{jk}(z) x_k(t) + \sum_{k \in C_1(j)} B_{jk}(z) x_k(t),
+    \inner{x_i(t)}{\sum_{k \in \anc{j} \cup \{j\}} \Big(\Phi(z)\A_{jk}(z)v_k(t) - \linE{\Phi(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^i}\Big)}.
   \end{equation*}
 
-  which when substituted into the left hand side of Equation
-  \ref{eqn:proof_inner0} results (by Proposition
-  \ref{prop:separated_ancestor_uncorrelated}) in
-
-  \begin{equation*}
-    \inner{x_i(t)}{\sum_{k \in C_1(j)} B_{jk}(z) x_k(t) - \sum_{k \in C_1(j)} \linE{B_{jk}(z) x_k(t)}{\H_{t - 1}^i}}.
-  \end{equation*}
-
-  We can continue this process recursively (i.e. split each
-  $k \in C_1(j)$ into $C_0(k)$ and $C_1(k)$) which must eventually
-  terminate with $C_1(u) = \{i\}$.  Therefore, there exists some
-  causal filter $\Phi(z)$ such that Equation \ref{eqn:proof_inner0} is
-  equivalent to
-
-  \begin{equation}
-    \label{eqn:proof_inner0}
-    \inner{x_i(t)}{\Phi(z)x_i(t) - \linE{\Phi(z)x_i(t)}{\H_{t - 1}^i}},
-  \end{equation}
-
-  which is $0$ since $\linE{\Phi(z)x_i(t)}{\H_{t - 1}^i} = \Phi(z)x_i(t)$.
+  We see that this is $0$ by Lemma \ref{lem:vj_perp} since
+  $j \not \in \anc{i}$, and
+  \[
+    \anc{i} \cap \anc{j} = \emptyset \implies \forall k \in \anc{j}: k \not \in \anc{i}.
+  \]
 \end{proof}
+
+% I believe this is an incorrect proof since it relies on inverting
+% (1 - B_{jj}(z)), which need not be invertible.  For example,
+% B(z) = [[r, -a], [a, 0]]z^{-1} is invertible whenever
+% max(|r - root(r^2 - 4a^2)|, |r + root(r^2 - 4a^2)|) < 2
+% which includes values of r > 1.
+
+% \begin{proof}
+%   By Theorem \ref{thm:granger_causality_equivalences} it suffices to show that
+
+%   \begin{equation*}
+%     \forall \psi \in \H_{t - 1}^j\ \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}{\psi - \linE{\psi}{\H_{t - 1}^i}} = 0.
+%   \end{equation*}
+
+%   which by the orthogonality principle and by representing
+%   $\psi \in \H_{t - 1}^j$ via the action of some strictly causal filter
+%   $\Phi(z)$ on $x_j(t)$ is equivalent to
+
+%   \begin{equation}
+%     \label{eqn:proof_inner0}
+%     \inner{x_i(t)}{\Phi(z)x_j(t) - \linE{\Phi(z)x_j(t)}{\H_{t - 1}^i}} = 0.
+%   \end{equation}
+
+%   Given a node $u$, consider the partition of $\pa{u}$:
+
+%   \begin{align*}
+%     C_0(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, k \ne i \}\\
+%     C_1(u) &= \{k \in \pa{u}\ |\ i \in \anc{k} \text{ or } k = i \}.
+%   \end{align*}
+
+%   We can then expand the parents of $j$ using Equation \ref{eqn:parent_expansion} as
+
+%   \begin{align*}
+%     x_j(t) &= v_j(t) + \B_{jj}(z)x_j(t) + \sum_{k \in C_0(j)} B_{jk}(z) x_k(t) + \sum_{k \in C_1(j)} B_{jk}(z) x_k(t)\\
+%     &= \widetilde{A}_{jj}(z)\Big(v_j(t) + \sum_{k \in C_0(j)} B_{jk}(z) x_k(t) + \sum_{k \in C_1(j)} B_{jk}(z) x_k(t)\Big),
+%   \end{align*}
+
+%   % \todo{Is this true??}
+%   where $(1 - B_{jj}(z))^{-1} = \widetilde{A}_{jj}(z)$, which exists
+%   due to the invertibility of $\A(z)$. When this expression is
+%   substituted into the left hand side of Equation
+%   \ref{eqn:proof_inner0} it results in
+
+%   \begin{equation}
+%     \label{eqn:proof_inner1}
+%     \begin{aligned}
+%       \inner{x_i(t)}{\sum_{k \in C_1(j)} \big(\widetilde{A}_{jj}(z)\Phi(z)B_{jk}(z) x_k(t) &- \linE{\widetilde{A}_{jj}(z)\Phi(z)B_{jk}(z) x_k(t)}{\H_{t - 1}^i}\big)},
+%     \end{aligned}
+%   \end{equation}
+
+%   where (by Proposition \ref{prop:separated_ancestor_uncorrelated}) we
+%   have eliminated each of the terms from $C_0(u)$, and by Lemma
+%   \ref{lem:vj_perp} the terms involving $v_j(t)$.
+
+%   Now, for any $u \in \anc{j}$, we must have $u \not \in \anc{i}$, since
+%   otherwise $u \in \anc{i} \cap \anc{j}$, which is empty by hypothesis.
+%   Moreover, for any $u \in \anc{j}$, we have
+%   $\anc{i} \cap \anc{u} = \emptyset$, since
+%   $w \in \anc{i} \cap \anc{u} \implies w \in \anc{i} \cap \anc{j}$. Therefore,
+%   we can continue the above process recursively splitting each
+%   $k \in C_1(j)$ into $C_0(k)$ and $C_1(k)$) upwards along each path
+%   from $j$ to $i$, terminating whenever we encounter $i$.  This process
+%   is guaranteed to terminate since $i \in \anc{k}$.  This leaves us with
+%   some strictly causal filter $\Psi(z)$ such that Expression
+%   \ref{eqn:proof_inner1} is equivalent to
+
+%   \begin{equation}
+%     \inner{x_i(t)}{\Psi(z)x_i(t) - \linE{\Psi(z)x_i(t)}{\H_{t - 1}^i}},
+%   \end{equation}
+
+%   which is $0$ since $\Psi(z)x_i(t) \in \H_{t - 1}^i$ and
+%   therefore $\linE{\Psi(z)x_i(t)}{\H_{t - 1}^i} = \Psi(z)x_i(t)$.
+% \end{proof}
 
 \begin{proposition}
   \label{prop:ancestor_properties}
@@ -408,15 +488,14 @@ $\A_{ij}(z) = 0$.
 
   Firstly, notice that every $u \in \big(\pa{j} \setminus \{i\}\big)$
   necessarily inherits these same two properties.  This follows since
-  if we also had $u \in \anc{i}$ then $u \in \anc{i} \cap \anc{j}$ so that every
-  $u \rightarrow \cdots \rightarrow j$ path must contain $i$, but
-  $u \in \pa{j}$, so this is not the case since $u \rightarrow j$ is a
-  path that doesn't contain $i$; moreover, if we consider
+  if we also had $u \in \anc{i}$ then $u \in \anc{i} \cap \anc{j}$ so by our
+  assumption every $u \rightarrow \cdots \rightarrow j$ path must contain
+  $i$, but $u \in \pa{j}$ so $u \rightarrow j$ is a path that doesn't contain
+  $i$, and therefore $u \not\in \anc{i}$; moreover, if we consider
   $w \in \anc{i} \cap \anc{u}$ then we also have
-  $w \in \anc{i} \cap \anc{j}$ so every
-  $w \rightarrow \cdots \rightarrow j$ path must contain $i$.  These
-  properties therefore extend inductively to every
-  $u \in \big(\anc{j} \setminus \{i\}\big)$.
+  $w \in \anc{i} \cap \anc{j}$ so the assumption implies that every
+  $w \rightarrow \cdots \rightarrow j$ path must contain $i$.  These properties therefore
+  extend inductively to every $u \in \big(\anc{j} \setminus \{i\}\big)$.
 
   In order to deploy a recursive argument, define the following
   partition of $\pa{u}$, for some node $u$:
@@ -427,64 +506,57 @@ $\A_{ij}(z) = 0$.
     C_2(u) &= \{k \in \pa{u}\ |\ i \not\in \anc{k}, \anc{i} \cap \anc{k} \ne \emptyset, k \ne i\}.
   \end{align*}
 
-  We notice that for any $u$ having the properties $(a), (b)$ above, we
-  must have $C_2(u) = \emptyset$ since if $k \in C_2(u)$ then
-  $\exists w \in \anc{i} \cap \anc{k}$ s.t. $i \not \in \anc{k}$ and
-  therefore there must be a path $\gcgpath{w}{k} \rightarrow u$ which
-  does not contain $i$.
+  We notice that for any $u$ having the properties $(a), (b)$ above,
+  we must have $C_2(u) = \emptyset$ since if $k \in C_2(u)$ then
+  $\exists w \in \anc{i} \cap \anc{k}$ (and
+  $w \in \anc{i} \cap \anc{u}$, since $k \in \pa{u}$) such that
+  $i \not \in \anc{k}$ and therefore there must be a path
+  $\gcgpath{w}{k} \rightarrow u$ which does not contain $i$, contradicting
+  property $(b)$.
 
-  Using this partition, we will expand $x_j(t)$ in terms of it's
-  parents, and recursively expand nodes in $C_1$ until we reach a case
-  where $C_1 = \emptyset$.  For the first step equation
+  Using this partition, and in a similar fashion to the proof of
+  Proposition \ref{prop:ancestor_uncorrelated}, we will expand
+  $x_j(t)$ in terms of it's parents, and recursively expand nodes in
+  $C_1$ until reaching $i$.  For the first step equation
   \eqref{eqn:parent_expansion} gives us:
 
   \begin{equation}
     \label{eqn:xj_partition_expansion}
-    x_j(t) = \A_{jj}(z)\Big(v_j(t) + \sum_{k \in C_0(j)}\B_{ik}(z)x_k(t) + \sum_{k \in C_1(j)}\B_{ik}(z)x_k(t)\Big).
+    x_j(t) = \widetilde{\A}_{jj}(z) \Big(v_j(t) + \sum_{k \in C_0(j)} \B_{ik}(z)x_k(t) + \sum_{k \in C_1(j)}\B_{ik}(z)x_k(t)\Big).
   \end{equation}
 
-  Using this representation we choose an arbitrary $\Phi(z) x_i(t - 1) \in \H_{t - 1}^{(j)}$ and show that
-
-  \begin{equation}
-    \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}{\Phi(z)x_j(t - 1) - \linE{\Phi(z)x_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
-  \end{equation}
-
-  which will imply (by Theorem \ref{thm:granger_causality_equivalences}) that $j \npwgc i$ and for which it is equivalent to show that
+  Using this representation we choose an arbitrary element of
+  $\H_{t - 1}^j$ and represent it as the action of a strictly causal
+  filter $\Phi(z)$, i.e.  $\Phi(z) x_j(t) \in \H_{t - 1}^{(j)}$ and show that
 
   \begin{equation}
     \label{eqn:sufficient_inner_prod}
-    \inner{x_i(t)}{\Phi(z)x_j(t - 1) - \linE{\Phi(z)x_j(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
+    \inner{x_i(t)}{\widetilde{\A}_{jj}(z)\Phi(z)x_j(t) - \linE{\widetilde{\A}_{jj}(z)\Phi(z)x_j(t)}{\H_{t - 1}^{(i)}}} = 0,
   \end{equation}
 
-  by the orthogonality principle since $\linE{x_i(t)}{\H_{t - 1}^{(i)}} \in \H_{t - 1}^{(i)}$.  Substituting (\ref{eqn:xj_partition_expansion}) into (\ref{eqn:sufficient_inner_prod}) and starting with the first term we have
+  which will imply (by Theorem
+  \ref{thm:granger_causality_equivalences}) that $j \npwgc i$.
 
-  \begin{align*}
-    &\inner{x_i(t)}{\Phi(z)\A_{jj}(z)v_j(t - 1) - \linE{\Phi(z)\A_{jj}(z)v_j(t - 1)}{\H_{t - 1}^{(i)}}}\\
-    \overset{(\alpha)}{=}\ &\inner{\A_{ii}(z)v_i(t) + \sum_{k \in \anc{i}}\A_{ik}(z)v_k(t)}{\Phi(z)\A_{jj}(z)v_j(t - 1)}\\
-    \overset{(\beta)}{=}\ &0,
-  \end{align*}
+  Substituting (\ref{eqn:xj_partition_expansion}) into
+  (\ref{eqn:sufficient_inner_prod}) we have cancellation of all terms
+  in which $k \in C_0(j)$ by Proposition \ref{prop:ancestor_properties},
+  and cancellation of the term involving $v_j(t)$ by Lemma \ref{lem:vj_perp}.
 
-  where $(\alpha)$ follows by expanding $x_i(t)$ with (\ref{eqn:ancestor_expansion}) and $\linE{\Phi(z)\A_{jj}(z)v_j(t - 1)}{\H_{t - 1}^{(i)}} = 0$ because $\forall \tau, s$
+  We are therefore left with
 
-  \begin{equation*}
-    \E v_j(t - \tau) x_i(t - s) = \E v_j(t - \tau) \sum_{k \in \anc{i} \cup \{i\}}\A_{ik}(z)v_k(t - s) = 0,
-  \end{equation*}
+  \begin{equation}
+    \label{eqn:refwornv}  % An arbitrary code for reference in just one place
+    \inner{x_i(t)}{\sum_{k \in C_1(j)} \big(\widetilde{\A}_{jj}(z)\Phi(z) \B_{ik}(z)x_k(t) - \linE{\widetilde{\A}_{jj}(z)\Phi(z) \B_{ik}(z)x_k(t)}{\H_{t - 1}^i}\big)}.
+  \end{equation}
 
-  since $j \not \in \anc{i}$; $(\beta)$ follows similarly, that is, $j \not \in \anc{i}$.  Secondly we see that $\forall k \in C_0(j)$
+  Since each such $k$ inherits the needed properties $(a), (b)$ we can
+  again (as in Proposition \ref{prop:ancestor_properties}) recursively
+  expand this expression until we reach $i$, obtaining a strictly
+  causal $\Psi(z)$ such that Expression \eqref{eqn:refwornv} is equal to
 
-  \begin{equation*}
-    \inner{x_i(t)}{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1) - \linE{\Phi(z)\A_{jj}(z)\B_{ik}(z)x_k(t - 1)}{\H_{t - 1}^{(i)}}} = 0,
-  \end{equation*}
-
-  which follows from Proposition \ref{prop:ancestor_uncorrelated}.  Finally,
-  for $k \in C_1(j)$ the case $k = i$ is immediate (since the error in
-  estimating $\Phi(z)\B_{ii}(z)x_i(t)$ given $\H_{t - 1}^{(i)}$ is
-  $0$), so suppose $k \ne i$.  We know from above that $k$ inherits the
-  key properties referred to as $(a)$ and $(b)$ above and therefore we
-  can recursively expand $k$ in the same way as in equation
-  (\ref{eqn:xj_partition_expansion}).  Continuing this recursion for
-  each $k \in C_1(j)$ (where $k \ne i$) must eventually terminate since
-  $i \in \anc{k}$.
+  \begin{equation}
+    \inner{x_i(t)}{\Psi(z)x_i(t) - \linE{\Psi(z)x_i(t)}{\H_{t - 1}^i}} = 0.
+  \end{equation}
 \end{proof}
 
 \begin{proposition}
@@ -496,7 +568,7 @@ $\A_{ij}(z) = 0$.
 \begin{proof}
   Suppose that there is a path from $k$ to $i$ which does not contain
   $j$.  In this case, there are multiple paths from $k$ to $i$ (one of
-  which \textit{does} go through $j$ since $j \in \anc{i}$) which
+  which \textit{does} go through $j$, since $j \in \anc{i}$) which
   contradicts the assumption of strong causality.
 \end{proof}
 
@@ -516,7 +588,6 @@ $\A_{ij}(z) = 0$.
 
   Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $\gcgpath{j}{i}$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
 
-  % Should this be written as a lemma?
   \begin{align*}
     x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
            &= \underbrace{v_{a_0}(t) + \B_{a_0a_0}(z) x_i(t) + \sum_{\substack{k \in \pa{a_0} \\ k \ne a_1}}\B_{a_0 k}(z) x_k(t)}_{\defeq \wtalpha{a_0}{a_1}} + \B_{a_0a_1}(z)x_{a_1}(t)\\
@@ -549,18 +620,19 @@ $\A_{ij}(z) = 0$.
     \sum_{\ell = 0}^r F_\ell(z) \wtalpha{a_\ell}{a_{\ell + 1}} \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}} - F_{r + 1}(z)x_j(t),
   \end{equation*}
 
-  or by rearranging and applying the representation obtained earlier, if and only if
+  or by rearranging and applying the representation for $x_i(t)$
+  obtained earlier, if and only if
 
   \begin{equation*}
-    x_i(t) \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}},
+    x_i(t) \overset{\text{a.s.}}{=} \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}}.
   \end{equation*}
 
-  but this is impossible since $x_i(t) \not \in \H_{t - 1}^{(i)}$.
+  But, this is impossible since $x_i(t) \not \in \H_{t - 1}^{(i)}$.
 \end{proof}
 
 \begin{lemma}
   \label{lem:time_lag_cancellation}
-  Suppose $v(t)$ is a scalar sequence with unit variance and zero
+  Suppose $v(t)$ is a scalar process with unit variance and zero
   autocorrelation and let $\A(z), \B(z)$ be nonzero and strictly
   causal (i.e. $\tau_0(\A) \ge 1$) linear filters.  Then,
 
@@ -578,18 +650,18 @@ $\A_{ij}(z) = 0$.
     &= \sum_{\tau = \text{max}(\tau_0(\A), \tau_0(\B))}^{\text{min}(\tau_\infty(\A), \tau_\infty(\B))} a(\tau) b(\tau)\\
   \end{align}
 
-  due to the uncorrelatedness assumptions on $v(t)$.  This expression
-  is $0$ if and only if $\tau_0(\A) \ge 1 + \tau_\infty(\B)$ or if
-  $\tau_0(\B) \ge 1 + \tau_\infty(\A)$ or if the coefficients are
-  orthogonal along the common support.
+  since $\E[v(t - s)v(t - \tau)] = \delta_{s - \tau}$.  This expression is
+  $0$ if and only if $\tau_0(\A) \ge 1 + \tau_\infty(\B)$ or if
+  $\tau_0(\B) \ge 1 + \tau_\infty(\A)$ or if the coefficients are orthogonal along
+  the common support.
 
-  Specializing this fact to $\inner{F(z)\A(z)v(t)}{\B(z)v(t)} = 0$ we
+  Specializing this fact to $\inner{F(z)\A(z)v(t)}{\B(z)v(t)}$ we
   see that the coefficients cannot be orthogonal for every choice of
   $F$, and that $\text{sup}_F \tau_\infty(F\A) = \infty$, leaving only
   the possibility that
 
   \begin{align*}
-    \tau_0(F\A) \ge 1 + \tau_\infty(\B) \forall F &\overset{(a)}{\iff} \tau_0(\A) \ge 1 + \tau_\infty(\B) - \underset{F}{\text{min }} \tau_0(F)\\
+     \forall F\ \tau_0(F\A) \ge 1 + \tau_\infty(\B) &\overset{(a)}{\iff} \tau_0(\A) \ge 1 + \tau_\infty(\B) - \underset{F}{\text{min }} \tau_0(F)\\
     &\overset{(b)}{\iff} \tau_0(\A) \ge \tau_\infty(\B),
   \end{align*}
 
@@ -633,9 +705,10 @@ $\A_{ij}(z) = 0$.
 \end{proposition}
 \begin{proof}
   We will show that $j \pwgc i$, the other being symmetric.  First
-  note also that by proposition \ref{prop:sc_graph_common_anc} we
-  cannot have $i \in \anc{j}$ or $j \in \anc{i}$ and therefore every
-  $k \in \anc{i}\cap\anc{j}$ will be a confounder.
+  note that by the contrapositive of proposition
+  \ref{prop:sc_graph_common_anc} we cannot have $i \in \anc{j}$ or
+  $j \in \anc{i}$ (else $k$ would not be a confounder) and therefore
+  \textit{every} $u \in \anc{i}\cap\anc{j}$ will be a confounder.
 
   It is sufficient to show that $\exists \psi \in \H_{t - 1}^{(j)}$
   such that
