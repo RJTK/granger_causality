@@ -209,7 +209,7 @@ accompanying this supplementary material.
   $(y - \linE{y}{\H_{t - 1}^{-j}})$ for $y \in H_t^i$ it is sufficient
   to consider $y = x_i(t)$ by linearity, then since
   $H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$ we have
-  $(x_i(t) - \linE{x_i(t)}{\H_{t = 1}^{-j}}) = v_i(t)$ since
+  $(x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{-j}}) = v_i(t)$ since
   $\B_{ij}(z) = 0$.  The result follows since
   $v_i(t) \perp \H_{t - 1}$.  $(c) \iff (d)$ is a result of the equivalence
   in Definition \ref{lem:conditional_orthogonality_equivalence}.  And,
@@ -473,6 +473,107 @@ accompanying this supplementary material.
 %   therefore $\linE{\Psi(z)x_i(t)}{\H_{t - 1}^i} = \Psi(z)x_i(t)$.
 % \end{proof}
 
+\begin{remark}
+  In order to prove Proposition \ref{prop:ancestor_properties} we
+  require some additional notation, as well as another representation
+  theorem.  The difficulty addressed by the following Definition
+  \ref{def:scc} and Lemma \ref{lem:scc_expansion} is that in the
+  representation of $x_j(t)$ in terms of it's parents (i.e. Equation
+  \eqref{eqn:parent_expansion})
+
+  \[
+    x_i(t) = v_i(t) + \B_{ii}(z)x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t),
+  \]
+
+  the filter $\B_{ii}(z)$ need not be stable.  That is, the inverse
+  filter $(1 - \B_{ii}(z))^{-1}$ need not exist.  An example of this
+  issue is furnished by
+
+  \[
+    \B(z) = \left[
+    \begin{array}{cc}
+      \rho & -a\\
+      a & 0\\
+    \end{array}
+  \right] z^{-1},
+  \]
+
+  for which, depending on the value of $a$, may still be stable even
+  if $|\rho| > 1$.  This implies that it is not always possible to
+  represent $x_i(t)$ in terms of $v_i(t)$ and $x_k(t), k \in \pa{i}$
+  alone, i.e. as
+
+  \[
+    x_i(t) = (1 - \B_{ii}(z))^{-1}\big(v_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t)\big).
+  \]
+
+  The difficulty presented by the non-existence of such a
+  representation may become apparent upon studying the proof of
+  Proposition \ref{prop:ancestor_properties}.
+\end{remark}
+
+\begin{definition}[Strongly Connected Components]
+  \label{def:scc}
+  In a graph $\gcg$, the subset $S \subseteq [n]$ is \textit{strongly
+    connected} if $\forall i, j \in S$, $i \in \anc{j}$ and
+  $j \in \anc{i}$.  We will denote by $S(j)$ (which may be the
+  singleton $\{j\}$) the largest strongly connected component (SCC)
+  containing $j$.  We will denote $x_{S(j)}(t)$ to be the vector of
+  processes
+
+  \[
+    x_{S(j)}(t) = \big(x_s(t)\ |\ s \in S(j)\big),
+  \]
+
+  whose indices are sorted in ascending order.  Similarly, the
+  sub-filter of $\B(z)$ acting on $x_{S(j)}(t)$ will be denoted
+  $\B_{S(j)}(z)$.
+\end{definition}
+
+\begin{lemma}[Expansion in SCCs]
+  \label{lem:scc_expansion}
+  Given some $j \in [n]$, the process $x_{S(j)}(t)$ can be represented
+  by
+% {\substack{k \in \pa{a_0} \\ k \ne a_1}}
+  \begin{equation}
+    \label{eqn:scc_parent_expansion}
+    x_{S(j)}(t) = v_{S(j)}(t) + \B_{S(j)}(z)x_{S(j)}(t) + \sum_{\substack{s \in S(j) \\ k \in \pa{s} \cap S(j)^\c}} B_{sk}(z)x_k(t)e_s^{S(j)},
+  \end{equation}
+
+  where $e_s^{S(j)}$ denotes the length $|S(j)|$ canonical basis
+  vector with a $1$ in the component corresponding to $x_s$ in the
+  vector $x_{S(j)}$, and the summation is a double sum on $s$ and $k$.
+
+  Moreover, the filter $\B(z)$ is stable with $I - \B_{S(j)}(z)$
+  invertible:
+
+  \begin{equation}
+    \label{eqn:scc_inversion}
+    (I - \B_{S(j)}(z))^{-1} = \sum_{k = 0}^\infty \B_{S(j)}(z)^k,
+  \end{equation}
+
+  therefore
+
+  \begin{equation}
+    \label{eqn:scc_parent_expansion_inverted}
+    x_{S(j)}(t) = (I - \B_{S(j)}(z))^{-1} \big(v_{S(j)}(t) + \sum_{\substack{s \in S(j) \\ k \in \pa{s} \cap S(j)^\c}} B_{sk}(z)x_k(t)e_s^{S(j)}\big),
+  \end{equation}
+  
+\end{lemma}
+\begin{proof}
+  The representation of Equation \eqref{eqn:scc_parent_expansion}
+  follows directly from the $\VAR$ representation of $x(t)$ (i.e. Equation
+  \eqref{eqn:ar_representation})
+
+  \[
+    x(t) = \B(z)x(t) + v(t).
+  \]
+
+  \hl{TODO: show stability}
+  % For the stability of $\B_{S(j)}(z)$ we must show that
+  % $\forall z: |z^{-1}| \le 1$ we have $$||\B_{S(j)}(z)||_2 < 1.$$
+\end{proof}
+
 \begin{proposition}
   \label{prop:ancestor_properties}
   If in a Granger-causality graph $\gcg$ where $j \pwgc i$ then
@@ -482,9 +583,13 @@ accompanying this supplementary material.
 
 \begin{proof}
   We will prove by way of contradiction.  To this end, suppose that
-  $j$ is a node such that: $(a)$ $j \not \in \anc{i}$ and $(b)$ for
-  every $k \in \anc{i} \cap \anc{j}$ every
-  $k \rightarrow \cdots \rightarrow j$ path contains $i$.
+  $j$ is a node such that:
+
+  \begin{enumerate}[label=(\alph*)]
+    \item{$j \not \in \anc{i}$}
+    \item{every $k \in \anc{i} \cap \anc{j}$ every
+        $k \rightarrow \cdots \rightarrow j$ path contains $i$.}
+  \end{enumerate}
 
   Firstly, notice that every $u \in \big(\pa{j} \setminus \{i\}\big)$
   necessarily inherits these same two properties.  This follows since
@@ -511,52 +616,90 @@ accompanying this supplementary material.
   $\exists w \in \anc{i} \cap \anc{k}$ (and
   $w \in \anc{i} \cap \anc{u}$, since $k \in \pa{u}$) such that
   $i \not \in \anc{k}$ and therefore there must be a path
-  $\gcgpath{w}{k} \rightarrow u$ which does not contain $i$, contradicting
-  property $(b)$.
+  $\gcgpath{w}{k} \rightarrow u$ which does not contain $i$,
+  contradicting property $(b)$.  Moreover, for any
+  $u \in \big(\anc{j} \setminus \{i\}\big)$ and $k \in C_0(u)$,
+  Proposition \ref{prop:ancestor_uncorrelated} shows that
+  $H_t^i \perp \H_{t - 1}^j | \H_{t - 1}^i$.
 
-  Using this partition, and in a similar fashion to the proof of
-  Proposition \ref{prop:ancestor_uncorrelated}, we will expand
-  $x_j(t)$ in terms of it's parents, and recursively expand nodes in
-  $C_1$ until reaching $i$.  For the first step equation
-  \eqref{eqn:parent_expansion} gives us:
-
-  \begin{equation}
-    \label{eqn:xj_partition_expansion}
-    x_j(t) = \widetilde{\A}_{jj}(z) \Big(v_j(t) + \sum_{k \in C_0(j)} \B_{ik}(z)x_k(t) + \sum_{k \in C_1(j)}\B_{ik}(z)x_k(t)\Big).
-  \end{equation}
-
-  Using this representation we choose an arbitrary element of
-  $\H_{t - 1}^j$ and represent it as the action of a strictly causal
-  filter $\Phi(z)$, i.e.  $\Phi(z) x_j(t) \in \H_{t - 1}^{(j)}$ and show that
+  In order to establish $j \npwgc i$, choose an arbitrary element of
+  $\H_{t - 1}^j$ and represent it via the action of a strictly causal
+  filter $\Phi(z)$, i.e.  $\Phi(z) x_j(t) \in \H_{t - 1}^{(j)}$, by
+  Theorem \ref{thm:granger_causality_equivalences} it suffices to show
+  that
 
   \begin{equation}
     \label{eqn:sufficient_inner_prod}
-    \inner{x_i(t)}{\widetilde{\A}_{jj}(z)\Phi(z)x_j(t) - \linE{\widetilde{\A}_{jj}(z)\Phi(z)x_j(t)}{\H_{t - 1}^{(i)}}} = 0,
+    \inner{x_i(t)}{\Phi(z)x_j(t) - \linE{\Phi(z)x_j(t)}{\H_{t - 1}^{(i)}}} = 0.
   \end{equation}
 
-  which will imply (by Theorem
-  \ref{thm:granger_causality_equivalences}) that $j \npwgc i$.
+  Denote $e_j \defeq e_j^{S(j)}$, we can write
+  $x_j(t) = e_j^\T x_{S(j)}(t)$, and therefore from Equation
+  \eqref{eqn:scc_parent_expansion_inverted} there exist strictly
+  causal filters $\Gamma_s(z)$ and $\Lambda_{sk}(z)$ (defined for ease
+  of notation) such that
 
-  Substituting (\ref{eqn:xj_partition_expansion}) into
-  (\ref{eqn:sufficient_inner_prod}) we have cancellation of all terms
-  in which $k \in C_0(j)$ by Proposition \ref{prop:ancestor_properties},
-  and cancellation of the term involving $v_j(t)$ by Lemma \ref{lem:vj_perp}.
+  \[
+    x_j(t) = \sum_{s \in S(j)} \Gamma_s(z)v_s(t) + \sum_{\substack{s \in S(j) \\ k \in \pa{s} \cap S(j)^\c}} \Lambda_{sk}(z)x_k(t).
+  \]
 
-  We are therefore left with
+  When we substitute this expression into the left hand side of
+  Equation \eqref{eqn:sufficient_inner_prod}, we may cancel each term
+  involving $v_s$ by Lemma \ref{lem:vj_perp}, and each $k \in C_0(s)$
+  by our earlier argument, leaving us with
 
-  \begin{equation}
-    \label{eqn:refwornv}  % An arbitrary code for reference in just one place
-    \inner{x_i(t)}{\sum_{k \in C_1(j)} \big(\widetilde{\A}_{jj}(z)\Phi(z) \B_{ik}(z)x_k(t) - \linE{\widetilde{\A}_{jj}(z)\Phi(z) \B_{ik}(z)x_k(t)}{\H_{t - 1}^i}\big)}.
-  \end{equation}
+  \[
+    \sum_{\substack{s \in S(j) \\ k \in C_1(s) \cap S(j)^\c}}\inner{x_i(t)}{\Phi(z)\Lambda_{sk}(z)x_k(t) - \linE{\Phi(z)\Lambda_{sk}(z)x_k(t)}{\H_{t - 1}^{(i)}}}.
+  \]
 
-  Since each such $k$ inherits the needed properties $(a), (b)$ we can
-  again (as in Proposition \ref{prop:ancestor_properties}) recursively
-  expand this expression until we reach $i$, obtaining a strictly
-  causal $\Psi(z)$ such that Expression \eqref{eqn:refwornv} is equal to
+  Since each $k \in C_1(s)$ with $k \ne i$ inherits properties $(a)$
+  and $(b)$ above, we can recursively expand each $x_k$ of the above
+  summation until reaching $k = i$ (which is garaunteed to terminate
+  due to the definition of $C_1(u)$) which leaves us with some
+  strictly causal filter $F(z)$ such that the left hand side of
+  Equation \eqref{eqn:sufficient_inner_prod} is equal to
 
-  \begin{equation}
-    \inner{x_i(t)}{\Psi(z)x_i(t) - \linE{\Psi(z)x_i(t)}{\H_{t - 1}^i}} = 0.
-  \end{equation}
+  \[
+    \inner{x_i(t)}{\Phi(z)F(z)x_i(t) - \linE{\Phi(z)F(z)x_i(t)}{\H_{t - 1}^{(i)}}},
+  \]
+
+  and this is $0$ since $\Phi(z)F(z)x_i(t) \in \H_{t - 1}^i$.
+  
+
+  % Using the above partition of $\pa{j}$, we can expand $x_j(t)$ in
+  % terms of it's parents, and recursively expand nodes in $C_1$
+  % (cancelling all nodes in $C_0$, and recalling that
+  % $C_2 = \emptyset$) until we reach $i$.
+
+  % Using this partition, we will expand $x_j(t)$ in terms of it's
+  % parents, and recursively expand nodes in $C_1$ until reaching $i$.
+  % For the first step equation \eqref{eqn:parent_expansion} gives us:
+
+  % \begin{equation}
+  %   \label{eqn:xj_partition_expansion}
+  %   x_j(t) = \widetilde{\A}_{jj}(z) \Big(v_j(t) + \sum_{k \in C_0(j)} \B_{ik}(z)x_k(t) + \sum_{k \in C_1(j)}\B_{ik}(z)x_k(t)\Big).
+  % \end{equation}
+
+  % Substituting (\ref{eqn:xj_partition_expansion}) into
+  % (\ref{eqn:sufficient_inner_prod}) we have cancellation of all terms
+  % in which $k \in C_0(j)$ by Proposition \ref{prop:ancestor_properties},
+  % and cancellation of the term involving $v_j(t)$ by Lemma \ref{lem:vj_perp}.
+
+  % We are therefore left with
+
+  % \begin{equation}
+  %   \label{eqn:refwornv}  % An arbitrary code for reference in just one place
+  %   \inner{x_i(t)}{\sum_{k \in C_1(j)} \big(\widetilde{\A}_{jj}(z)\Phi(z) \B_{ik}(z)x_k(t) - \linE{\widetilde{\A}_{jj}(z)\Phi(z) \B_{ik}(z)x_k(t)}{\H_{t - 1}^i}\big)}.
+  % \end{equation}
+
+  % Since each such $k$ inherits the needed properties $(a), (b)$ we can
+  % again (as in Proposition \ref{prop:ancestor_properties}) recursively
+  % expand this expression until we reach $i$, obtaining a strictly
+  % causal $\Psi(z)$ such that Expression \eqref{eqn:refwornv} is equal to
+
+  % \begin{equation}
+  %   \inner{x_i(t)}{\Psi(z)x_i(t) - \linE{\Psi(z)x_i(t)}{\H_{t - 1}^i}} = 0.
+  % \end{equation}
 \end{proof}
 
 \begin{proposition}
