@@ -82,6 +82,10 @@ class TrackErrors:
         return D_errs, D_true_errs, D_MCC
 
 
+def _count_edges(G):
+    return len(set([(i, j) for i, j in G.edges if i != j]))
+
+
 def simple_lasso():
     np.random.seed(0)
     n_nodes, p_lags, p_max = 25, 2, 3

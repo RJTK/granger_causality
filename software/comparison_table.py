@@ -23,7 +23,7 @@ alpha = 0.05
 
 def main():
     np.random.seed(0)
-    n_nodes, p_lags, p_max = 35, 5, 10
+    n_nodes, p_lags, p_max = 50, 5, 10
     N_iters = 100
 
     params = {"T": [50, 250, 1250],
@@ -169,13 +169,14 @@ def calculate_error(G_hat, G_true, sv2_true):
 
 
 def adalasso(X, G, T, p_max):
-    return estimate_dense_graph(X, max_lag=p_max, max_T=T, method="alasso")
+    return estimate_dense_graph(X, max_lag=p_max, max_T=T,
+                                method="alasso", post_ols=True)
 
 
 def pwgc(X, G, T, p_max):
     return estimate_graph(X[:T], G, max_lags=p_max,
                           method="lstsqr", alpha=alpha,
-                          fast_mode=True, F_distr=True)
+                          fast_mode=True, F_distr=False)
 
 
 def fltfmt(f):

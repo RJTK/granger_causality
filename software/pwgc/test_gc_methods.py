@@ -65,37 +65,91 @@ def test_fast_computation():
 
 
 def test_pw_scg():
-    n_nodes, p_lags, p_max = 50, 5, 15
+    n_nodes, p_lags, p_max = 35, 5, 10
     alpha = 0.05
 
-    T_max = 5000
+    T_max = 10000
 
     random_graph = lambda: random_scg(
         n_nodes, p_lags, pole_rad=0.75)
     # random_graph = lambda: random_gnp_dag(
-    #     n_nodes, p_lags, pole_rad=0.75, edge_prob=2./n_nodes)
+    #     n_nodes, p_lags, pole_rad=0.75, edge_prob=4./n_nodes)
     sv2_true = 0.5 + np.random.exponential(0.5, size=n_nodes)
     G = random_graph()
     drive_gcg(G, T_max, sv2_true, filter_attr="b(z)")
     X = get_X(G)
     X = X - np.mean(X, axis=0)[None, :]
 
-    def est_graph(X, fast=False):
+    def est_graph(X, fast=True, bd=False, F_distr=False):
         if fast:
             F, P = fast_compute_pairwise_gc(X, p_lags)
         else:
             F, P = compute_pairwise_gc(X, max_lag=p_lags)
 
-        P_edges = normalize_gc_score(F, P)  # p-values are just 1 - F
+        # p-values are just 1 - F
+        P_edges = normalize_gc_score(F, P, T=len(X), F_distr=F_distr)
         P_values = 1 - P_edges[~np.eye(n_nodes, dtype=bool)].ravel()
         t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
-        G_hat = pw_scg(F, P_edges, t_bh)
+        G_hat = pw_scg(F, P_edges, t_bh, eliminate_bidirectional=bd)
         draw_graph_estimates(G, G_hat)
         return
 
-    est_graph(X, False)
-    est_graph(X, True)
+    # import networkx as nx
+    # def est_graph(X, fast=True, bd=False):
+    #     if fast:
+    #         F, P = fast_compute_pairwise_gc(X, p_lags)
+    #     else:
+    #         F, P = compute_pairwise_gc(X, max_lag=p_lags)
+
+    #     # p-values are just 1 - F
+    #     P_edges = normalize_gc_score(F, P, T=len(X), F_distr=False)
+    #     P_values = 1 - P_edges[~np.eye(n_nodes, dtype=bool)].ravel()
+    #     t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
+    #     P_edges[P_edges < 1 - t_bh] = 0
+    #     P_edges[P_edges > 0] = 1
+    #     G_hat = nx.DiGraph(P_edges.T)
+    #     # G_hat = pw_scg(F, P_edges, t_bh, eliminate_bidirectional=bd)
+    #     draw_graph_estimates(G, G_hat)
+    #     return
+
+    # est_graph(X, fast=False)
+    # est_graph(X, fast=True)
+    # est_graph(X, bd=False, F_distr=True)
+    # est_graph(X, bd=False, F_distr=False)
+    est_graph(X, bd=False)
+    est_graph(X, bd=True)
     return
 
 
+def stat_sig():
+    N = 50000
+    N_iter = 50
+
+    def make_ar(p=0.9):
+        a = np.zeros(N)
+        v = np.random.normal(size=N)
+        if p:
+            a[0] = (1 / (1 - p)) * np.random.normal()
+            for t in range(N - 1):
+                a[t + 1] = p * a[t] + v[t]
+            return a
+        else:
+            return v
+
+    F, P = np.zeros((2, 2)), np.zeros((2, 2))
+    for _ in range(N_iter):
+        a = make_ar(0.9)
+        b = make_ar(0.9)
+        X = np.vstack((a, b)).T
+
+        # xi_i, xi_ij, p_i, p_ij = fast_compute_xi(np.vstack((a, b)).T, max_lag=2)
+        _F, p_ij = fast_compute_pairwise_gc(X)
+        # _F = compute_gc_score(xi_i, xi_ij, T=N, p_lags=p_ij, F_distr=False)
+        _P = normalize_gc_score(F, p_ij, T=N, F_distr=False)
+        F += _F
+        P += _P
+    P = P / N_iter
+    F = F / N_iter
+    print(P)
+    print(F)
 # test_pw_scg()
