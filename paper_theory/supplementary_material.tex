@@ -8,7 +8,7 @@
 \AtAppendix{\counterwithin{lemma}{section}}
 \AtAppendix{\counterwithin{definition}{section}}
 \AtAppendix{\counterwithin{equation}{section}}
-\externaldocument{paper_theory}
+\externaldocument{graph_topology_granger_causality}
 
 \usepackage{geometry}
 
@@ -1003,9 +1003,9 @@ accompanying this supplementary material.
   where $(a)$ applies the orthogonality principle, $(b)$ expands with
   Equation \eqref{eqn:ancestor_expansion} with
   $H_i(z)x_i(t) = \linE{x_i(t)}{H_{t - 1}^i}$, and $(c)$ follows by
-  performing cancellations of $v_k(t) \perp v_\ell(t)$ since by the
-  contrapositive of Proposition \ref{prop:sc_graph_common_anc} we
-  cannot have $i \in \anc{j}$ or $j \in \anc{i}$.
+  performing cancellations of $v_k(t) \perp v_\ell(t)$ and noting that
+  by the contrapositive of Proposition \ref{prop:sc_graph_common_anc}
+  we cannot have $i \in \anc{j}$ or $j \in \anc{i}$.
 
 % , $(c)$ is obtained through cancellations from Lemma \ref{lem:vj_perp}, $(d)$ follows since $\H_i$ is self-adjoint, $(e)$ follows by definition of $\H_i$: $\exists H_i(z)$ such that $$H_i(z)x_i(t) = \H_i \sum_{\ell \in \anc{i}}\A_{i\ell}v_\ell(t),$$ $(f)$ follows by again expanding $x_i(t)$ with Equation \eqref{eqn:ancestor_expansion}, and finally $(g)$ by cancelling orthogonal components of $v(t)$.
 
@@ -1038,7 +1038,7 @@ accompanying this supplementary material.
 
   \begin{align*}
     &\sum_{k \in \anc{i} \cap \anc{j}}\inner{F(z)\A_{jk}(z)v_k(t)}{(1 - H_i(z))\A_{ik}(z)v_k(t)}\\
-    = &\sum_{k \in \anc{i} \cap \anc{j}}\inner{\A_{ik}(z^{-1})(1 - H_i(z^{-1}))F(z)\A_{jk}(z)v_k(t)}{v_k(t)}\\
+    = &\sum_{k \in \anc{i} \cap \anc{j}}\inner{\A_{ik}(z^{-1})(1 - H_i(z^{-1}))F(z)\A_{jk}(z)v_k(t)}{v_k(t)}.\\
   \end{align*}
 
   Moreover, it is sufficient to find some strictly causal $F(z)$ of
@@ -1067,7 +1067,7 @@ accompanying this supplementary material.
   and $i \pwgc j$ if $T_{ij}(z)$ it \textit{not} anti-causal.
   Moreover, we have $i \npwgc j$ \textit{and} $j \pwgc i$ if
   $T_{ij}(z)$ is a constant.  Therefore, under Assumption
-  \ref{ass:T_causality} $j \pwgc i \implies i \pwgc j$.
+  \ref{ass:T_causality} $j \pwgc i \iff i \pwgc j$.
 
   This follows since if $T_{ij}(z)$ is not causal then
   $\exists k > 0$ such that the $z^k$ coefficient of $T_{ij}(z)$ is
@@ -1202,10 +1202,10 @@ number of steps.
   by Proposition \ref{prop:pwgc_anc}.  Proposition
   \ref{prop:sc_graph_common_anc} ensures that $(i, j)$ are not
   confounded and Corollary \ref{cor:parent_corollary} that
-  $j \not\in \anc{i}$ so $j \npwgc i$ and thence by Proposition
+  $j \not\in \anc{i}$ so $j \npwgc i$ by Proposition and therefore
   \ref{prop:ancestor_properties} $(i, j) \in W$.
 
-  Conversely, suppose $(i, j) \in W$.  Then since $j \npwgc i$
+  Conversely, suppose $(i, j) \in W$.  Then since $j \npwgc i$,
   Proposition \ref{prop:persistence_converse} ensures that $(j, i)$
   are not confounded and so by Proposition \ref{prop:ancestor_properties}
   we must have $i \in \anc{j}$.
@@ -1219,7 +1219,7 @@ number of steps.
   \ref{fig:example_fig3} we have $d(3) = 1$ and $d(4) = 2$.
 \end{definition}
 
-\begin{lemma}[Depth Characterization of $P_k$]
+\begin{lemma}[Depth Characterization of $P_k$ and $S_k$]
   \label{lem:depth_lemma}
   $i \in P_k \iff d(i) = k$ and $j \in S_k \iff d(j) \ge k$.
 \end{lemma}
@@ -1250,21 +1250,20 @@ number of steps.
   ($d(i) = k \implies i \in P_k$): Suppose $i \in [n]$ is such that
   $d(i) = k$.  Then $i \in S_{k - 1}$ by the hypothesis, but also
   $i \not\in P_{k - 1}$ so then
-  $i \in S_k = S_{k - 1} \setminus P_{k - 1}$ and thus $d(i) \ge k$.
-  Now, recalling the definition of $P_k$
+  $i \in S_k = S_{k - 1} \setminus P_{k - 1}$.  Now, recalling the
+  definition of $P_k$
 
   \begin{equation*}
     P_k = \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W \},
   \end{equation*}
 
   if $s \in S_k$ is such that $(s, i) \in W$ then $s \pwgc i$ and
-  $i \npwgc s$ so that by persistence and Proposition
-  \ref{prop:persistence_converse} there cannot be a confounder of
-  $(s, i)$ (otherwise $i \pwgc s$) so then by Proposition
-  \ref{prop:ancestor_properties} we have $s \in \anc{i}$.  We have
-  shown that $s \in S_k \implies d(s) \ge k$ and so we must have
-  $d(i) > k$, a contradiction, thence $s \not\in \anc{i}$,
-  $s \npwgc i$, $(s, i) \not\in W$ and $i \in P_k$.
+  $i \npwgc s$ so that by Proposition \ref{prop:persistence_converse}
+  there cannot be a confounder of $(s, i)$ (otherwise $i \pwgc s$) so
+  then by Proposition \ref{prop:ancestor_properties} we have
+  $s \in \anc{i}$.  We have shown that $s \in S_k \implies d(s) \ge k$
+  and so we must have $d(i) > k$, a contradiction, therefore there is
+  no such $s \in S_k$ so $i \in P_k$.
 
   ($d(j) \ge k \implies j \in S_k$): Let $j \in [n]$ such that
   $d(j) \ge k$, then by induction we have $j \in S_{k - 1}$.  This
@@ -1284,12 +1283,13 @@ number of steps.
   We prove by induction on $r$, keeping in mind the results of Lemmas
   \ref{lem:W_subset_E} and \ref{lem:depth_lemma}.  For the base case,
   let $r = 1$ and suppose that $(i, j) \in \gcge$ with $d(j) = k$ and
-  $d(i) = k - 1$.  Then, $(i, j) \in W$ and by our assumptions on
-  $E_{k - 1}$ there is no $\gcgpath{i}{j}$ path in $E_{k - 1}$
-  and therefore $(i, j) \in D_{k1}$.  Conversely, suppose that
-  $(i, j) \in D_{k1}$.  Then, $d(i) = k - 1$ and $d(j) = k$ which, since
-  $(i, j) \in W \implies i \in \anc{j}$ implies that
-  $i \in \pa{j}$ and $(i, j) \in \gcge$.
+  $d(i) = k - 1$.  Then, by Corollary \ref{cor:gc_implies_pwgc}
+  $(i, j) \in W$ and by our assumptions on $E_{k - 1}$ there is no
+  $\gcgpath{i}{j}$ path in $E_{k - 1}$ and therefore
+  $(i, j) \in D_{k1}$.  Conversely, suppose that $(i, j) \in D_{k1}$.
+  Then, $d(i) = k - 1$ and $d(j) = k$ which, since
+  $(i, j) \in W \implies i \in \anc{j}$ implies that $i \in \pa{j}$
+  and $(i, j) \in \gcge$.
 
   Now, fix $r > 1$ and suppose that the result holds up to $r - 1$.
   Let $(i, j) \in \gcge$ with $d(j) = k$ and $d(i) = k - r$.  Then,
@@ -1333,12 +1333,12 @@ number of steps.
   suppose further than $d(j) = k$.  Since $i \in \pa{j}$ we must have
   $d(i) < k$ (else $d(j) > k$) and again by Lemma
   \ref{lem:inner_loop_lemma} $(i, j) \in \bigcup_{r = 1}^k D_{kr}$
-  which implies that $(i, j) \in E_k$.  The result follows.
+  which implies that $(i, j) \in E_k$.
 \end{proof}
 
 \begin{lemma}[Finite Termination]
-  Algorithm \ref{alg:pwgr} terminates and returns $E_{k^\star - 1} = \gcge$
-  for some $k^\star \le n$.
+  Algorithm \ref{alg:pwgr} terminates and returns the set
+  $E_{k^\star - 1} = \gcge$ for some $k^\star \le n$.
 \end{lemma}
 \begin{proof}
   If $n = 1$, the algorithm is clearly correct, returning on the first
@@ -1376,7 +1376,7 @@ follow the simple scheme of estimating the following two linear models:
 
 \begin{align}
   H_0:&\ \widehat{x}_i^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau),\\
-  H_1:&\ \widehat{x}_i^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^pb_{ij}(\tau)x_j(t - \tau).
+  H_1:&\ \widehat{x}_{i|j}^{(p)}(t) = \sum_{\tau = 1}^{p} b_{ii}(\tau)x_i(t - \tau) + \sum_{\tau = 1}^pb_{ij}(\tau)x_j(t - \tau).
 \end{align}
 
 We formulate the statistic 
@@ -1505,7 +1505,7 @@ recursion\footnote{We have made use of standalone tailor made
 Denote $F_{ij}$ the Granger-causality statistic of equation
 \ref{eqn:gc_statistics} with model orders chosen by the methods of
 Section \ref{sec:model_order_selection}.  We assume that this
-statistic is asymptotically $\chi^2(p_{ij})$ distributed (the
+statistic is asymptotically $\chi^2(p_{ij})$ distributed (e.g. the
 disturbances are Gaussian), and denote by $G$ the cumulative
 distribution function thereof.  We will define the matrix
 
@@ -1720,6 +1720,6 @@ using only $T = 500$ data points, granted, an SCG on this many nodes
 is extremely sparse.
 
 \clearpage
-\bibliography{\string~/Documents/academics/global_academics/global_bib}
-
+% \bibliography{\string~/Documents/academics/global_academics/global_bib}
+\bibliography{paper_bib}
 \end{document}

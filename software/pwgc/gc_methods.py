@@ -655,7 +655,7 @@ def pw_scg(F, P_edge, alpha, eliminate_bidirectional=False):
         W_set = {(i, j) for (i, j) in product(S, S)
                  if (F[j, i] >= F[i, j] and
                      P_edge[j, i] > 0 and
-                     P_edge[i, j] == 0)}
+                     P_edges[i, j] == 0)}
     else:
         W_set = {(i, j) for (i, j) in product(S, S)
                  if (F[j, i] >= F[i, j] and

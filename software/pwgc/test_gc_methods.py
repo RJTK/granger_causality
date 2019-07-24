@@ -68,7 +68,7 @@ def test_pw_scg():
     n_nodes, p_lags, p_max = 35, 5, 10
     alpha = 0.05
 
-    T_max = 10000
+    T_max = 1000
 
     random_graph = lambda: random_scg(
         n_nodes, p_lags, pole_rad=0.75)
@@ -90,7 +90,7 @@ def test_pw_scg():
         P_edges = normalize_gc_score(F, P, T=len(X), F_distr=F_distr)
         P_values = 1 - P_edges[~np.eye(n_nodes, dtype=bool)].ravel()
         t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
-        G_hat = pw_scg(F, P_edges, t_bh, eliminate_bidirectional=bd)
+        G_hat = pw_scg(F, P_edges, t_bh, eliminate_bidirectional=False)
         draw_graph_estimates(G, G_hat)
         return
 
@@ -116,8 +116,8 @@ def test_pw_scg():
     # est_graph(X, fast=True)
     # est_graph(X, bd=False, F_distr=True)
     # est_graph(X, bd=False, F_distr=False)
-    est_graph(X, bd=False)
-    est_graph(X, bd=True)
+    est_graph(X, bd=True, F_distr=False)
+    est_graph(X, bd=False, F_distr=False)
     return
 
 

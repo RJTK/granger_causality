@@ -3,13 +3,7 @@
 \usepackage{ccfonts,eulervm}
 \usepackage{tabularx}
 \usepackage{xr}
-\externaldocument{proofs}
-% \usepackage[T1]{fontenc}
-% \usepackage[lite]{belleek}
-% \fontfamily{belleek}
-% \usepackage[math]{belleek}
-% \usepackage{concretemath-fonts}
-% \interfootnotelinepenalty=10000
+\externaldocument{supplementary_material}
 % ---------------------------------------------------------------------------------------------------------------------------------
 % The statsoc style file is broken?
 % I have copied this code straight from stack overflow
@@ -30,10 +24,6 @@
 
 % \usepackage{natbib}
 \bibliographystyle{chicago}
-
-% TODO: Are we, in this setting, immune to confounders?  We are removing
-%       all bi-directional edges, so it seems likely that we are?  Can we state
-%       any theorem about this?
 
 %% bibliography stuff -- this needs come before the preamble inclusion
 \usepackage{enumitem}
@@ -1463,7 +1453,8 @@ application to very large networks of time series data which are not
 well approximated by finite $\VAR(p)$ models.
 
 % \bibliography{\string~global_bib.bib}
-\bibliography{\string~/Documents/academics/global_academics/global_bib}
+% \bibliography{\string~/Documents/academics/global_academics/global_bib}
+\bibliography{paper_bib}
 \end{document}
 
 %%% Local Variables:
