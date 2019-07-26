@@ -154,16 +154,16 @@ time series contexts as well as Granger-causality
 \cite{DBLP:journals/corr/HallacPBL17} \cite{haufe2008sparse}
 \cite{bolstad2011causal} \cite{he2013stationary}
 \cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery}.
-One of the key improvements to the original LASSO algorithm is the
-adaptive (i.e. weighted) ``adaLASSO'' \cite{adaptive_lasso_zou2006},
-for which oracle results (i.e. asymptotic support recovery) are
-established under less restrictive conditions than for the vanilla
-LASSO.  Our experimental comparisons in Section
+
+The LASSO algorithm is known to suffer from a large proportion of
+false-positives (e.g. see \cite{fdr_lasso}), except when certain
+stringent conditions are met.  One of the key improvements to the
+original LASSO algorithm is the adaptive (i.e. weighted) ``adaLASSO''
+\cite{adaptive_lasso_zou2006}, for which oracle results
+(i.e. asymptotic support recovery) are established under less
+restrictive conditions.  Our experimental comparisons in Section
 \ref{sec:empirical_evaluation} are against the
-adaLASSO. % Success of the LASSO has lead to
-% the famous ``bet on sparsity'' principle ``Use a procedure that does
-% well in sparse problems, since no procedure does well in dense
-% problems.''  \cite{tibshirani2015statistical}.
+adaLASSO.
 
 \subsection{Contributions}
 In the context of time series data, sparsity assumptions remain
