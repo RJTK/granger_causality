@@ -23,3 +23,4 @@ auto/
 *.pdf
 *.bib
 *.toc
+data/*
