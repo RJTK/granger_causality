@@ -1,17 +1,29 @@
+"""
+This script produces all of the GCG networks for later analysis.
+"""
+
+import pywren as pw
 import numpy as np
 import pandas as pd
 
 import seaborn as sns
 import os
+import sys
+
+from constants import (FIGURE_DIR, channels, ADJ_MATRICES,
+                       ADJ_ESTIMATES, RAW_DATA, PROCESSED_DATA)
 
 from matplotlib import pyplot as plt
 from levinson.levinson import compute_covariance, lev_durb
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
+sys.path.append("../")
 from pwgc.gc_methods import (pwgc_estimate_graph, get_residual_graph,
                              get_X, combine_graphs, estimate_B,
-                             attach_X, compute_bic, form_Xy)
+                             attach_X, compute_bic, form_Xy,
+                             pw_threshold_estimate_graph,
+                             estimate_dense_graph)
 from pwgc.var_system import remove_zero_filters
 
 from matplotlib import rc as mpl_rc
@@ -23,40 +35,39 @@ mpl_rc("font", **font)
 mpl_rc("text", usetex=True)
 
 
-# Ensure we always have the same channels and that they are in the same order.
-channels = [
-    "AF1", "AF2", "AF7", "AF8", "AFZ", "C1", "C2", "C3", "C4", "C5", "C6",
-    "CP1", "CP2", "CP3", "CP4", "CP5", "CP6", "CPZ", "CZ", "F1", "F2", "F3",
-    "F4", "F5", "F6", "F7", "F8", "FC1", "FC2", "FC3", "FC4", "FC5", "FC6",
-    "FCZ", "FP1", "FP2", "FPZ", "FT7", "FT8", "FZ", "O1", "O2", "OZ", "P1",
-    "P2", "P3", "P4", "P5", "P6", "P7", "P8", "PO1", "PO2", "PO7", "PO8",
-    "POZ", "PZ", "T7", "T8", "TP7", "TP8", "X", "Y", "nd"]
-
-# X, Y are "EOG" (Electro-oculogram) for eyes
-# nd is a reference electrode
-
 thread_lock = Lock()
+pywren_executor = pw.default_executor()
+USE_PYWREN = False
+K_CORES = "default"
+max_T = 200
+max_lag = 5
+
+# methods available: pwgc, onepass_pwgc, simple_pwgc, alasso
 
 
-def compute_all_networks():
+def compute_all_networks(method="pwgc"):
     pool = ThreadPool(4)
-    pool.map(compute_and_save_networks, os.listdir("eeg"))
+    data_dirs = os.listdir(RAW_DATA)
+    pool.starmap(compute_and_save_networks,
+                 zip(data_dirs, [method] * len(data_dirs)))
     pool.close()
     pool.join()
     return
 
 
-def compute_and_save_networks(subject):
+def compute_and_save_networks(subject, method="pwgc"):
     print(subject)
-    if subject[3] == "a":
-        pass
-    elif subject[3] == "c":
+    if subject[3] in ("a", "c"):
         pass
     else:
         return
 
-    Adj = estimate_subject_G_adj(subject)
-    np.save("eeg/adj_estimates/" + subject + ".npy", Adj)
+    save_dir = PROCESSED_DATA + method + "/" + ADJ_ESTIMATES
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    Adj = estimate_subject_G_adj(subject, method=method)
+    np.save(save_dir + subject + ".npy", Adj)
     return
 
 
@@ -67,42 +78,133 @@ def network_comparison_example():
     A_control = estimate_subject_G_adj(subject_control)
     A_alcoholic = estimate_subject_G_adj(subject_alcoholic)
 
-    plot_adj_mat(A_control, save_file=["../figures/control_adj_mat.png",
-                                       "../figures/control_adj_mat.pdf"],
+    plot_adj_mat(A_control, save_file=[FIGURE_DIR + "control_adj_mat.png",
+                                       FIGURE_DIR + "control_adj_mat.pdf"],
                  show=True, title="Control")
-    plot_adj_mat(A_alcoholic, save_file=["../figures/alcoholic_adj_mat.png",
-                                         "../figures/alcoholic_adj_mat.pdf"],
+    plot_adj_mat(A_alcoholic, save_file=[FIGURE_DIR + "alcoholic_adj_mat.png",
+                                         FIGURE_DIR + "alcoholic_adj_mat.pdf"],
                  show=True, title="Alcoholic")
     return
 
 
-def estimate_subject_G_adj(subject):
-    folder = "eeg/" + subject + "/"
-    save_folder = "eeg/adj_matrices/" + subject + "/"
+def pw_estimate_subject_G_adj(subject, method="pwgc"):
+    data_folder = get_subject_data_folder(subject)
+    save_folder = PROCESSED_DATA + method + "/" + ADJ_MATRICES + subject + "/"
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
 
-    all_G_hat = []
+    all_files = os.listdir(data_folder)
+    pool = ThreadPool(4)
 
-    for file_name in os.listdir(folder):
+    def _load_data(file_name):
+        file_name = data_folder + file_name
         try:
-            _, _, _, G_hat = estimate_eeg_graph(folder + file_name,
-                                                post_estimate="lstsqr")
-            all_G_hat.append(G_hat)
-            A_hat = make_adj_mat([G_hat])
-            np.save(save_folder + file_name + ".npy", A_hat)
+            X = get_eeg_data(file_name)
         except Exception as e:
             # Here's a ghetto error logger
             err = ("Caught Exception {} while trying to estimate eeg "
-                   "graph for subject {} and file {}.  We can try to "
-                   "continue...".format(e, subject, file_name))
+                   "graph for file {}.  We can try to "
+                   "continue...".format(e, file_name))
             print(err)
 
             thread_lock.acquire(blocking=True, timeout=-1)
             with open("eeg_errors.txt", "w+") as f:
                 f.write(err + "\n")
             thread_lock.release()
+            return None
+        return X
 
+    def _save_adj_mat(file_name, A_hat):
+        np.save(save_folder + file_name + ".npy", A_hat)
+        return
+
+    if method == "pwgc":
+        def estimate_graph(X__file_name__post_estimate):
+            X, file_name, post_estimate = X__file_name__post_estimate
+            _, G_hat = estimate_eeg_graph(X, post_estimate=post_estimate)
+            A_hat = make_adj_mat([G_hat])
+            return file_name, A_hat, G_hat
+    else:
+        raise ValueError("method {} not available".format(method))
+
+    all_data = [X for X in pool.map(_load_data, all_files) if X is not None]
+    data = zip(all_data, all_files, ["lstsqr"] * len(all_files))
+
+    results = pywren_executor.map(estimate_graph, data)
+    results = pw.get_all_results(results)
+    all_G_hat = [result[-1] for result in results]
+
+    pool.starmap(_save_adj_mat, [(result[0], result[1]) for result in results])
+    pool.close()
+    pool.join()
+    return make_adj_mat(all_G_hat)
+
+
+def estimate_subject_G_adj(subject, method="pwgc"):
+    data_folder = get_subject_data_folder(subject)
+    save_folder = PROCESSED_DATA + method + "/" + ADJ_MATRICES + subject + "/"
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+
+    all_files = os.listdir(data_folder)
+
+    def _load_data(file_name):
+        file_name = data_folder + file_name
+        try:
+            X = get_eeg_data(file_name)
+        except Exception as e:
+            # Here's a ghetto error logger
+            err = ("Caught Exception {} while trying to estimate eeg "
+                   "graph for file {}.  We can try to "
+                   "continue...".format(e, file_name))
+            print(err)
+
+            thread_lock.acquire(blocking=True, timeout=-1)
+            with open("eeg_errors.txt", "w+") as f:
+                f.write(err + "\n")
+            thread_lock.release()
+            return None
+        return X
+
+    def _save_adj_mat(file_name, A_hat):
+        np.save(save_folder + file_name + ".npy", A_hat)
+        return
+
+    if method == "pwgc":  # pwgc multiple passes
+        def estimate_graph(X__file_name__post_estimate):
+            X, file_name, post_estimate = X__file_name__post_estimate
+            _, G_hat = estimate_eeg_graph(X, post_estimate=post_estimate)
+            A_hat = make_adj_mat([G_hat])
+            return file_name, A_hat, G_hat
+    elif method == "simple_pwgc":  # Simple Pairwise thresholding method
+        def estimate_graph(X__file_name__post_estimate):
+            X, file_name, post_estimate = X__file_name__post_estimate
+            _, G_hat = simple_pwgc_estimate_graph(X)
+            A_hat = make_adj_mat([G_hat])
+            return file_name, A_hat, G_hat
+    elif method == "onepass_pwgc":  # Single pass of pwgc
+        def estimate_graph(X__file_name__post_estimate):
+            X, file_name, post_estimate = X__file_name__post_estimate
+            _, G_hat = onepass_pwgc_estimate_graph(X)
+            A_hat = make_adj_mat([G_hat])
+            return file_name, A_hat, G_hat
+    elif method == "alasso":  # ALASSO
+        def estimate_graph(X__file_name__post_estimate):
+            X, file_name, post_estimate = X__file_name__post_estimate
+            _, G_hat = alasso_estimate(X)
+            A_hat = make_adj_mat([G_hat])
+            return file_name, A_hat, G_hat
+    else:
+        raise ValueError("method {} not available".format(method))
+
+    all_data = [X for X in map(_load_data, all_files) if X is not None]
+    data = zip(all_data, all_files, ["lstsqr"] * len(all_files))
+    results = list(map(estimate_graph, data))
+
+    all_G_hat = [result[-1] for result in results]
+
+    for result in results:
+        _save_adj_mat(result[0], result[1])
     return make_adj_mat(all_G_hat)
 
 
@@ -135,7 +237,6 @@ def make_adj_mat(all_G_hat):
         for (i, j) in g.edges:
             edges[i][j] += 1
 
-    # G_hat = nx.DiGraph(edges)
     G_adj = np.zeros((n_nodes, n_nodes))
     for i in edges:
         for j in edges[i]:
@@ -150,10 +251,12 @@ def oos_error_demonstration(subject="co2a0000364"):
     all_V = []
     all_V_bl = []
     all_G_hat = []
-    folder = "eeg/" + subject + "/"
+    folder = get_subject_data_folder(subject)
+
     for file_name in os.listdir(folder):
-        V, V_bl, V0, G_hat = estimate_eeg_graph(folder + file_name,
-                                                post_estimate="lstsqr")
+        X = get_eeg_data(folder + file_name)
+        V, G_hat = estimate_eeg_graph(X, post_estimate="lstsqr")
+        V_bl, V0 = baseline_estimate(X)
         plt.plot(V, color="b", alpha=0.75)
         plt.plot(V_bl, color="r", alpha=0.75)
         plt.plot(V0, color="g", alpha=0.75)
@@ -174,16 +277,19 @@ def oos_error_demonstration(subject="co2a0000364"):
     plt.title("Out of Sample Error (subject {})".format(subject))
     plt.xlabel("log MSE")
     plt.ylabel("Density")
-    plt.savefig("../figures/eeg_oos_demonstration.png")
-    plt.savefig("../figures/eeg_oos_demonstration.pdf")
+    plt.savefig(FIGURE_DIR + "eeg_oos_demonstration.png")
+    plt.savefig(FIGURE_DIR + "eeg_oos_demonstration.pdf")
     plt.show()
     return
 
 
+def get_subject_data_folder(subject):
+    return RAW_DATA + subject + "/"
+
+
 def oos_example():
-    max_T = 200
-    max_lag = 5
-    X = get_eeg_data("eeg/co2a0000364/co2a0000364.rd.000")
+    data_folder = get_subject_data_folder("co2a0000364")
+    X = get_eeg_data(data_folder + "co2a0000364.rd.000")
     baseline_estimates(X, max_T, max_lag, plot_example=True)
     return
 
@@ -199,16 +305,46 @@ def get_eeg_data(file_name):
     return X
 
 
-def estimate_eeg_graph(file_name, post_estimate="lstsqr"):
-    X = get_eeg_data(file_name)
-    max_T = 200
-    p_max = 5
+def estimate_eeg_graph(X, post_estimate="lstsqr"):
+    def _doit():
+        V, G_hat = full_graph_estimates(X, max_T=max_T, max_lag=max_lag,
+                                        N_iters=10,
+                                        post_estimate=post_estimate)
+        return V, G_hat
+    return _doit()
 
-    V, G_hat = full_graph_estimates(X, max_T=max_T, max_lag=p_max,
-                                    N_iters=10, post_estimate=post_estimate)
-    V_bl = baseline_estimates(X, max_T, p_max)
+
+def baseline_estimate(X):
+    V_bl = baseline_estimates(X, max_T, max_lag)
     V0 = np.var(X[max_T:], axis=0)
-    return V, V_bl, V0, G_hat
+    return V_bl, V0
+
+
+def onepass_pwgc_estimate_graph(X):
+    """Single pass of pwgc algorithm"""
+    G_hat = pwgc_estimate_graph(X[:max_T], max_lags=max_lag,
+                                method="lstsqr",
+                                K_cores=K_CORES)
+    X_r = get_X(G_hat, prop="r")
+    V = np.var(X_r, axis=0)
+    return V, G_hat
+
+
+def simple_pwgc_estimate_graph(X, post_estimate="lstsqr"):
+    """Pure pairwise thresholding"""
+    G_hat = pw_threshold_estimate_graph(X[:max_T], max_lags=max_lag,
+                                        method="lstsqr", K_cores=K_CORES)
+    X_r = get_X(G_hat, prop="r")
+    V = np.var(X_r, axis=0)
+    return V, G_hat
+
+
+def alasso_estimate(X):
+    G_hat = estimate_dense_graph(X, max_lag=max_lag, max_T=max_T,
+                                 method="alasso")
+    X_r = get_X(G_hat, prop="r")
+    V = np.var(X_r, axis=0)
+    return V, G_hat
 
 
 def baseline_estimates(X, max_T, max_lag, plot_example=False):
@@ -255,8 +391,8 @@ def baseline_estimates(X, max_T, max_lag, plot_example=False):
         plt.xlabel("Time")
         plt.ylabel("EEG Signal (normalized nv)")
         plt.title("Illustrative Estimates (Univariate AR)")
-        plt.savefig("../figures/eeg_estimate_example.png")
-        plt.savefig("../figures/eeg_estimate_example.pdf")
+        plt.savefig(FIGURE_DIR + "eeg_estimate_example.png")
+        plt.savefig(FIGURE_DIR + "eeg_estimate_example.pdf")
         plt.show()
     return V
 
@@ -273,7 +409,8 @@ def full_graph_estimates(X, max_T, max_lag, N_iters=4,
     graph_estimates = []
 
     def _estimate(X_data):
-        G_e = pwgc_estimate_graph(X[:max_T], max_lags=max_lag, method="lstsqr")
+        G_e = pwgc_estimate_graph(X[:max_T], max_lags=max_lag,
+                                  method="lstsqr", K_cores=K_CORES)
         G_r = get_residual_graph(G_e)
         X_r = get_X(G_r)
         return G_e, X_r
@@ -312,8 +449,8 @@ def read_trial(file_name):
     return eeg
 
 
-if __name__== "__main__":
-    # oos_example()
-    # oos_error_demonstration()
-    compute_all_networks()
-    pass
+# if __name__== "__main__":
+#     # oos_example()
+#     # oos_error_demonstration()
+#     compute_all_networks()
+#     pass

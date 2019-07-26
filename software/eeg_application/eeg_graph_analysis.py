@@ -6,6 +6,8 @@ import os
 import grakel
 import pandas as pd
 
+from constants import ADJ_MATRICES, FIGURE_DIR
+
 from grakel import GraphKernel  # Graph kernels
 from datetime import datetime
 from matplotlib import pyplot as plt
@@ -46,6 +48,14 @@ mpl_rc("font", **font)
 mpl_rc("text", usetex=True)
 
 
+def stratified_split(X, y, test_size=0.2):
+    ss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
+    train_ix, valid_ix = next(ss.split(X, y))
+    X_valid, y_valid = X[valid_ix], y[valid_ix]
+    X_train, y_train = X[train_ix], y[train_ix]
+    return X_valid, y_valid, X_train, y_train
+
+
 def logistic_regression_clf():
     """
     Compute and quantify the quality of a multinomial logistic regression
@@ -55,10 +65,7 @@ def logistic_regression_clf():
     le = LabelEncoder()
     y = le.fit_transform(y)
 
-    ss = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
-    train_ix, valid_ix = next(ss.split(X, y))
-    X_valid, y_valid = X[valid_ix], y[valid_ix]
-    X_train, y_train = X[train_ix], y[train_ix]
+    X_valid, y_valid, X_train, y_train = stratified_split(X, y, test_size=0.2)
 
     clf = Pipeline(
         steps=[("kern", Nystroem(kernel="poly")),
@@ -67,7 +74,8 @@ def logistic_regression_clf():
                                                class_weight="balanced",
                                                multi_class="multinomial",
                                                tol=1e-3,
-                                               max_iter=500, warm_start=True))])
+                                               max_iter=500, warm_start=True))]
+                                               )
     param_grid = {"kern__gamma": np.linspace(0.2, 1.5, 20),
                   "kern__degree": [3, 4, 5],
                   "kern__coef0": [0.5, 1.0, 1.5],
@@ -91,9 +99,9 @@ def logistic_regression_clf():
               "".format(matthews_corrcoef(y_hat_valid, y_valid)))
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
-    plt.savefig("../figures/logistic_regression_confusion_matrix.pdf",
+    plt.savefig(FIGURE_DIR + "logistic_regression_confusion_matrix.pdf",
                 bbox_inches="tight", pad_inches=0)
-    plt.savefig("../figures/logistic_regression_confusion_matrix.png",
+    plt.savefig(FIGURE_DIR + "logistic_regression_confusion_matrix.png",
                 bbox_inches="tight", pad_inches=0)
     plt.show()
     return
@@ -118,8 +126,8 @@ def logistic_regression_subject_pair_visualization(i=59, j=60):
     _X = X[sel]
 
     qt = QuantileTransformer(output_distribution="normal")
-    kern = Nystroem(kernel="poly", gamma=0.55, degree=4, coef0=1.0, n_components=40,
-                    random_state=0)
+    kern = Nystroem(kernel="poly", gamma=0.55, degree=4, coef0=1.0,
+                    n_components=40, random_state=0)
     K = kern.fit_transform(_X)
     K = qt.fit_transform(K)
 
@@ -139,7 +147,7 @@ def logistic_regression_subject_pair_visualization(i=59, j=60):
     cv.fit(X_proj, _y)
 
     clf = cv.best_estimator_
-    clf.probability=True
+    clf.probability = True
     clf.fit(X_proj, _y)
 
     h = .01
@@ -162,9 +170,9 @@ def logistic_regression_subject_pair_visualization(i=59, j=60):
     plt.ylabel("PLS Projection $y$")
     plt.xlabel("PLS Projection $x$")
     plt.legend()
-    plt.savefig("../figures/logistic_regression_separation.png",
+    plt.savefig(FIGURE_DIR + "logistic_regression_separation.png",
                 bbox_inches="tight", pad_inches=0)
-    plt.savefig("../figures/logistic_regression_separation.pdf",
+    plt.savefig(FIGURE_DIR + "logistic_regression_separation.pdf",
                 bbox_inches="tight", pad_inches=0)
     plt.show()
 
@@ -196,7 +204,8 @@ def logistic_regression_subject_pair(i=59, j=60, clf=None):
                                                    class_weight="balanced",
                                                    multi_class="multinomial",
                                                    tol=1e-3,
-                                                   max_iter=500, warm_start=True))])
+                                                   max_iter=500,
+                                                   warm_start=True))])
         param_grid = {"kern__gamma": np.linspace(0.2, 1.5, 20),
                       "kern__degree": [3, 4, 5],
                       "kern__coef0": [0.5, 1.0, 1.5],
@@ -215,23 +224,13 @@ def logistic_regression_subject_pair(i=59, j=60, clf=None):
     return matthews_corrcoef(y_valid, y_hat_valid), final_clf
 
 
-def load_Xy_dataset():
-    dataset = load_dataset()
-    X = np.vstack([dataset["A"][i][0].toarray().ravel()
-                   for i in range(len(dataset["A"]))])
-    Y = np.vstack([dataset["C"][i][0].toarray().ravel()
-                   for i in range(len(dataset["C"]))])
-    y = np.append(np.ones(len(X)), np.zeros(len(Y)))
-    X = np.vstack((X, Y))
-    return X, y
-
-
-def load_dataset(avg_subjects=False):
+def load_dataset(avg_subjects=False,
+                 base_folder="data/processed/pwgc/"):
     dataset = {"A": [], "C": []}
     # labels = {chan: chan for chan in channels}
     vertex_labels = {i: chan for i, chan in enumerate(channels)}
 
-    adj_mat_folder = "eeg/adj_matrices/"
+    adj_mat_folder = os.path.join(base_folder, ADJ_MATRICES)
     for folder in os.listdir(adj_mat_folder):
         if folder[3] == "a":
             label = "A"
@@ -249,16 +248,15 @@ def load_dataset(avg_subjects=False):
     return dataset
 
 
-def load_subject_Xyz():
+def load_subject_Xyz(base_folder="data/processed/pwgc_results/"):
     dataset = {}
-    # labels = {chan: chan for chan in channels}
     vertex_labels = {i: chan for i, chan in enumerate(channels)}
 
     X = []
     y = []
     z = []
 
-    adj_mat_folder = "eeg/adj_matrices/"
+    adj_mat_folder = os.path.join(base_folder, "adj_matrices/")
     for folder in os.listdir(adj_mat_folder):
         if folder[3] == "a":
             label = "A"
@@ -277,6 +275,7 @@ def load_subject_Xyz():
             X.append(g.ravel())
             y.append(folder)
             z.append(label)
+
     X = np.vstack(X)
     y = np.array(y)
     z = np.array(z)
@@ -313,51 +312,6 @@ def _load_all_graphs(folder, adj_mat_folder, dataset,
         except Exception as e:
             print("Caught Exception {}, continuing...".format(e))
     return dataset
-
-
-def load_s2_dataset():
-    """
-    Dataset based on whether S2 was "match" or "nomatch"
-    """
-    dataset = {"A": [], "C": []}
-    vertex_labels = {i: chan for i, chan in enumerate(channels)}
-
-    adj_mat_folder = "eeg/adj_matrices/"
-    for folder in os.listdir(adj_mat_folder):
-        for adj_file in os.listdir(adj_mat_folder + folder):
-            if adj_file[-3:] != "npy":
-                continue
-            file_name = os.path.join(adj_mat_folder, folder, adj_file)
-
-            trial_type = get_trial_type(folder, adj_file[:-4])
-            if trial_type == "S1":
-                continue
-            elif trial_type == "match":
-                label = "A"
-            elif trial_type == "nomatch":
-                label = "C"
-            else:
-                raise AssertionError("???")
-
-            adj = np.load(file_name)
-            adj = sparse_matrix(adj)
-            dataset[label].append([adj, vertex_labels])
-    return dataset
-
-
-def get_trial_type(folder, file_name):
-    data_folder = "eeg/"
-    file_name = os.path.join(data_folder, folder, file_name)
-    with open(file_name) as f:
-        [f.readline() for _ in range(3)]
-        l = f.readline()
-        if "nomatch" in l:
-            return "nomatch"
-        elif "match" in l:
-            return "match"
-        else:
-            return "S1"
-    return
 
 
 def adj_mat_to_graph(adj):
@@ -406,5 +360,3 @@ if __name__ == "__main__":
     i, j = 0, 1
     logistic_regression_subject_pair_visualization(i, j)
     logistic_regression_subject_pair(i, j)
-    pass
-

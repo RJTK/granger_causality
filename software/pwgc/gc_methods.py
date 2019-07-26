@@ -288,7 +288,10 @@ def estimate_B(G, max_lag=10, copy_G=False,
 
         if len(a_i) == 0:
             G.nodes[i]["sv^2_hat"] = np.var(y_raw)
-            G.nodes[i]["r"] = G.nodes[i]["x"][max_T + max_lag:]
+            if max_T is not None:
+                G.nodes[i]["r"] = G.nodes[i]["x"][max_T + max_lag:]
+            else:
+                G.nodes[i]["r"] = G.nodes[i]["x"][max_lag:]
             continue
         else:
             X_raw = np.hstack([G.nodes[j]["x"][:, None] for j in a_i])
@@ -862,12 +865,40 @@ def alasso_fista_estimate_dense_graph(X, max_lag=10, max_T=None, nu=1.25,
     return G
 
 
-def pwgc_estimate_graph(X, max_lags=10, alpha=0.05,
-                        method="lstsqr"):
+def pw_threshold_estimate_graph(X, max_lags=10, alpha=0.05,
+                                method="lstsqr", K_cores="default"):
     T, n = X.shape
 
-    F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
-                                    k_cores=int(1 + np.log(n)))
+    if K_cores == "default":
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                        k_cores=int(1 + np.log(n)))
+    else:
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                        k_cores=K_cores)
+
+    P_edges = normalize_gc_score(F, P, T, F_distr=True)
+    P_values = 1 - P_edges[~np.eye(n, dtype=bool)].ravel()
+    t_bh = benjamini_hochberg(P_values, alpha=alpha, independent=False)
+
+    P_edges[P_edges < 1 - t_bh] = 0
+    P_edges[P_edges > 0] = 1.0
+
+    G_hat = nx.DiGraph(P_edges.T)
+    attach_X(G_hat, X)
+    G_hat = estimate_B(G_hat, max_lags, method=method)
+    return G_hat
+
+
+def pwgc_estimate_graph(X, max_lags=10, alpha=0.05,
+                        method="lstsqr", K_cores="default"):
+    T, n = X.shape
+
+    if K_cores == "default":
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                        k_cores=int(1 + np.log(n)))
+    else:
+        F, P = fast_compute_pairwise_gc(X, max_lag=max_lags,
+                                        k_cores=K_cores)
 
     # Screen edges via benjamini hochberg criterion
     P_edges = normalize_gc_score(F, P, T, F_distr=True)  # p-values are just 1 - F
@@ -920,7 +951,7 @@ def estimate_graph(X, G, max_lags=10, method="lasso", alpha=0.05,
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
                            method=method)
         G_hat = remove_zero_filters(G_hat, "b_hat(z)", copy_G=False)
-    elif method == "lstsqr":
+    elif method in "lstsqr":
         G_hat = estimate_B(G_hat, max_lags, copy_G=False, max_T=T,
                            method=method)
     else:
