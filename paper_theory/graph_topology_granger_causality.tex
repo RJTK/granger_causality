@@ -43,6 +43,7 @@
 \def\gcg{\mathcal{G}}  % Granger-causality graph
 \def\gcge{\mathcal{E}}  % Graph edges
 \def\VAR{\mathsf{VAR}}  % VAR(p) model
+\def\MA{\mathsf{MA}}  % MA(p) model
 \def\B{\mathsf{B}}  % Filter B
 \def\wtB{\widetilde{\B}}  % General filter B
 \def\A{\mathsf{A}}  % Filter A
@@ -199,7 +200,7 @@ In this paper we study the notion of Granger-causality
 \cite{granger1969investigating} \cite{Granger1980329} as a means of
 uncovering an underlying causal structure in multivariate time series.
 Though the underlying causality graph cannot be observed directly,
-it's it's presence is inferred as a latent structure among observed
+it's presence is inferred as a latent structure among observed
 time series data.  This notion is leveraged in a variety of
 applications e.g. in Neuroscience as a means of recovering
 interactions amongst brain regions \cite{bressler2011wiener},
@@ -294,7 +295,7 @@ Granger-causality.  We establish sufficient conditions (sections
 which a fully conditional Granger-causality graph can be recovered
 from pairwise tests alone (sec \ref{sec:pairwise_algorithm}).  We
 report a summary of simulation results in \ref{sec:simulation}, with
-additional results reported in the supplementary material
+additional results reported in the supplementary material Section
 \ref{apx:simulation}.  Our simulation results establish that there is
 significant potential for improvement over existing methods, and that
 the graph-topological aspects of time series analysis are relevant for
@@ -324,8 +325,8 @@ such a process
 \begin{equation}
   \label{eq:hilbert_space_defn}
   \begin{aligned}
-    \H_t^x &= \cl \{\sum_{\tau = 0}^p a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, p \in \N\} \subseteq L_2(\Omega)\\
-    H_t^x &= \{a x(t)\ |\ a \in \R\} \subseteq L_2(\Omega),
+    \H_t^{(x)} &= \cl \{\sum_{\tau = 0}^p a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, p \in \N\} \subseteq L_2(\Omega)\\
+    H_t^{(x)} &= \{a x(t)\ |\ a \in \R\} \subseteq L_2(\Omega),
   \end{aligned}
 \end{equation}
 
@@ -335,11 +336,11 @@ spaces are separable, and as closed subspaces of a Hilbert space they
 are themselves Hilbert.  We will denote the spaces generated in
 analogous ways by particular components of $x$ as e.g.
 $\H_t^{(i, j)}$, $\H_t^{i}$ or by all but a particular component as
-$\H_t^{-j}$.
+$\H_t^{(-j)}$.
 
 As a consequence of the Wold decomposition theorem (see
 e.g. \cite{lindquist}), every WSS sequence has the moving average
-$MA(\infty)$ representation
+$\MA(\infty)$ representation
 
 \begin{equation}
   \label{eqn:wold}
@@ -356,11 +357,11 @@ $\VAR(\infty)$ form
   x(t) = \sum_{\tau = 1}^\infty B(\tau) x(t - \tau) + v(t).
 \end{equation}
 
-The equations (\ref{eqn:wold}), (\ref{eqn:ar_representation}) can be
+The Equations \eqref{eqn:wold}, \eqref{eqn:ar_representation} can be
 represented as $x(t) = \A(z)v(t) = \B(z)x(t) + v(t)$ via the action
 (convolution) of the operators (LTI filters)
-$\A(z) \defeq \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$ and
-$\B(z) \defeq \sum_{\tau = 1}^\infty B(\tau)z^{-\tau}$ where the
+$$\A(z) \defeq \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$$ and
+$$\B(z) \defeq \sum_{\tau = 1}^\infty B(\tau)z^{-\tau},$$ where the
 operator $z^{-1}$ is the back shift operator acting on
 $\ell_2^n(\Omega, \mathcal{F}, \mathbb{P})$, that is:
 
@@ -388,7 +389,7 @@ definition, which is the setup for the remainder of the paper:
   process having invertible $\VAR(\infty)$ representation
   \eqref{eqn:ar_representation} where $v(t)$ is sequentially
   uncorrelated and has a diagonal positive-definite covariance matrix.
-  The $MA(\infty)$ representation of equation \eqref{eqn:wold} has
+  The $\MA(\infty)$ representation of Equation \eqref{eqn:wold} has
   $c(t) = 0$ and $A(0) = I$.
 \end{definition}
 
@@ -402,7 +403,7 @@ definition, which is the setup for the remainder of the paper:
   and write $x_j \gc x_i$ if
 
 \begin{equation}
-  \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{-j}_{t - 1}},
+  \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{(-j)}_{t - 1}},
 \end{equation}
 
 where $\xi[x \ |\ \H] \defeq \E (x - \linE{x}{\H})^2$ is the mean
@@ -449,8 +450,8 @@ general class of WSS processes, rather than simply $\VAR(p)$ models.
   \begin{enumerate}
     \item{$x_j \ngc x_i$}
     \item{$\forall \tau \in \N_+\ B_{ij}(\tau) = 0$ i.e. $\B_{ij}(z) = 0$}
-    \item{$H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j}$}
-    \item{$\linE{x_i(t)}{\H_{t - 1}^{-j}} = \linE{x_i(t)}{\H_{t - 1}}$}
+    \item{$H_t^{i} \perp \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(-j)}$}
+    \item{$\linE{x_i(t)}{\H_{t - 1}^{(-j)}} = \linE{x_i(t)}{\H_{t - 1}}$}
   \end{enumerate}
 \end{theorem}
 
@@ -516,7 +517,7 @@ Granger-causality relations as follows.
 
 The edges of the Granger-causality graph $\gcg$ can be given a general
 notion of ``weight'' by associating an edge $(j, i)$ with the
-\textit{strictly causal} LTI filter $\B_{ij}(z)$ (see eqn
+\textit{strictly causal} LTI filter $\B_{ij}(z)$ (see Equation
 \eqref{eqn:filter_action}).  Thence, the matrix $\B(z)$ is analogous
 to a \textit{weighted adjacency matrix}\footnote{\footnotesize We are using the
   convention that $\B_{ij}(z)$ is a filter with input $x_j$ and output
@@ -529,7 +530,7 @@ in the same way that the $k^{\text{th}}$ power of an adjacency matrix
 counts the number of paths of length $k$ between nodes,
 $(\B(z)^k)_{ij}$ is a filter isolating the ``action'' of $j$ on $i$ at
 a time lag of $k$ steps, this is exemplified in the inversion formula
-\ref{eqn:lsi_inversion}.
+\eqref{eqn:lsi_inversion}.
 
 From the $\VAR$ representation of $x(t)$ there is clearly a tight
 relationship between each node and it's parent nodes, the relationship
@@ -558,8 +559,8 @@ $x(t)$) in terms of the causality graph $\gcg$.
   \end{equation}
 
   where $\A(z) = \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$ is the filter from
-  the Wold decomposition representation of $x(t)$, equation
-  (\ref{eqn:wold}).
+  the Wold decomposition representation of $x(t)$, Equation
+  \eqref{eqn:wold}.
 \end{proposition}
 
 This statement is ultimately about the sparsity pattern in the Wold
@@ -613,16 +614,8 @@ hand.
 
   then $\H_t^{(i)} \perp \H_t^{(j)}$, that is,
   $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  Moreover,
-  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^i} = 0$.
+  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^{(i)}} = 0$.
 \end{proposition}
-
-\begin{remark}
-  The possibility that there exist nodes sharing both $i$ and $j$ as
-  ancestors is not excluded, the point being that the temporal nature
-  of Granger-causality eliminates the problems caused by ``colliders''
-  (in the language of Pearl's causal calculus
-  \cite{pearl2009causality}) in static causal inference.
-\end{remark}
 
 \begin{remark}
   It is possible for components of $x(t)$ to be correlated at some
@@ -631,12 +624,6 @@ hand.
   \ref{prop:separated_ancestor_uncorrelated} will still hold even if
   $i \in \anc{j}$, since $j$ cannot provide any information about $i$
   that is not available from observing $i$ itself.
-  % However, it is important to note that this is the case only if we
-  % have direct access to $x(t)$.  That is, if we instead observed a
-  % noisy version of $x$ (i.e. $\tilde{x}(t) = x(t) + n(t)$) the
-  % observation of $\tilde{x}_j$ would enable conditionally improved
-  % estimates of $\tilde{x}_i$, without there necessarily being any
-  % causal flow in the underlying system $x(t)$.
 \end{remark}
 
 \begin{proposition}
@@ -823,13 +810,13 @@ subgraphs.
       \caption{\textit{E.Coli} Network of
         \cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}}
       \label{fig:gene_network1}
-      \includegraphics[width=\linewidth, height=\linewidth]{ecoli_regulatory_network.png}
+      \includegraphics[width=\linewidth, height=\linewidth]{ecoli_regulatory_network.pdf}
     \end{subfigure}
     \begin{subfigure}[b]{0.45\textwidth}
       \caption{\textit{Saccharomyces cerevisiae} Network of
         \cite{learning_genome_scale_regulatory_networks}}
       \label{fig:gene_network2}
-      \includegraphics[width=\linewidth, height=\linewidth]{huge_gene_network.png}
+      \includegraphics[width=\linewidth, height=\linewidth]{huge_gene_network.pdf}
     \end{subfigure}
 
     {\footnotesize Figure \ref{fig:gene_network1} has only one edge
@@ -941,17 +928,6 @@ surprisingly, not true in a general graph.
   If $\gcg$ is a strongly causal DAG then $j \gc i \Rightarrow j \pwgc i$.
 \end{corollary}
 
-\begin{remark}
-  As we have seen and as is true in much of statistics, confounding
-  nodes pose challenges for Granger-causality.  However, as opposed to
-  the causal calculus of \cite{pearl2009causality}, pairwise
-  Granger-causality does not suffer any difficulty with so-called
-  ``colliders'', that is, the topology $i \rightarrow k \leftarrow j$ will never result
-  in $i \pwgc j$ or $j \pwgc i$.  This is evidently an advantage of
-  the \textit{temporal} nature of Granger-causality -- there is no
-  backwards causal flow along the edges of $\gcg$.
-\end{remark}
-
 \begin{example}
   As a final remark of this subsection we note that a complete
   converse to Proposition \ref{prop:ancestor_properties} is not
@@ -995,7 +971,7 @@ which a converse to part $(b)$ will hold.
 
   \begin{align}
     \tau_0(\B) &= \text{inf }\{\tau \in \Z_+\ |\ b(\tau) \ne 0\},\\
-    \tau_{\infty}(\B) &= \text{sup }\{\tau \in \Z_+\ |\ b(\tau) \ne 0\}.\\
+    \tau_{\infty}(\B) &= \text{sup }\{\tau \in \Z_+\ |\ b(\tau) \ne 0\}.
   \end{align}
 
   i.e. the ``first'' and ``last'' coefficients of the filter $\B(z)$,
@@ -1047,7 +1023,7 @@ In order to eliminate the possibility of a particular sort of
 cancellation, an ad-hoc assumption is required.  Strictly speaking,
 the persistence condition is not a necessary or sufficient condition
 for the following, but cases where the following fails to hold, and
-peristence \textit{does} hold, are unavoidable pathologies.
+persistence \textit{does} hold, are unavoidable pathologies.
 
 \begin{assumption}[no-cancellation]
   \label{ass:T_causality}
@@ -1055,7 +1031,7 @@ peristence \textit{does} hold, are unavoidable pathologies.
   such that
 
   \begin{equation*}
-    H_i(z)x_i(t) = \linE{x_i(t)}{\H_{t - 1}^i},
+    H_i(z)x_i(t) = \linE{x_i(t)}{\H_{t - 1}^{(i)}},
   \end{equation*}
 
   and similarly for $H_j(z)$.  Then define
@@ -1083,7 +1059,7 @@ peristence \textit{does} hold, are unavoidable pathologies.
   $x(t)$ is persistent, and there is only a single confounder.
   Unfortunately, some pathological behaviour resulting from
   confounding nodes seems to be unavoidable without some assumptions
-  about the parameters of the $MA(\infty)$ system defining $x(t)$.
+  about the parameters of the $\MA(\infty)$ system defining $x(t)$.
 \end{remark}
 
 \begin{proposition}
@@ -1101,12 +1077,12 @@ peristence \textit{does} hold, are unavoidable pathologies.
 
 \begin{remark}
   The importance of this result is that when $i \pwgc j$ is a result
-  of a condounder $k$, then $i \pwgc j \iff j \pwgc i$.  This
+  of a confounder $k$, then $i \pwgc j \iff j \pwgc i$.  This
   implies that in a strongly causal graph every bidirectional pairwise
   causality relation must be the result of a confounder.  Therefore,
   in a strongly causal graph, pairwise causality analysis is
   \textit{immune to confounding} (since we can safely remove all
-  bidrectional edges).
+  bidirectional edges).
 \end{remark}
 
 \subsection{Recovering $\gcg$ via Pairwise Tests}
@@ -1407,7 +1383,7 @@ in the case of more general DAGs, the PWGC heuristic is still able to
 more reliably uncover the graph structure for small values of $q$.  We
 would conjecture that for small $q$, random graphs are ``likely'' to
 be ``close'' to SCGs in some appropriate sense.  As $q$ increases,
-there are simply not enough edges allowed by the SGC topology for it
+there are simply not enough edges allowed by the SCG topology for it
 to be possible to accurately recover $\gcg$.
 
 Interestingly, we can observe that the AdaLASSO appears to perform
@@ -1450,10 +1426,12 @@ with our PWGC algorithm (by modifying the approach described in
 Section \ref{sec:pairwise_hypothesis_testing} to instead utilize
 state-space Granger-causality testing) therefore is likely to enable
 application to very large networks of time series data which are not
-well approximated by finite $\VAR(p)$ models.
+well approximated by finite $\VAR(p)$ models.  Moreover, our
+heuristics are in principle applicable in a model-free context.  As
+long as a primitive for testing the pairwise causation between two
+components of a multivariate time series is available, our methods may
+be useful.
 
-% \bibliography{\string~global_bib.bib}
-% \bibliography{\string~/Documents/academics/global_academics/global_bib}
 \bibliography{paper_bib}
 \end{document}
 

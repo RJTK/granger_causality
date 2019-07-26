@@ -4,10 +4,12 @@
 \usepackage{tabularx}
 \usepackage{xr}
 \usepackage{chngcntr}
-\usepackage{apptools}
-\AtAppendix{\counterwithin{lemma}{section}}
-\AtAppendix{\counterwithin{definition}{section}}
-\AtAppendix{\counterwithin{equation}{section}}
+\usepackage{appendix}
+\newcounter{lemma}
+\newcounter{definition}
+\counterwithin{lemma}{section}
+\counterwithin{definition}{section}
+\counterwithin{equation}{section}
 \externaldocument{graph_topology_granger_causality}
 
 \usepackage{geometry}
@@ -40,6 +42,7 @@
 \def\gcg{\mathcal{G}}  % Granger-causality graph
 \def\gcge{\mathcal{E}}  % Graph edges
 \def\VAR{\mathsf{VAR}}  % VAR(p) model
+\def\MA{\mathsf{MA}}  % MA(p) model
 \def\B{\mathsf{B}}  % Filter B
 \def\wtB{\widetilde{\B}}  % General filter B
 \def\A{\mathsf{A}}  % Filter A
@@ -191,8 +194,8 @@ accompanying this supplementary material.
   \begin{enumerate}
   \item{$x_j \ngc x_i$}
   \item{$\forall \tau \in \N_+\ B_{ij}(\tau) = 0$ i.e. $\B_{ij}(z) = 0$}
-  \item{$H_t^{i} \perp \H_{t - 1}^{j}\ |\ \H_{t - 1}^{-j}$}
-  \item{$\linE{x_i(t)}{\H_{t - 1}^{-j}} = \linE{x_i(t)}{\H_{t - 1}}$}
+  \item{$H_t^{(i)} \perp \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(-j)}$}
+  \item{$\linE{x_i(t)}{\H_{t - 1}^{(-j)}} = \linE{x_i(t)}{\H_{t - 1}}$}
   \end{enumerate}
 \end{theorem}
 
@@ -206,10 +209,10 @@ accompanying this supplementary material.
   $(a) \Rightarrow (b)$ follows as a result of the uniqueness of orthogonal
   projection (i.e. the best estimate is necessarily the coefficients
   of the model).  $(b) \Rightarrow (c)$ follows since in computing
-  $(y - \linE{y}{\H_{t - 1}^{-j}})$ for $y \in H_t^i$ it is sufficient
+  $(y - \linE{y}{\H_{t - 1}^{(-j)}})$ for $y \in H_t^{(i)}$ it is sufficient
   to consider $y = x_i(t)$ by linearity, then since
-  $H_{t - 1}^i \subseteq \H_{t - 1}^{-j}$ we have
-  $(x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{-j}}) = v_i(t)$ since
+  $H_{t - 1}^{(i)} \subseteq \H_{t - 1}^{(-j)}$ we have
+  $(x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(-j)}}) = v_i(t)$ since
   $\B_{ij}(z) = 0$.  The result follows since
   $v_i(t) \perp \H_{t - 1}$.  $(c) \iff (d)$ is a result of the equivalence
   in Definition \ref{lem:conditional_orthogonality_equivalence}.  And,
@@ -253,8 +256,8 @@ accompanying this supplementary material.
   \end{equation}
 
   where $\A(z) = \sum_{\tau = 0}^\infty A(\tau)z^{-\tau}$ is the filter from
-  the Wold decomposition representation of $x(t)$, equation
-  (\ref{eqn:wold}).
+  the Wold decomposition representation of $x(t)$, Equation
+  \eqref{eqn:wold}.
 \end{proposition}
 
 \begin{proof}
@@ -263,7 +266,7 @@ accompanying this supplementary material.
   and Theorem \ref{thm:granger_causality_equivalences}, we are left to
   demonstrate \eqref{eqn:ancestor_expansion}.
   
-  From equation (\ref{eqn:ar_representation}), which we are assuming
+  From Equation \eqref{eqn:ar_representation}, which we are assuming
   throughout the paper to be invertible, we can write
 
   \begin{equation*}
@@ -283,7 +286,7 @@ accompanying this supplementary material.
   $\B$.
 
   Let $S$ be a matrix with elements in $\{0, 1\}$ which represents the
-  sparsity pattern of $\B(z)$, from lemma \ref{lem:adj_matrix} $S$ is
+  sparsity pattern of $\B(z)$, from Lemma \ref{lem:adj_matrix} $S$ is
   the transpose of the adjacency matrix for $\gcg$ and hence
   $(S^k)_{ij}$ is non-zero if and only if $j \in \gpn{k}{i}$, and
   therefore $\B(z)^k_{ij} = 0$ if $j \not \in \gpn{k}{i}$.  Finally,
@@ -311,7 +314,7 @@ accompanying this supplementary material.
 
   then $\H_t^{(i)} \perp \H_t^{(j)}$, that is,
   $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.  Moreover,
-  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^i} = 0$.
+  this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^{(i)}} = 0$.
 \end{proposition}
 
 \begin{proof}
@@ -338,16 +341,16 @@ accompanying this supplementary material.
 \begin{lemma}
   \label{lem:vj_perp}
   Consider distinct nodes $i, j$ in a Granger-causality graph $\gcg$.
-  If $j \not \in \anc{i}$, then $\H_t^{v_j} \perp \H_{t}^{i}$, and therefore
+  If $j \not \in \anc{i}$, then $\H_t^{(v_j)} \perp \H_{t}^{(i)}$, and therefore
   for any causal filter $\Phi(z)$ we have
 
   \begin{align*}
-    \linE{\Phi(z)v_j(t)}{\H_{t - 1}^i} &= 0\\
+    \linE{\Phi(z)v_j(t)}{\H_{t - 1}^{(i)}} &= 0\\
     \inner{x_i(t)}{\Phi(z)v_j(t)} & = 0.
   \end{align*}
 \end{lemma}
 \begin{proof}
-  Fix $\tau, s \ge 0$, then by expanding with Equation \ref{eqn:ancestor_expansion}
+  Fix $\tau, s \ge 0$, then by expanding with Equation \eqref{eqn:ancestor_expansion}
 
   \begin{align*}
     \E[x_i(t - \tau)v_j(t - s)] &= \E[\big(\A_{ii}(z)v_i(t) + \sum_{k \in \anc{i}}\A_{ik}(z)v_k(t) \big) v_j(t - s)]\\
@@ -374,23 +377,23 @@ accompanying this supplementary material.
   By Theorem \ref{thm:granger_causality_equivalences} it suffices to show that
 
   \begin{equation*}
-    \forall \psi \in \H_{t - 1}^j\ \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}{\psi - \linE{\psi}{\H_{t - 1}^i}} = 0.
+    \forall \psi \in \H_{t - 1}^{(j)}\ \inner{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}} = 0.
   \end{equation*}
 
   which by the orthogonality principle and by representing
-  $\psi \in \H_{t - 1}^j$ via the action of some strictly causal filter
+  $\psi \in \H_{t - 1}^{(j)}$ via the action of some strictly causal filter
   $\Phi(z)$ on $x_j(t)$ is equivalent to
 
   \begin{equation}
     \label{eqn:proof_inner0}
-    \inner{x_i(t)}{\Phi(z)x_j(t) - \linE{\Phi(z)x_j(t)}{\H_{t - 1}^i}} = 0.
+    \inner{x_i(t)}{\Phi(z)x_j(t) - \linE{\Phi(z)x_j(t)}{\H_{t - 1}^{(i)}}} = 0.
   \end{equation}
 
   If we expand $x_j(t)$ using Equation \eqref{eqn:ancestor_expansion},
   the left hand side of \eqref{eqn:proof_inner0} becomes
 
   \begin{equation*}
-    \inner{x_i(t)}{\sum_{k \in \anc{j} \cup \{j\}} \Big(\Phi(z)\A_{jk}(z)v_k(t) - \linE{\Phi(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^i}\Big)}.
+    \inner{x_i(t)}{\sum_{k \in \anc{j} \cup \{j\}} \Big(\Phi(z)\A_{jk}(z)v_k(t) - \linE{\Phi(z)\A_{jk}(z)v_k(t)}{\H_{t - 1}^{(i)}}\Big)}.
   \end{equation*}
 
   We see that this is $0$ by Lemma \ref{lem:vj_perp} since
@@ -667,10 +670,10 @@ accompanying this supplementary material.
   contradicting property $(b)$.  Moreover, for any
   $u \in \big(\anc{j} \setminus \{i\}\big)$ and $k \in C_0(u)$,
   Proposition \ref{prop:ancestor_uncorrelated} shows that
-  $H_t^i \perp \H_{t - 1}^j | \H_{t - 1}^i$.
+  $H_t^{(i)} \perp \H_{t - 1}^{(j)} | \H_{t - 1}^{(i)}$.
 
   In order to establish $j \npwgc i$, choose an arbitrary element of
-  $\H_{t - 1}^j$ and represent it via the action of a strictly causal
+  $\H_{t - 1}^{(j)}$ and represent it via the action of a strictly causal
   filter $\Phi(z)$, i.e.  $\Phi(z) x_j(t) \in \H_{t - 1}^{(j)}$, by
   Theorem \ref{thm:granger_causality_equivalences} it suffices to show
   that
@@ -710,7 +713,7 @@ accompanying this supplementary material.
     \inner{x_i(t)}{\Phi(z)F(z)x_i(t) - \linE{\Phi(z)F(z)x_i(t)}{\H_{t - 1}^{(i)}}},
   \]
 
-  and this is $0$ since $\Phi(z)F(z)x_i(t) \in \H_{t - 1}^i$.
+  and this is $0$ since $\Phi(z)F(z)x_i(t) \in \H_{t - 1}^{(i)}$.
   
 
   % Using the above partition of $\pa{j}$, we can expand $x_j(t)$ in
@@ -774,9 +777,9 @@ accompanying this supplementary material.
     \inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}} \ne 0
   \end{equation}
 
-  and therefore that $H_t^{(i)} \not\perp\ \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(i)}$, which by theorem (\ref{thm:granger_causality_equivalences}) is enough to establish that $j \pwgc i$.
+  and therefore that $H_t^{(i)} \not\perp\ \H_{t - 1}^{(j)}\ |\ \H_{t - 1}^{(i)}$, which by Theorem (\ref{thm:granger_causality_equivalences}) is enough to establish that $j \pwgc i$.
 
-  Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $\gcgpath{j}{i}$ path in $\gcg$, we will expand the representation of equation (\ref{eqn:parent_expansion}) backwards along this path:
+  Firstly, we will establish a representation of $x_i(t)$ that involves $x_j(t)$.  Denote by $a_{r + 1} \rightarrow a_r \rightarrow \cdots \rightarrow a_1 \rightarrow a_0$ with $a_{r + 1} \defeq j$ and $a_0 \defeq i$ the \textit{unique} $\gcgpath{j}{i}$ path in $\gcg$, we will expand the representation of Equation \eqref{eqn:parent_expansion} backwards along this path:
 
   \begin{align*}
     x_i(t) &= v_i(t) + \B_{ii}(z) x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z) x_k(t)\\
@@ -788,7 +791,7 @@ accompanying this supplementary material.
 
   where $(a)$ follows by a routine induction argument and where we define $\prod_{m = 0}^{-1} \bullet \defeq 1$ for notational convenience.
 
-  Using this representation to expand equation (\ref{eqn:cond_ortho_proof}), we obtain the following cumbersome expression:
+  Using this representation to expand Equation \eqref{eqn:cond_ortho_proof}, we obtain the following cumbersome expression:
 
   \begin{align*}
     &\inner{\psi - \linE{\psi}{\H_{t - 1}^{(i)}}}{F_{r + 1}(z)x_j(t) - \linE{F_{r + 1}(z)x_j(t)}{\H_{t - 1}^{(i)}}}\\
@@ -806,7 +809,7 @@ accompanying this supplementary material.
 
   Now since $F_{r + 1}(z) \ne 0$ by Theorem
   \ref{thm:granger_causality_equivalences}, and
-  $F_{r + 1}(z)x_j(t) \not\in \H_{t - 1}^i$, we have by the
+  $F_{r + 1}(z)x_j(t) \not\in \H_{t - 1}^{(i)}$, we have by the
   Cauchy-Schwarz inequality that this expression is equal to $0$ if
   and only if
 
@@ -956,7 +959,7 @@ accompanying this supplementary material.
     \iff \inner{F(z)A_{jk}(z)v_k(t)}{x_i(t - \tau)} &= 0\ \forall \tau \ge 1, \text{ strictly causal } F(z),
   \end{align*}
 
-  which can be expanded by equation \eqref{eqn:ancestor_expansion} to
+  which can be expanded by Equation \eqref{eqn:ancestor_expansion} to
   obtain (after cancelling all ancestors of $i$ other than $k$)
 
   \begin{equation*}
@@ -989,20 +992,20 @@ accompanying this supplementary material.
 % \end{proposition}
 \begin{proof}
   Recalling Theorem \ref{thm:granger_causality_equivalences}, consider
-  some $\psi \in \H_{t - 1}^j$ and represent it as
+  some $\psi \in \H_{t - 1}^{(j)}$ and represent it as
   $\psi(t) = F(z)x_j(t)$ for some strictly causal filter $F(z)$.
   Then
 
   \begin{align*}
-    &\inner{\psi(t) - \linE{\psi(t)}{\H_{t - 1}^i}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}\\
-    &\overset{(a)}{=} \inner{F(z)x_j(t)}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^i}}\\
+    &\inner{\psi(t) - \linE{\psi(t)}{\H_{t - 1}^{(i)}}}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}\\
+    &\overset{(a)}{=} \inner{F(z)x_j(t)}{x_i(t) - \linE{x_i(t)}{\H_{t - 1}^{(i)}}}\\
     &\overset{(b)}{=} \inner{F(z)\big(\A_{jj}(z)v_j(t) + \sum_{k \in \anc{j}}\A_{jk}(z)v_k(t)\big)}{(1 - H_i(z))\big(\A_{ii}(z)v_i(t) + \sum_{\ell \in \anc{i}}\A_{i\ell}(z)v_\ell(t)\big)}\\
     &\overset{(c)}{=} \sum_{k \in \anc{i}\cap\anc{j}}\inner{F(z)\A_{jk}(z)v_k(t)}{(1 - H_i(z))\A_{ik}(z)v_k(t)},
   \end{align*}
 
   where $(a)$ applies the orthogonality principle, $(b)$ expands with
   Equation \eqref{eqn:ancestor_expansion} with
-  $H_i(z)x_i(t) = \linE{x_i(t)}{H_{t - 1}^i}$, and $(c)$ follows by
+  $H_i(z)x_i(t) = \linE{x_i(t)}{H_{t - 1}^{(i)}}$, and $(c)$ follows by
   performing cancellations of $v_k(t) \perp v_\ell(t)$ and noting that
   by the contrapositive of Proposition \ref{prop:sc_graph_common_anc}
   we cannot have $i \in \anc{j}$ or $j \in \anc{i}$.
@@ -1010,13 +1013,13 @@ accompanying this supplementary material.
 % , $(c)$ is obtained through cancellations from Lemma \ref{lem:vj_perp}, $(d)$ follows since $\H_i$ is self-adjoint, $(e)$ follows by definition of $\H_i$: $\exists H_i(z)$ such that $$H_i(z)x_i(t) = \H_i \sum_{\ell \in \anc{i}}\A_{i\ell}v_\ell(t),$$ $(f)$ follows by again expanding $x_i(t)$ with Equation \eqref{eqn:ancestor_expansion}, and finally $(g)$ by cancelling orthogonal components of $v(t)$.
 
   Through symmetric calculation, we can obtain the expression relevant
-  to the determination of $i \pwgc j$ for $\phi \in \H_{t - 1}^i$ represented by the strictly causal filter $G(z): \phi(t) = G(z)x_i(t)$
+  to the determination of $i \pwgc j$ for $\phi \in \H_{t - 1}^{(i)}$ represented by the strictly causal filter $G(z): \phi(t) = G(z)x_i(t)$
   \begin{align*}
-    &\inner{\phi(t) - \linE{\phi(t)}{\H_{t - 1}^j}}{x_j(t) - \linE{x_j(t)}{\H_{t - 1}^j}}\\
+    &\inner{\phi(t) - \linE{\phi(t)}{\H_{t - 1}^{(j)}}}{x_j(t) - \linE{x_j(t)}{\H_{t - 1}^{(j)}}}\\
     &= \sum_{k \in \anc{i} \cap \anc{j}}\inner{G(z)\A_{ik}(z)v_k(t)}{(1 - H_j(z))\A_{jk}(z)v_k(t)},
   \end{align*}
 
-  where $H_j(z)x_j(t) = \linE{x_j(t)}{\H_{t - 1}^j}.$
+  where $H_j(z)x_j(t) = \linE{x_j(t)}{\H_{t - 1}^{(j)}}.$
 
   We have therefore
 
@@ -1465,7 +1468,7 @@ autocorrelation method
 \cite{hayes_statistical_digital_signal_processing} which substitutes
 the following autocovariance estimates in the Yule-Walker
 equations:\footnote{The particular indexing and normalization given in
-  equation \ref{eqn:covariance_estimate} is critical to ensure
+  Equation \eqref{eqn:covariance_estimate} is critical to ensure
   $\widehat{R}$ is positive semidefinite.  The estimate can be viewed
   as calculating the covariance sequence of a signal multiplied by a
   rectangular window.}
@@ -1502,8 +1505,8 @@ recursion\footnote{We have made use of standalone tailor made
 
 \subsection{Edge Probabilities and Error Rate Controls}
 \label{sec:error_rate_control}
-Denote $F_{ij}$ the Granger-causality statistic of equation
-\ref{eqn:gc_statistics} with model orders chosen by the methods of
+Denote $F_{ij}$ the Granger-causality statistic of Equation
+\eqref{eqn:gc_statistics} with model orders chosen by the methods of
 Section \ref{sec:model_order_selection}.  We assume that this
 statistic is asymptotically $\chi^2(p_{ij})$ distributed (e.g. the
 disturbances are Gaussian), and denote by $G$ the cumulative
@@ -1550,7 +1553,7 @@ this heuristic in future work.
     \label{alg:finite_pwgc}
 
     \Input{Estimates of pairwise Granger-causality statistics $F_{ij}$
-      (eqn \ref{eqn:gc_statistics}).  Matrix of edge probabilities $P_{ij}$ (eqn \ref{eqn:edge_inclusion_probability}).  Hypothesis testing threshold $\delta$ chosen via the Benjamini-Hochberg criterion (Section \ref{sec:error_rate_control})}
+      (eqn. \ref{eqn:gc_statistics}).  Matrix of edge probabilities $P_{ij}$ (eqn. \ref{eqn:edge_inclusion_probability}).  Hypothesis testing threshold $\delta$ chosen via the Benjamini-Hochberg criterion (Section \ref{sec:error_rate_control})}
     \Output{A strongly causal graph $\widehat{\gcg}$}
     \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
       $E = \emptyset$  \texttt{\# edges of }$\widehat{\gcg}$\\
@@ -1689,7 +1692,7 @@ Results are collected in Figures
     the LASSO is encumbered by the sparsity inducing penalty.}
 \end{figure}
 
-In reference to figure \ref{fig:simulation_results_comparison1} it
+In reference to Figure \ref{fig:simulation_results_comparison1} it
 should not be overly surprising that our PWGC algorithm performs
 better than the LASSO for the case of a strongly causal graph, since
 in this case the theory from which our heuristic derives is valid.
@@ -1720,6 +1723,5 @@ using only $T = 500$ data points, granted, an SCG on this many nodes
 is extremely sparse.
 
 \clearpage
-% \bibliography{\string~/Documents/academics/global_academics/global_bib}
 \bibliography{paper_bib}
 \end{document}
