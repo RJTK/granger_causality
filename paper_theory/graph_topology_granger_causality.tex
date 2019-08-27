@@ -40,7 +40,7 @@
 \def\pwgc{\overset{\text{PW}}{\rightarrow}}  % Pairwise Granger causality arrow
 \def\npwgc{\overset{\text{PW}}{\nrightarrow}}  % Negated pairwise Granger causality arrow
 \def\te{\overset{\mathcal{T}}{\rightarrow}}  % Transfer entropy arrow
-\def\gcg{\mathcal{G}}  % Granger-causality graph
+\def\gcg{\mathcal{G}}  % Granger causality graph
 \def\gcge{\mathcal{E}}  % Graph edges
 \def\VAR{\mathsf{VAR}}  % VAR(p) model
 \def\MA{\mathsf{MA}}  % MA(p) model
@@ -173,7 +173,7 @@
 
 \begin{document}
 
-\abstract{We study Granger-causality in the context of wide-sense
+\abstract{We study Granger causality in the context of wide-sense
   stationary time series, where our focus is on the topological
   aspects of the underlying causality graph.  We establish sufficient
   conditions (in particular, we develop the notion of a ``strongly
@@ -186,9 +186,8 @@
   statistical and computational) which can be obtained (in comparison
   to LASSO-type algorithms) when structural assumptions are met.}
 
-\keywords{causality graph, gene regulatory networks,
-  Granger-causality, network learning, time series, vector
-  autoregression}
+\keywords{causality graph, Granger causality, network learning, time
+  series, vector autoregression, LASSO}
 
 \paragraph{Acknowledgement}
 
@@ -196,7 +195,7 @@ We acknowledge the support of the Natural Sciences and Engineering Research Coun
 
 \section{Introduction and Review}
 \label{sec:introduction}
-In this paper we study the notion of Granger-causality
+In this paper we study the notion of Granger causality
 \cite{granger1969investigating} \cite{Granger1980329} as a means of
 uncovering an underlying causal structure in multivariate time series.
 Though the underlying causality graph cannot be observed directly,
@@ -212,7 +211,7 @@ the dependence and connectedness of financial institutions
 \cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty};
 and power system design \cite{Misyrlis2016450}, \cite{yuan2014root}.
 
-Granger-causality can generally be formulated by searching for the
+Granger causality can generally be formulated by searching for the
 ``best'' graph structure consistent with observed data, which is in
 general an extremely challenging problem (i.e. it may be framed as a
 best subset selection problem, see, \cite{hastie_bss_comp} for recent
@@ -243,7 +242,7 @@ stationary time series data with a sufficiently fast rate of
 dependence decay \cite{basu2015} \cite{wong2016lasso}
 \cite{autoregressive_process_modelling_via_the_lasso_procedure}, and
 variations on the LASSO have been applied in a number of different
-time series contexts as well as Granger-causality
+time series contexts as well as Granger causality
 \cite{DBLP:journals/corr/HallacPBL17} \cite{haufe2008sparse}
 \cite{bolstad2011causal} \cite{he2013stationary}
 \cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery}.
@@ -254,7 +253,7 @@ established under less restrictive conditions than for the vanilla
 LASSO.
 
 % We study a novel perspective on the problem by establishing conditions
-% under which simple \textit{pairwise} Granger-causality tests are
+% under which simple \textit{pairwise} Granger causality tests are
 % sufficient to recover the entire graph.  Without particular
 % topological assumptions, pairwise testing naturally results in a large
 % number of false positives \cite{tam2013gene_pwgc}.
@@ -262,14 +261,14 @@ LASSO.
 In the context of time series data, sparsity assumptions remain
 important, but there is significant additional structure that may
 arise as a result of considering the topology of the underlying
-Granger-causality graph.  The focus of this paper is to shed light on
+Granger causality graph.  The focus of this paper is to shed light on
 some of these topological questions, in particular, we study a
 particularly simple notion of graph topology which we term
 ``strongly causal'' and show that stationary times series whose
 underlying causality graph has this structure satisfy natural
 intuitive notions of ``information flow'' through the graph.
 Moreover, we show that such graphs are perfectly recoverable with only
-\textit{pairwise} Granger-causality tests, which would otherwise
+\textit{pairwise} Granger causality tests, which would otherwise
 suffer from serious confounding problems (see
 e.g. \cite{tam2013gene_pwgc} for earlier work on pairwise testing).
 Aside from being an interesting theoretical perspective, prior
@@ -277,22 +276,27 @@ assumptions about the underlying graph (similarly to sparsity
 assumptions) can greatly improve upon the statistical power of
 causality graph recovery algorithms when the assumptions are met.
 
+Detailed study of Granger causality for star structured graphs has
+been carried out in \cite{jozsa2018relationship}.  See as well
+\cite{barnett2015granger}, \cite{jozsa2018_phd_thesis} for state space
+formulations.
+
 In the case of gene expression networks, we show examples from the
 literature which suggest our concept of a ``strongly causal graph''
 topology may have application in this field (see Section
 \ref{sec:strongly_causal_graphs}).
 
-The principle contributions of this paper are as follows: firstly, in
-section \ref{sec:theory} we study \textit{pairwise} Granger-causality
+The principal contributions of this paper are as follows: firstly, in
+section \ref{sec:theory} we study \textit{pairwise} Granger causality
 relations, providing novel theorems connecting the structure of the
 causality graph to the pairwise ``causality flow'' in the system, as
 well as an interpretation in terms of the graph topology of the
 sparsity pattern of matrices arising in the Wold decomposition,
 generalizing in some sense the notion of ``feedback-free'' processes
 studied by \cite{caines1975feedback} in close connection with
-Granger-causality.  We establish sufficient conditions (sections
+Granger causality.  We establish sufficient conditions (sections
 \ref{sec:strongly_causal_graphs}, \ref{sec:persistent_systems}) under
-which a fully conditional Granger-causality graph can be recovered
+which a fully conditional Granger causality graph can be recovered
 from pairwise tests alone (sec \ref{sec:pairwise_algorithm}).  We
 report a summary of simulation results in \ref{sec:simulation}, with
 additional results reported in the supplementary material Section
@@ -305,7 +309,7 @@ proofs of each proposition and theorem are also relegated to the
 supplementary material, simple corollaries have proofs included in the
 main text.
 
-\section{Graph Topological Aspects of Granger-causality}
+\section{Graph Topological Aspects of Granger causality}
 \label{sec:theory}
 \subsection{Formal Setting}
 Consider the space $L_2(\Omega)$, the usual Hilbert space of finite
@@ -423,7 +427,7 @@ indeed, if the distribution of $v(t)$ is known to be Gaussian then
 they are equivalent \cite{barnett2009granger}.
 
 The notion of conditional orthogonality is the essence of
-Granger-causality, and enables us to obtain results for a fairly
+Granger causality, and enables us to obtain results for a fairly
 general class of WSS processes, rather than simply $\VAR(p)$ models.
 
 \begin{definition}[Conditional Orthogonality]
@@ -505,17 +509,17 @@ formally in definitions for the reader's convenient reference.
   in which case we will write $\anc{i}\setminus \{i\}$.
 \end{definition}
 
-Our principle object of study will be a graph determined by
-Granger-causality relations as follows.
+Our principal object of study will be a graph determined by
+Granger causality relations as follows.
 
 \begin{definition}[Causality graph]
-  We define the Granger-causality graph $\gcg = ([n], \gcge)$ to be the directed
+  We define the Granger causality graph $\gcg = ([n], \gcge)$ to be the directed
   graph formed on $n$ vertices where an edge $(j, i) \in \gcge$ if and
   only if $x_j$ Granger-causes $x_i$ (with respect to $x$).  That is,
   $$(j, i) \in \gcge \iff j \in \pa{i} \iff x_j \gc x_i.$$
 \end{definition}
 
-The edges of the Granger-causality graph $\gcg$ can be given a general
+The edges of the Granger causality graph $\gcg$ can be given a general
 notion of ``weight'' by associating an edge $(j, i)$ with the
 \textit{strictly causal} LTI filter $\B_{ij}(z)$ (see Equation
 \eqref{eqn:filter_action}).  Thence, the matrix $\B(z)$ is analogous
@@ -571,16 +575,16 @@ $\A_{ij}(z) = 0$.
 
 \subsection{Pairwise Granger Causality}
 \label{sec:pwgc}
-Recall that Granger-causality in general must be understood with
+Recall that Granger causality in general must be understood with
 respect to a particular universe of observations.  If $x_j \gc x_i$
 with respect to $x_{-k}$, it may not hold with respect to $x$.  For
 example, $x_k$ may be a common ancestor which when observed, completely
 explains the connection from $x_j$ to $x_i$.  In this section we study
-\textit{pairwise} Granger-causality, and seek to understand when
+\textit{pairwise} Granger causality, and seek to understand when
 knowledge of pairwise relations is sufficient to deduce the true fully
 conditional relations of $\gcg$.
 
-\begin{definition}[Pairwise Granger-causality]
+\begin{definition}[Pairwise Granger causality]
   We will say that $x_j$ pairwise Granger-causes $x_i$ and write
   $x_j \pwgc x_i$ if $x_j$ Granger-causes $x_i$ with respect only to
   $(x_i, x_j)$.
@@ -604,7 +608,7 @@ remain relevant for providing intuitive insight into the problems at
 hand.
 
 \begin{proposition}
-  Consider distinct nodes $i, j$ in a Granger-causality graph
+  Consider distinct nodes $i, j$ in a Granger causality graph
   $\gcg$.  If
 
   \begin{enumerate}[label=(\alph*)]
@@ -627,7 +631,7 @@ hand.
 \end{remark}
 
 \begin{proposition}
-  Consider distinct nodes $i, j$ in a Granger-causality graph $\gcg$.
+  Consider distinct nodes $i, j$ in a Granger causality graph $\gcg$.
   If
 
   \begin{enumerate}[label=(\alph*)]
@@ -657,7 +661,7 @@ possibility presented in this example.
 
 \begin{proposition}
   \label{prop:ancestor_properties}
-  If in a Granger-causality graph $\gcg$ where $j \pwgc i$ then
+  If in a Granger causality graph $\gcg$ where $j \pwgc i$ then
   $j \in \anc{i}$ or $\exists k \in \anc{i} \cap\anc{j}$ which is a
   confounder of $(i, j)$.
 \end{proposition}
@@ -773,7 +777,7 @@ time series networks, that is, the topology of $\gcg$.
 
 \begin{definition}[Strongly Causal]
   \label{def:strongly_causal}
-  We will say that a Granger-causality graph $\gcg$ is
+  We will say that a Granger causality graph $\gcg$ is
   \textit{strongly causal} if there is at most one directed path between
   any two nodes.  Strongly Causal Graphs will be referred to as SCGs.
 \end{definition}
@@ -980,13 +984,13 @@ which a converse to part $(b)$ will hold.
 \end{definition}
 
 \begin{definition}[Persistent]
-  We will say that the process $x(t)$ with Granger-causality graph
+  We will say that the process $x(t)$ with Granger causality graph
   $\gcg$ is \textit{persistent} if for every $i \in [n]$ and every
   $k \in \anc{i}$ we have $\tau_0(\A_{ik}) < \infty$ and $\tau_\infty(\A_{ik}) = \infty$.
 \end{definition}
 
 \begin{remark}
-  In the context of Granger-causality, ``most'' systems should be
+  In the context of Granger causality, ``most'' systems should be
   persistent.  In particular, $\mathsf{\VAR}(p)$ models are likely to
   be persistent since these naturally result in an equivalent
   $\mathsf{MA}(\infty)$ representation, see Example
@@ -1092,7 +1096,7 @@ paper.
 
 \begin{theorem}[Pairwise Recovery]
   \label{thm:scg_recovery}
-  If the Granger-causality graph $\gcg$ for the process $x(t)$ is a
+  If the Granger causality graph $\gcg$ for the process $x(t)$ is a
   strongly causal DAG and Assumption \ref{ass:T_causality} holds, then
   $\gcg$ can be inferred from pairwise causality tests.  The procedure
   can be carried out, assuming we have an oracle for pairwise
@@ -1109,10 +1113,10 @@ paper.
   \caption{Pairwise Granger Causality Algorithm}
   \label{alg:pwgr}
   \TitleOfAlgo{Pairwise Graph Recovery}
-  \Input{Pairwise Granger-causality relations between a persistent
-  process of dimension $n$ whose joint Granger-causality
+  \Input{Pairwise Granger causality relations between a persistent
+  process of dimension $n$ whose joint Granger causality
   relations are known to form a strongly causal DAG $\gcg$.}
-  % \Input{Pairwise Granger-causality relations}
+  % \Input{Pairwise Granger causality relations}
   \Output{Edges $\gcge = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of
     the graph $\gcg$.}
   \Initialize{$S_0 = [n]$  \texttt{\# unprocessed nodes}\\
@@ -1224,7 +1228,7 @@ type of pairwise edge (no edge, unidirectional, bidirectional).
 %   contains a loop but is pairwise recoverable, though not by algorithm
 %   (\ref{alg:pwgr}).  Clearly, this example is somewhat artificial
 %   since when $n = 2$ there is no difference between pairwise
-%   Granger-causality and joint Granger-causality amongst all series --
+%   Granger causality and joint Granger causality amongst all series --
 %   however, one can add any number of nodes having no parents or
 %   children to a graph containing a length 2 cycle, in which case the
 %   graph clearly remains pairwise recoverable.
@@ -1299,11 +1303,11 @@ dramatically superior performance.
 \begin{remark}[MCC as a Support Recovery Measurement]
   We apply Matthew's Correlation Coefficient (MCC)
   \cite{matthews1975comparison} as a statistic for measuring support
-  recovery performance.  This statistic synthesizes the confusion
-  matrix into a single score appropriate for unbalanced labels and is
-  calibrated to fall into the range $[-1, 1]$ with $1$ being perfect
-  performance, $0$ being the performance of random guessing, and $-1$
-  being perfectly opposed.
+  recovery performance (see also \cite{chicco2017ten} tip \# 8).  This
+  statistic synthesizes the confusion matrix into a single score
+  appropriate for unbalanced labels and is calibrated to fall into the
+  range $[-1, 1]$ with $1$ being perfect performance, $0$ being the
+  performance of random guessing, and $-1$ being perfectly opposed.
 \end{remark}
 
 \begin{remark}[Error Measurement]
@@ -1398,13 +1402,13 @@ sparsity rate which is considered.
 \section{Conclusion}
 \label{sec:conclusion}
 In this paper we have argued that considering particular topological
-properties of Granger-causality networks can provide substantial
+properties of Granger causality networks can provide substantial
 insights into the structure of causality graphs with potential for
 providing improvements to causality graph estimation when structural
 assumptions are met.  In particular, the notion of a strongly-causal
 graph has been exploited to establish conditions under which pairwise
 causality testing alone is sufficient for recovering a complete
-Granger-causality graph.  Moreover, examples from the literature
+Granger causality graph.  Moreover, examples from the literature
 suggest that such topological assumptions may be reasonable in some
 applications.  And secondly, even when the strong-causality assumption
 is not met, we have provided simulation evidence to suggest that our
@@ -1420,11 +1424,11 @@ error rate of PWGC when applied to non strongly-causal graphs?  Can
 constraint systems or cunning adaptive weighting schemes impose useful
 prior knowledge about graph topology for the LASSO algorithm?
 Finally, the work of \cite{barnett2015granger} has established the
-superiority of Granger-causality testing by state space models (as
+superiority of Granger causality testing by state space models (as
 opposed to pure autoregressions) in many cases.  Combining this work
 with our PWGC algorithm (by modifying the approach described in
 Section \ref{sec:pairwise_hypothesis_testing} to instead utilize
-state-space Granger-causality testing) therefore is likely to enable
+state-space Granger causality testing) therefore is likely to enable
 application to very large networks of time series data which are not
 well approximated by finite $\VAR(p)$ models.  Moreover, our
 heuristics are in principle applicable in a model-free context.  As

@@ -39,7 +39,7 @@
 \def\pwgc{\overset{\text{PW}}{\rightarrow}}  % Pairwise Granger causality arrow
 \def\npwgc{\overset{\text{PW}}{\nrightarrow}}  % Negated pairwise Granger causality arrow
 \def\te{\overset{\mathcal{T}}{\rightarrow}}  % Transfer entropy arrow
-\def\gcg{\mathcal{G}}  % Granger-causality graph
+\def\gcg{\mathcal{G}}  % Granger causality graph
 \def\gcge{\mathcal{E}}  % Graph edges
 \def\VAR{\mathsf{VAR}}  % VAR(p) model
 \def\MA{\mathsf{MA}}  % MA(p) model
@@ -228,7 +228,7 @@ accompanying this supplementary material.
     the usual convention for adjacency matrices where $A_{ij} = 1$ if
     there is an edge $(i, j)$.  In our case, the sparsity pattern of
     $\B_{ij}$ is the \textit{transposed} conventional adjacency
-    matrix.} of the Granger-causality graph $\gcg$.  Then,
+    matrix.} of the Granger causality graph $\gcg$.  Then,
   $(S^k)_{ij}$ is the number of paths of length $k$ from node $j$ to
   node $i$.  Evidently, if $\forall k \in \N,\ (S^k)_{ij} = 0$ then
   $j \not\in \anc{i}$.
@@ -304,7 +304,7 @@ accompanying this supplementary material.
 
 \begin{proposition}
   \label{prop:separated_ancestor_uncorrelated}
-  Consider distinct nodes $i, j$ in a Granger-causality graph
+  Consider distinct nodes $i, j$ in a Granger causality graph
   $\gcg$.  If
 
   \begin{enumerate}[label=(\alph*)]
@@ -340,7 +340,7 @@ accompanying this supplementary material.
 
 \begin{lemma}
   \label{lem:vj_perp}
-  Consider distinct nodes $i, j$ in a Granger-causality graph $\gcg$.
+  Consider distinct nodes $i, j$ in a Granger causality graph $\gcg$.
   If $j \not \in \anc{i}$, then $\H_t^{(v_j)} \perp \H_{t}^{(i)}$, and therefore
   for any causal filter $\Phi(z)$ we have
 
@@ -363,7 +363,7 @@ accompanying this supplementary material.
 
 \begin{proposition}
   \label{prop:ancestor_uncorrelated}
-  Consider distinct nodes $i, j$ in a Granger-causality graph $\gcg$.
+  Consider distinct nodes $i, j$ in a Granger causality graph $\gcg$.
   If
 
   \begin{enumerate}[label=(\alph*)]
@@ -626,7 +626,7 @@ accompanying this supplementary material.
 
 \begin{proposition}
   \label{prop:ancestor_properties}
-  If in a Granger-causality graph $\gcg$ where $j \pwgc i$ then
+  If in a Granger causality graph $\gcg$ where $j \pwgc i$ then
   $j \in \anc{i}$ or $\exists k \in \anc{i} \cap\anc{j}$ which is a
   confounder of $(i, j)$.
 \end{proposition}
@@ -1138,7 +1138,7 @@ accompanying this supplementary material.
 
 \begin{theorem}[Pairwise Recovery]
   \label{thm:scg_recovery}
-  If the Granger-causality graph $\gcg$ for the process $x(t)$ is a
+  If the Granger causality graph $\gcg$ for the process $x(t)$ is a
   strongly causal DAG and Assumption \ref{ass:T_causality} holds, then
   $\gcg$ can be inferred from pairwise causality tests.  The procedure
   can be carried out, assuming we have an oracle for pairwise
@@ -1155,10 +1155,10 @@ accompanying this supplementary material.
   \caption{Pairwise Granger Causality Algorithm (PWGC)}
   \label{alg:pwgr}
   % \TitleOfAlgo{Pairwise Graph Recovery (PWGC)}
-  % \Input{Pairwise Granger-causality relations between a persistent
-  % process of dimension $n$ whose joint Granger-causality
+  % \Input{Pairwise Granger causality relations between a persistent
+  % process of dimension $n$ whose joint Granger causality
   % relations are known to form a strongly causal DAG $\gcg$.}
-  \Input{Pairwise Granger-causality relations}
+  \Input{Pairwise Granger causality relations}
   \Output{Edges $\gcge = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of
     the graph $\gcg$.}
   \Initialize{$S_0 = [n]$  \texttt{\# unprocessed nodes}\\
@@ -1365,7 +1365,7 @@ reviews of the following concepts are provided e.g. by
 \cite{all_of_statistics}, \cite{murphy_mlp}, and elsewhere.
 
 In subsection \ref{sec:pairwise_hypothesis_testing} we define pairwise
-Granger-causality hypothesis tests, in subsection
+Granger causality hypothesis tests, in subsection
 \ref{sec:model_order_selection} a model order selection criteria, in
 subsection \ref{sec:efficient_model_estimation} an efficient
 estimation algorithm, in subsection \ref{sec:error_rate_control} the
@@ -1374,7 +1374,7 @@ subsection \ref{sec:finite_pwgc} the unified finite sample algorithm.
 
 \subsection{Pairwise Hypothesis Testing}
 \label{sec:pairwise_hypothesis_testing}
-In performing pairwise checks for Granger-causality $x_j \pwgc x_i$ we
+In performing pairwise checks for Granger causality $x_j \pwgc x_i$ we
 follow the simple scheme of estimating the following two linear models:
 
 \begin{align}
@@ -1505,7 +1505,7 @@ recursion\footnote{We have made use of standalone tailor made
 
 \subsection{Edge Probabilities and Error Rate Controls}
 \label{sec:error_rate_control}
-Denote $F_{ij}$ the Granger-causality statistic of Equation
+Denote $F_{ij}$ the Granger causality statistic of Equation
 \eqref{eqn:gc_statistics} with model orders chosen by the methods of
 Section \ref{sec:model_order_selection}.  We assume that this
 statistic is asymptotically $\chi^2(p_{ij})$ distributed (e.g. the
@@ -1552,7 +1552,7 @@ this heuristic in future work.
     \caption{Finite Sample Pairwise Graph Recovery (PWGC)}
     \label{alg:finite_pwgc}
 
-    \Input{Estimates of pairwise Granger-causality statistics $F_{ij}$
+    \Input{Estimates of pairwise Granger causality statistics $F_{ij}$
       (eqn. \ref{eqn:gc_statistics}).  Matrix of edge probabilities $P_{ij}$ (eqn. \ref{eqn:edge_inclusion_probability}).  Hypothesis testing threshold $\delta$ chosen via the Benjamini-Hochberg criterion (Section \ref{sec:error_rate_control})}
     \Output{A strongly causal graph $\widehat{\gcg}$}
     \Initialize{$S = [n]$  \texttt{\# unprocessed nodes}\\
@@ -1713,7 +1713,7 @@ very small sample ($T \le 100$) regime (see Figure
 must contend with.
 
 In regards scalability, we have observed that performing the $O(n^2)$
-pairwise Granger-causality calculations consumes the vast majority
+pairwise Granger causality calculations consumes the vast majority
 ($> 90\%$) of the computation time.  Since this step is trivially
 parallelizable, our algorithm also scales well with multiple cores or
 multiple machines.  Figure \ref{fig:simulation_results_scaling} is a

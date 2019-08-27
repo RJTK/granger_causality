@@ -88,6 +88,7 @@ def network_comparison_example():
 
 
 def pw_estimate_subject_G_adj(subject, method="pwgc"):
+    # With PyWren
     data_folder = get_subject_data_folder(subject)
     save_folder = PROCESSED_DATA + method + "/" + ADJ_MATRICES + subject + "/"
     if not os.path.exists(save_folder):
