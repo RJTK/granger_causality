@@ -1,0 +1,53 @@
+Main points to cover:
+- What is Granger-causality and why should we care?
+  - Definition and heuristic explanation
+  - Brief history on economic applications
+  - Examples of applications
+    - Neuroscience with some nice figures and explanation
+    - Gene networks
+    - (Idea) on "rationality testing" in a sequential game
+    - Financial connectedness
+- Special cases and formulas
+  - VAR(1)
+  - VAR(\infty)
+  - Transfer entropy / multigraph example for why linear models make
+    life easier ?
+  - Expansion as 
+- Notion of the causation graph
+  - Quick definitions on parents, ancestors, paths.
+  - Note that we are mostly interested in cases where the system is
+    large (dozens or hundreds of nodes)
+- The LASSO and adaLASSO briefly
+  - Extremely common to apply this in applications on Granger
+    causality or on papers which do simulation studies
+  - Theorems on recovery for ordinary linear regression
+    - Emphasize the importance of the sparsity rate as a parameter
+      governing recovery probability
+  - Theorems as adapted to a time-series case
+    - point out it has nothing to do with graph structure, it is just
+      a modification which works for the time series case.
+- Look at some sorts of causality graph topologies as examples of how
+  wildly different the graphs can look while still having the same
+  sparsity rate?
+- Pairwise causality
+  - Intuitive confounding problems
+  - Notion of confounders
+  - Prop 4 on necessary conditions; note that these hold in /any/ graph
+    - Special case of DAG?  Corollary 1
+  - Why a converse to prop 4 is not direct
+    - The converse is often taken for granted when discussing confounding
+- Strongly causal graphs
+  - Prop 6, the partial converse to prop 4.
+    - Note that to obtain this we needed /only/ some topological assumptions
+    - Corollary 4 that seems to be so obviously
+- Difficulty of completing the converse
+  - Persistence condition
+  - The big T(z) filter and cancellation
+  - Completed converse
+- Recovery via pairwise tests alone
+  - The algorithm and the idea
+  - The example
+- Simulation results
+  - Notice that the LASSO seems to perform slightly better on the SCG
+    in comparison to the DAG with a comparable number of edges
+- Conclusions

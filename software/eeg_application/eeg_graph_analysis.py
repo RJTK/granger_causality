@@ -1,3 +1,7 @@
+"""
+This script performs the classifier training.
+"""
+
 import numpy as np
 
 import seaborn as sns
@@ -14,12 +18,13 @@ from matplotlib import pyplot as plt
 from scipy.sparse import coo_matrix as sparse_matrix
 from eeg_analysis import channels
 
+from skopt import BayesSearchCV
 from sklearn.svm import SVC
 from sklearn.model_selection import (StratifiedShuffleSplit, StratifiedKFold,
                                      GridSearchCV, learning_curve,
                                      RandomizedSearchCV)
 # from sklearn.learning_curves import learning_curve
-from sklearn.metrics import matthews_corrcoef
+from sklearn.metrics import matthews_corrcoef, make_scorer
 from sklearn.decomposition import PCA, KernelPCA
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.manifold import Isomap, TSNE
@@ -53,19 +58,56 @@ def stratified_split(X, y, test_size=0.2):
     train_ix, valid_ix = next(ss.split(X, y))
     X_valid, y_valid = X[valid_ix], y[valid_ix]
     X_train, y_train = X[train_ix], y[train_ix]
-    return X_valid, y_valid, X_train, y_train
+    return X_train, y_train, X_valid, y_valid
 
 
-def logistic_regression_clf():
+def logistic_regression_alcoholism_clf(base_data_folder="data/processed/pwgc",
+                                       alg_name=""):
+    X, y, z = load_subject_Xyz(base_data_folder)
+    z = np.array(z == "A")
+
+    X_train, z_train, X_valid, z_valid = stratified_split(X, z, test_size=0.2)
+
+    clf = Pipeline(
+        steps=[("kern", Nystroem(kernel="poly", n_components=60)),
+               ("qt", QuantileTransformer(output_distribution="normal")),
+               ("logistic", LogisticRegression(dual=False, solver="lbfgs",
+                                               class_weight="balanced",
+                                               tol=1e-3, penalty="l2",
+                                               max_iter=500, warm_start=True))]
+                                               )
+    param_grid = {"kern__gamma": (1e-4, 1e2, "log-uniform"),
+                  "kern__degree": [3, 4, 5],
+                  "kern__coef0": (1e-2, 1e4, "log-uniform"),
+                  "logistic__C": (1e-2, 1e4, "log-uniform")}
+
+    cv = BayesSearchCV(estimator=clf, search_spaces=param_grid,
+                       n_iter=100, n_jobs=3, cv=5, refit=True,
+                       scoring=make_scorer(matthews_corrcoef), iid=True)
+    cv.fit(X_train, z_train)
+
+    z_hat_valid = cv.predict(X_valid)
+    mcc_valid = matthews_corrcoef(z_valid, z_hat_valid)
+    print("Classification metrics for algorithm {}".format(alg_name))
+    print("MCC CV: {}".format(np.max(cv.cv_results_["mean_test_score"])))
+    print("MCC valid: {}".format(mcc_valid))
+    print("Acc valid: {}".format(np.mean(z_valid == z_hat_valid)))
+    print("Base prevelance: {}".format(np.mean(z)))
+    print("Best estimator: {}".format(cv.best_estimator_))
+    return
+
+
+def logistic_regression_clf(base_data_folder="data/processed/pwgc/",
+                            alg_name=""):
     """
-    Compute and quantify the quality of a multinomial logistic regression
-    model between all subjects.
+    Compute and quantify the quality of a multinomial logistic
+    regression model between all subjects.
     """
-    X, y, z = load_subject_Xyz()
+    X, y, z = load_subject_Xyz(base_data_folder)
     le = LabelEncoder()
     y = le.fit_transform(y)
 
-    X_valid, y_valid, X_train, y_train = stratified_split(X, y, test_size=0.2)
+    X_train, y_train, X_valid, y_valid = stratified_split(X, y, test_size=0.2)
 
     clf = Pipeline(
         steps=[("kern", Nystroem(kernel="poly")),
@@ -95,25 +137,29 @@ def logistic_regression_clf():
     C = C / np.sum(C, axis=1)[:, None]
     plt.imshow(C)
     plt.colorbar()
-    plt.title("Multiclass Confusion Matrix ($MCC = {:+.3f}$)"
-              "".format(matthews_corrcoef(y_hat_valid, y_valid)))
+    plt.title("Multiclass Confusion Matrix for Algorithm {} ($MCC = {:+.3f}$)"
+              "".format(alg_name.replace("_", "\\_"),
+                        matthews_corrcoef(y_hat_valid, y_valid)))
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
-    plt.savefig(FIGURE_DIR + "logistic_regression_confusion_matrix.pdf",
-                bbox_inches="tight", pad_inches=0)
-    plt.savefig(FIGURE_DIR + "logistic_regression_confusion_matrix.png",
-                bbox_inches="tight", pad_inches=0)
+    saved_fig_name = ("logistic_regression_{}_confusion_matrix.pdf"
+                      "".format(alg_name))
+    plt.savefig(
+        FIGURE_DIR + saved_fig_name, bbox_inches="tight", pad_inches=0)
+    plt.savefig(FIGURE_DIR + saved_fig_name, bbox_inches="tight", pad_inches=0)
     plt.show()
     return
 
 
-def logistic_regression_subject_pair_visualization(i=59, j=60):
+def logistic_regression_subject_pair_visualization(
+        i=59, j=60, base_data_folder="data/processed/pwgc/",
+        alg_name=""):
     """
     Visualize the separation between GCGs of subjects i, j.  This
     visualization uses the whole dataset and likely is a slight
     overestimation of the quality of a discriminator between i, j.
     """
-    X, y, z = load_subject_Xyz()
+    X, y, z = load_subject_Xyz(base_folder=base_data_folder)
     le = LabelEncoder()
     y = le.fit_transform(y)
 
@@ -166,20 +212,87 @@ def logistic_regression_subject_pair_visualization(i=59, j=60):
     plt.contourf(xx, yy, Z, cmap=plt.cm.viridis, alpha=0.5,
                  vmin=0, vmax=1)
     plt.colorbar()
-    plt.title("Separating Subjets by EEG Granger-Causality Graph")
+    plt.title("Separating Subjets by EEG Granger-Causality Graph "
+              "from Algorithm {}".format(alg_name.replace("_", "\\_")))
     plt.ylabel("PLS Projection $y$")
     plt.xlabel("PLS Projection $x$")
     plt.legend()
-    plt.savefig(FIGURE_DIR + "logistic_regression_separation.png",
+
+    saved_fig_name = "logistic_regression_{}_separation.png".format(alg_name)
+    plt.savefig(FIGURE_DIR + saved_fig_name,
                 bbox_inches="tight", pad_inches=0)
-    plt.savefig(FIGURE_DIR + "logistic_regression_separation.pdf",
+    plt.savefig(FIGURE_DIR + saved_fig_name,
+                bbox_inches="tight", pad_inches=0)
+    plt.show()
+    return
+
+
+def logistic_regression_alcoholism_visualization(
+        base_data_folder="data/processed/pwgc/", alg_name=""):
+    """
+    Visualize the separation between alcoholic and non-alcoholic subjects.
+    """
+    X, y, z = load_subject_Xyz(base_folder=base_data_folder)
+    z = np.array(z == "A")
+
+    qt = QuantileTransformer(output_distribution="normal")
+    kern = Nystroem(kernel="poly", gamma=39.3, degree=3, coef0=9340.0,
+                    n_components=60, random_state=0)
+    K = kern.fit_transform(X)
+    K = qt.fit_transform(K)
+
+    pls = PLSRegression(n_components=2, scale=False)
+    pls.fit(K, z)
+    X_proj = pls.x_scores_
+
+    clf = SVC(kernel="rbf")
+    param_grid = {"C": np.logspace(-2, 2, 20),
+                  "gamma": np.logspace(-2, 2, 20)}
+
+    cv = GridSearchCV(estimator=clf, param_grid=param_grid,
+                      n_jobs=3, cv=5, refit=True)
+    cv.fit(X_proj, z)
+
+    clf = cv.best_estimator_
+    clf.probability = True
+    clf.fit(X_proj, z)
+
+    h = .01
+    x_min, x_max = X_proj[:, 0].min() - 1, X_proj[:, 0].max() + 1
+    y_min, y_max = X_proj[:, 1].min() - 1, X_proj[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+    Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 0]
+    Z = Z.reshape(xx.shape)
+
+    sel = (z == 0)
+    plt.scatter(X_proj[sel, 0], X_proj[sel, 1], c="r", marker="o",
+                label="Control")
+    plt.scatter(X_proj[~sel, 0], X_proj[~sel, 1], c="b", marker="^",
+                label="Alcoholic")
+    plt.contourf(xx, yy, Z, cmap=plt.cm.viridis, alpha=0.5,
+                 vmin=0, vmax=1)
+    plt.colorbar()
+    plt.title("Separating Alcoholism by EEG Granger-Causality Graph "
+              "from Algorithm {}".format(alg_name.replace("_", "\\_")))
+    plt.ylabel("PLS Projection $y$")
+    plt.xlabel("PLS Projection $x$")
+    plt.legend()
+
+    saved_fig_name = ("logistic_regression_{}_alcoholism_separation.png"
+                      "".format(alg_name))
+    plt.savefig(FIGURE_DIR + saved_fig_name,
+                bbox_inches="tight", pad_inches=0)
+    plt.savefig(FIGURE_DIR + saved_fig_name,
                 bbox_inches="tight", pad_inches=0)
     plt.show()
 
     return
 
 
-def logistic_regression_subject_pair(i=59, j=60, clf=None):
+def logistic_regression_subject_pair(
+        i=59, j=60, clf=None, base_data_folder="data/processed/pwgc/",
+        alg_name=""):
     """
     Compute and return the MCC distinguishing between
     subjects i and j.  We also return the classifier we fit.
@@ -195,6 +308,8 @@ def logistic_regression_subject_pair(i=59, j=60, clf=None):
     sel = np.logical_or(y == s0, y == s1)
     _y = y[sel]
     _X = X[sel]
+
+    X_train, y_train, X_valid, y_valid = stratified_split(_X, _y)
 
     if clf is None:
         clf = Pipeline(
@@ -248,7 +363,9 @@ def load_dataset(avg_subjects=False,
     return dataset
 
 
-def load_subject_Xyz(base_folder="data/processed/pwgc_results/"):
+def load_subject_Xyz(base_folder="data/processed/pwgc/"):
+    print("Loading estimated graphs from folder {}".format(base_folder))
+
     dataset = {}
     vertex_labels = {i: chan for i, chan in enumerate(channels)}
 
@@ -279,6 +396,7 @@ def load_subject_Xyz(base_folder="data/processed/pwgc_results/"):
     X = np.vstack(X)
     y = np.array(y)
     z = np.array(z)
+    print("Obtained {} graph estimates".format(len(z)))
     return X, y, z
 
 
@@ -293,7 +411,7 @@ def _load_avg_graphs(folder, adj_mat_folder, dataset,
     for adj, _ in _dataset[label]:
         adj = np.array(adj.todense())
         g = g + adj
-    g /= n_nodes
+    g /= len(_dataset[label])
     dataset[label].append([g, vertex_labels])
     return dataset
 
@@ -355,8 +473,28 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
 
 
 if __name__ == "__main__":
-    logistic_regression_clf()
-
     i, j = 0, 1
-    logistic_regression_subject_pair_visualization(i, j)
-    logistic_regression_subject_pair(i, j)
+    name_folder = {"pwgc": "data/processed/pwgc/",
+                   "alasso": "data/processed/alasso/",
+                   "simple_pwgc": "data/processed/simple_pwgc/"}
+
+    name = "simple_pwgc"
+    logistic_regression_subject_pair_visualization(
+        i, j, base_data_folder=name_folder[name], alg_name=name)
+    logistic_regression_subject_pair(
+        i, j, base_data_folder=name_folder[name], alg_name=name)
+    logistic_regression_clf(base_data_folder=name_folder[name], alg_name=name)
+
+    name = "pwgc"
+    logistic_regression_subject_pair_visualization(
+        i, j, base_data_folder=name_folder[name], alg_name=name)
+    logistic_regression_subject_pair(
+        i, j, base_data_folder=name_folder[name], alg_name=name)
+    logistic_regression_clf(base_data_folder=name_folder[name], alg_name=name)
+
+    name = "alasso"
+    logistic_regression_subject_pair_visualization(
+        i, j, base_data_folder=name_folder[name], alg_name=name)
+    logistic_regression_subject_pair(
+        i, j, base_data_folder=name_folder[name], alg_name=name)
+    logistic_regression_clf(base_data_folder=name_folder[name], alg_name=name)

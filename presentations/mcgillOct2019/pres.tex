@@ -1,0 +1,233 @@
+\documentclass{beamer} %With pauses
+% \input{\string~/Documents/academics/global_academics/latex_preamble}
+%\documentclass[handout]{beamer} %Without pauses
+\usepackage[backend=bibtex]{biblatex}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{cancel}
+\usefonttheme[onlymath]{serif}
+
+\setbeamertemplate{bibliography item}{}
+\setbeamertemplate{bibliography entry title}{}
+\setbeamertemplate{bibliography entry location}{}
+\setbeamertemplate{bibliography entry note}{}
+
+\addtobeamertemplate{navigation symbols}{}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+
+\bibliography{\string~/Documents/academics/global_academics/global_bib.bib}
+
+\usepackage{wasysym}
+\usepackage{tikz}
+
+\usetheme{PaloAlto}
+
+\newtheorem*{defn}{Definition}
+
+\def\E{\mathbb{E}}  % Expectation
+\def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
+\def\ngc{\overset{\text{GC}}{\nrightarrow}}  % Negated Granger causality arrow
+\def\pwgc{\overset{\text{PW}}{\rightarrow}}  % Pairwise Granger causality arrow
+\def\npwgc{\overset{\text{PW}}{\nrightarrow}}  % Negated pairwise Granger causality arrow
+\def\te{\overset{\mathcal{T}}{\rightarrow}}  % Transfer entropy arrow
+\def\gcg{\mathcal{G}}  % Granger-causality graph
+\def\gcge{\mathcal{E}}  % Graph edges
+\def\VAR{\mathsf{VAR}}  % VAR(p) model
+\def\B{\mathsf{B}}  % Filter B
+\def\wtB{\widetilde{\B}}  % General filter B
+\def\A{\mathsf{A}}  % Filter A
+\def\H{\mathcal{H}}  % Hilbert space
+\def\R{\mathbb{R}}  % Reals
+\def\N{\mathbb{N}}  % Naturals
+\def\T{\mathsf{T}}  % Transpose
+\def\cl{\mathsf{cl}}  % Closure
+
+\newcommand{\linE}[2]{\hat{\E}[#1\ |\ #2]}  % Linear projection
+\newcommand{\linEerr}[2]{\xi[#1\ |\ #2]}  % Error of linear projection
+\newcommand{\pa}[1]{pa(#1)}  % Parents of a node
+\newcommand{\anc}[1]{\mathcal{A}(#1)}  % Ancestors of a node
+\newcommand{\ancn}[2]{\mathcal{A}_{#1}(#2)}  % nth ancestors of a node
+\newcommand{\gpn}[2]{gp_{#1}(#2)}  % nth generation grandparents
+\newcommand{\wtalpha}[2]{\widetilde{\alpha}(#1, #2)}  % Some notation for lem:pwgc_anc
+\newcommand{\dist}[2]{\mathsf{d}(#1, #2)}  % Distance between things
+\newcommand{\gcgpath}[2]{#1 \rightarrow \cdots \rightarrow #2}  % A shorter path command
+
+\title{Graph Topological Aspects of Granger Causal Network Learning}
+\author{\texorpdfstring{Ryan J. Kinnear\newline\url{Ryan@Kinnear.ca}}{Ryan J. Kinnear}}% \author{Ryan J. Kinnear} \\
+  % \small\href{mailto:ryan@kinnear.ca}{ryan@kinnear.ca} \\
+  % \small\url{https://github.com/RJTK}\\
+  % Under the Supervision of Ravi R. Mazumdar}
+
+\institute[University of Waterloo] % (optional, but mostly needed)
+{
+  University of Waterloo\\
+  Department of Electrical and Computer Engineering
+}
+
+\date{McGill University, Oct 4 2019}
+
+\AtBeginSection[]
+{
+  \begin{frame}<beamer>{Outline}
+    \tableofcontents[currentsection,currentsubsection]
+  \end{frame}
+}
+
+% Let's get started
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+  \tableofcontents
+  % You might wish to add the option [pausesections]
+\end{frame}
+
+\section{Introduction}
+
+\begin{frame}{Causality}
+  \begin{itemize}
+    \item{Do billiard collisions cause motion?}\pause
+    \item{Does standing in the street cause cars to stop?}\pause
+    \item{Does smoking cause cancer?}\pause
+    \item{Does government spending cause an increase in GDP?}\pause
+    \item{Granger causality addresses the last question.}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Causality in Time Series}
+  \begin{itemize}
+    \item{Consider $x_t, y_t \overset{\text{i.i.d.}}{\sim} \text{BER}(1/2)$}\pause
+    \item{If $z_t = x_{t - 1}$ then since cause preceeds effect, intuitively $x$ causes $z$}\pause
+    \item{$z'_t = x_{t - 1} \oplus y_{t - 1}$ is more ambiguous.}\pause
+    \item{Issue raised by: \fullcite{transfer_entropy_criticism}} 
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Causality in Linear Time Series}
+  \begin{itemize}
+    \item{Granger causality formalizes ``cause proceeds effect'' for WSS processes}\pause
+    \item{Interpretation as a ``Flow of Information'' or ``Flow of Energy'' is also reasonable}\pause
+    \item{Given WSS processes, $x_1(t), \ldots, x_n(t)$, how can we understand causation $x_i \rightarrow x_j$?}\pause
+    \item{\fullcite{granger1969investigating}}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Basic Setup}
+  \begin{itemize}
+    \item{Basic setup is an $n-$dimensional WSS process $x(t)$}\pause
+    \item{Wold representation $x(t) = \sum_{\tau = 0}^\infty A(\tau)v(t - \tau)$}\pause
+    \item{$\text{VAR}(\infty)$ representation $x(t) = \sum_{\tau = 1}^\infty B(\tau)x(t - \tau) + v(t)$}\pause
+    \item{Require $\E[v(t)v(t - \tau)] = \delta_{\tau}\Sigma_v$, with $\Sigma_v$ Diagonal}\pause
+  \end{itemize}
+
+  \begin{defn}
+    Linear Projection onto Hilbert space $\H \subseteq L_2(\Omega)$
+    \begin{equation*}
+      \linE{x}{\H} = \underset{u \in \H}{\text{argmin }} ||x - u||
+    \end{equation*}
+
+    Minimum Mean Squared Error
+    \begin{equation*}
+      \xi[x \ |\ \H] = \E (x - \linE{x}{\H})^2      
+    \end{equation*}
+  \end{defn}
+\end{frame}
+
+\begin{frame}{Basic Setup}
+  More notation
+
+  \begin{align*}
+    \H_t &= \cl \{\sum_{\tau = 0}^p a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, p \in \N\} \subseteq L_2(\Omega)\\
+    % H_t^x &= \{a x(t)\ |\ a \in \R\} \subseteq L_2(\Omega),
+  \end{align*}\pause
+
+  \begin{itemize}
+    \item{$\H_t^{i}$ Hilbert space spanned by $x_i(t)$ alone}
+    \item{$\H_t^{-i}$ Hilbert space spanned by $x(t)$ but \textit{excluding} $x_i(t)$}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Granger Causality}
+  \begin{defn}
+    For the WSS series $x(t)$ we say that component $x_j$
+    \textit{Granger-Causes} component $x_i$ (with respect to $x$)
+    and write $x_j \gc x_i$ if given Hilbert spaces $\H_{t - 1}$,
+    $\H^{-j}_{t - 1}$ if
+
+    \begin{equation*}
+      \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{-j}_{t - 1}},
+    \end{equation*}
+  \end{defn}\pause
+
+  \begin{defn}
+    We say that $x_j$ pairwise Granger-causes $x_i$ and write
+    $x_j \pwgc x_i$ if $x_j$ Granger-causes $x_i$ with respect only to
+    $(x_i, x_j)$.
+  \end{defn}
+\end{frame}
+
+\begin{frame}{Simple Examples}
+  \begin{equation*}
+    x_i(t) = b_i x(t - 1) + v_i(t); i = 0, 1, 2
+  \end{equation*}
+
+  \begin{figure}
+    \includegraphics[width=0.75\linewidth]{./figures/var1_example.pdf}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Simple Examples}
+  \begin{align*}
+    x_0(t) &= b_0 x_0(t - 1) + b_{0, 2} x_2(t - 150) + v_0(t)\\
+    x_1(t) &= b_1 x_1(t - 1) + b_{1, 2} x_2(t - 150) + v_1(t)\\
+    x_2(t) &= b_2 x_2(t - 1) + v_2(t)\\
+  \end{align*}
+
+  % TODO: Fix the whitespace consumed by this figure!
+
+  \centering
+  \includegraphics[width=0.75\linewidth]{./figures/var2_example.pdf}
+\end{frame}
+
+\section{Causality Graphs}
+\begin{frame}{Graph Terminology}
+  \begin{itemize}
+    \item{Graph $\gcg = (V, \gcge)$ with nodes (or vertices) $V$ and edges $\gcge$}\pause
+    \item{Directed paths: $j \rightarrow a_0 \rightarrow \cdots \rightarrow a_r \rightarrow i$ for $(a_{k}, a_{k + 1}) \in \gcge$ distinct nodes}\pause
+    \item{Cycles: paths with $i = j$}
+    \item{Directed Acyclic Graph (DAG): A directed graph without any cycles}\pause
+    \item{Parents: $j \in \pa{i}$ iff $(j, i) \in \gcge$}\pause
+    \item{Ancestors: $j \in \anc{i}$ iff $j \rightarrow i$ path in $\gcge$}\pause
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Granger Causality Graph
+  A Granger causality graph is simply a graph $\gcg = ([n], \gcge)$ with $(j, i) \in \gcge$ iff $j \gc i$.
+
+  % TODO: Include a gcg example here, maybe a few papers
+  % \includegraphics[]{}
+    % \item{Confounder: A node $k$ confounds $i, j$ if $k \in \anc{i} \cap \anc{j}$ if exists a
+    %     path $\gcgpath{k}{i}$ not containing $j$, and a path
+    %     $\gcgpath{k}{j}$ not containing $i$.}
+\end{frame}
+
+\section{Pairwise Causal Flow}
+\begin{frame}
+\end{frame}
+
+\section{Pairwise Testing Recovery Methods}
+\begin{frame}
+\end{frame}
+
+\section{LASSO Recovery Methods}
+\begin{frame}
+\end{frame}
+
+\end{document}
