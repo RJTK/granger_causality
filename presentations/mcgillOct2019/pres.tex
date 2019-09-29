@@ -6,6 +6,9 @@
 \usepackage{caption}
 \usepackage{cancel}
 \usepackage{centernot}
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+\usepackage{subcaption}
+
 \usefonttheme[onlymath]{serif}
 
 \setbeamertemplate{bibliography item}{}
@@ -431,7 +434,7 @@
     \item{In strongly causal (and acyclic) graphs, we have the appealing results:}
   \end{itemize}
 
-  \begin{proposition}
+  \begin{proposition}[Partial Sufficient Conditions]
     \label{prop:pwgc_anc}
     If $\gcg$ is a strongly causal DAG then $j \in \anc{i} \Rightarrow j \pwgc i$.
   \end{proposition}\pause
@@ -463,11 +466,161 @@
     $\gcg$ is \textit{persistent} if every node has a self-loop,
     i.e. $\B_{ii}(z) \ne 0$.
   \end{definition}
-    
+\end{frame}
+
+\begin{frame}{Persistent Systems}
+  Define $H_i(z)$ to be the filter s.t.:
+  
+  \begin{equation*}
+    H_i(z)x_i(t) = \linE{x_i(t)}{\H_{t - 1}^{(i)}},
+  \end{equation*}\pause
+
+  And then with $\sigma_k^2 = \E v_k(t)^2$
+  \begin{equation*}
+    \label{eqn:T_filter}
+    T_{ij}(z) = \sum_{k \in \anc{i} \cap \anc{j}}\sigma_k^2\A_{ik}(z^{-1})(1 - H_i(z^{-1}))(1 - H_j(z))\A_{jk}(z)
+  \end{equation*}\pause
+
+  \begin{proposition}
+    \label{prop:persistence_converse}
+    Fix $i, j \in [n]$ and suppose $\exists k \in \anc{i} \cap \anc{j}$
+    which confounds $i, j$.  Then, if $T_{ij}(z)$ is not causal we have
+    $j \pwgc i$, and if $T_{ij}(z)$ is not anti-causal we have
+    $i \pwgc j$.  Moreover, if $T_{ij}(z)$ is two-sided, then $j \pwgc i \iff i \pwgc j$.
+  \end{proposition}
 \end{frame}
 
 \section{Pairwise Testing Recovery Methods}
-\begin{frame}
+\begin{frame}{Pairwise Recovery}
+  \begin{itemize}
+    \item{Persistant systems where $T_{ij}(z)$ is not two-sided are highly pathological}\pause
+    \item{However, that the following requires an assumption on
+        $T_{ij}(z)$ is an unfortunate blemish on the theory as it is
+        not a topological requirement}\pause
+  \end{itemize}
+
+    \begin{theorem}[Pairwise Recovery]
+      \label{thm:scg_recovery}
+      If the Granger causality graph $\gcg$ for the process $x(t)$ is
+      a strongly causal DAG and $T_{ij}(z)$ is two-sided for every
+      $i, j$, then $\gcg$ can be recovered from pairwise causality
+      tests alone.
+    \end{theorem}
+
+    \begin{itemize}
+      \item{Proof is constructive in that I directly provide an algorithm to do so.}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Pairwise Recovery}
+  \begin{algorithm}[H]
+    \SetKwInOut{Input}{input}
+    \SetKwInOut{Output}{output}
+    \SetKwInOut{Initialize}{initialize}
+    \DontPrintSemicolon
+
+    \footnotesize
+    % \BlankLine
+    % \caption{Pairwise Granger Causality Algorithm}
+    \label{alg:pwgr}
+    % \TitleOfAlgo{Pairwise Graph Recovery}
+    % \Input{Pairwise Granger causality relations between a persistent
+    % process of dimension $n$ whose joint Granger causality
+    % relations are known to form a strongly causal DAG $\gcg$.}
+    % \Input{Pairwise Granger causality relations}
+    % \Output{Edges $\gcge = \{(i, j) \in [n] \times [n]\ |\ i \gc j \}$ of
+    %   the graph $\gcg$.}
+    \Initialize{$S_0 = [n]$, $E_0 = \emptyset$, $k = 1$}\pause
+    \BlankLine
+    $W \leftarrow \{(i, j)\ |\ i \pwgc j, j \npwgc i\}$\\\pause
+    $P_0 \leftarrow \{i \in S_0\ |\ \forall s \in S_0\ (s, i) \not\in W\}$\\\pause
+    \While{$S_{k - 1} \ne \emptyset$}{
+      $S_k \leftarrow S_{k - 1} \setminus P_{k - 1}$\\
+      $P_k \leftarrow \{i \in S_k\ |\ \forall s \in S_k\ (s, i) \not\in W\}$\\\pause
+
+      $D_{k0} \leftarrow \emptyset$\\\pause
+      \For{$r = 1, \ldots, k$} 
+      {
+        $Q \leftarrow E_{k - 1} \cup \big(\bigcup_{\ell = 0}^{r - 1} D_{k\ell}\big)$\\\pause
+        $D_{kr} \leftarrow \{(i, j) \in P_{k - r} \times P_k\ |\ (i, j) \in W,\ \text{no } i \rightarrow j \text{ path in } Q\}$\\\pause
+      }
+      $E_k \leftarrow E_{k - 1} \cup \big(\bigcup_{r = 1}^k D_{kr}\big)$\\\pause
+      $k \leftarrow k + 1$\\\pause
+    }
+    \Return{$E_{k - 1}$}
+  \end{algorithm}
+\end{frame}
+
+\begin{frame}{Pairwise Recovery}
+  An Example (TODO: Intersperse Pauses)
+
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm.pdf}
+      \end{figure}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm2.pdf}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Simulation}
+  \begin{itemize}
+    \item{Construct random graphs and compare PWGC against LASSO method}\pause
+    \item{I obtained the best results with Zou's Adaptive LASSO, but known to suffer somewhat from false positives}
+    \item{\fullcite{adaptive_lasso_zou2006}}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Simulation}
+  Representative Random Graph Topologies on $n = 50$ Nodes.  Parameter
+  $q$ controls the density of edges.
+  \begin{columns}
+    \begin{column}{0.33\linewidth}
+      \begin{figure}
+        \caption{SCG}
+        \includegraphics[width=\linewidth]{../../figures/example_scg.pdf}
+      \end{figure}
+    \end{column}\pause
+    \begin{column}{0.33\linewidth}
+      \begin{figure}
+        \caption{DAG $(q = \frac{2}{n})$}
+        \includegraphics[width=\linewidth]{../../figures/example_dag.pdf}
+      \end{figure}
+    \end{column}\pause
+    \begin{column}{0.33\linewidth}
+      \begin{figure}
+        \caption{DAG $(q = \frac{4}{n})$}
+        \includegraphics[width=\linewidth]{../../figures/example_dag_q.pdf}
+      \end{figure}
+    \end{column}\pause
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Simulation}
+  $\VAR(p)$ model with $n = 50, p = 15$ and randomized edge placements.  Left: SCG, Right: DAG ($q = 2/n$)
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \includegraphics[width=0.9\linewidth]{./figures/new_lasso_comparison_scg_pmax15_simulation_mcc_only.png}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \includegraphics[width=0.9\linewidth]{./figures/new_lasso_comparison_dag_pmax15_simulation_mcc_only.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Simulation}
+  \includegraphics[width=\linewidth]{../../figures/new_increasing_n_simulation.pdf}\pause
+\end{frame}
+
+\begin{frame}{Simulation}
+  \includegraphics[width=\linewidth]{../../figures/new_mcc_comparison001.pdf}
 \end{frame}
 
 \end{document}
