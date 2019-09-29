@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{cancel}
+\usepackage{centernot}
 \usefonttheme[onlymath]{serif}
 
 \setbeamertemplate{bibliography item}{}
@@ -27,6 +28,7 @@
 \usetheme{PaloAlto}
 
 \newtheorem*{defn}{Definition}
+\newtheorem*{proposition}{Proposition}
 
 \def\E{\mathbb{E}}  % Expectation
 \def\gc{\overset{\text{GC}}{\rightarrow}}  % Granger causality arrow
@@ -44,6 +46,7 @@
 \def\R{\mathbb{R}}  % Reals
 \def\N{\mathbb{N}}  % Naturals
 \def\T{\mathsf{T}}  % Transpose
+\def\Z{\mathbb{Z}}  % Transpose
 \def\cl{\mathsf{cl}}  % Closure
 
 \newcommand{\linE}[2]{\hat{\E}[#1\ |\ #2]}  % Linear projection
@@ -97,7 +100,7 @@
     \item{Does standing in the street cause cars to stop?}\pause
     \item{Does smoking cause cancer?}\pause
     \item{Does government spending cause an increase in GDP?}\pause
-    \item{Granger causality addresses the last question.}
+    \item{Granger causality attemps to address the last question's category.}
   \end{itemize}
 \end{frame}
 
@@ -208,25 +211,262 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Granger Causality Graph
-  A Granger causality graph is simply a graph $\gcg = ([n], \gcge)$ with $(j, i) \in \gcge$ iff $j \gc i$.
+\begin{frame}{Granger Causality Graph}
+  A Granger causality graph is simply a graph $\gcg = ([n], \gcge)$
+  with $(j, i) \in \gcge$ iff $j \gc i$.  $\VAR(1)$ models are
+  particularly simple:
 
-  % TODO: Include a gcg example here, maybe a few papers
-  % \includegraphics[]{}
-    % \item{Confounder: A node $k$ confounds $i, j$ if $k \in \anc{i} \cap \anc{j}$ if exists a
-    %     path $\gcgpath{k}{i}$ not containing $j$, and a path
-    %     $\gcgpath{k}{j}$ not containing $i$.}
+  \begin{columns}
+    \begin{column}{0.25\textwidth}
+      \includegraphics[width=1.5\linewidth]{../../figures/example1.pdf}
+    \end{column}
+
+    \begin{column}{0.75\textwidth}
+      \begin{equation*}
+        x(t) = \left[
+          \begin{array}{cccc}
+            0 & 0 & 0 & 0\\
+            a & 0 & 0 & 0\\
+            -a & 0 & 0 & 0\\
+            0 & 1 & 1 & 0\\
+          \end{array}\right]
+        x(t - 1) + v(t)
+      \end{equation*}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\section{Pairwise Causal Flow}
-\begin{frame}
+\begin{frame}{Application Examples}
+  Analysis of connectedness of financial institutions
+
+  TODO: Finance example
+  \begin{columns}
+
+  \end{columns}
+
+  \footfullcite{NBERw16223}
+\end{frame}
+
+\begin{frame}{Application Examples}
+  Analysis of brain functional connectivity
+  
+  TODO: Anna examples or something
+\end{frame}
+
+\begin{frame}{Application Examples}
+  TODO: Gene expression networks
+\end{frame}
+
+\section{Recovery Methods}
+\begin{frame}{LASSO Recovery Methods}
+  \begin{itemize}
+    \item{Small systems ($n = 2$ or $n \lessapprox 10$) with adequate data are amenable to least squares and hypothesis testing}\pause
+    \item{Large systems ($n \gtrapprox 20$) or when data is limited are addressed via the LASSO (and variants)}\pause
+    \item{Standard linear regression case:
+        \begin{equation*}
+          \underset{\beta \in \R^n}{\text{minimize }} \frac{1}{2T}||y - X\beta||_2^2 + \lambda ||\beta||_1
+        \end{equation*}
+      }\pause
+    \item{$\VAR(p)$ models:
+        \begin{equation*}
+          \underset{B(\tau) \in \R^{n \times n}}{\text{minimize }} \frac{1}{2T}||x(t) - \sum_{\tau = 1}^p B(\tau)x(t - \tau)||_2^2 + \lambda \sum_{\tau = 1}^p ||B(\tau)||_1
+        \end{equation*}
+      }
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{LASSO Recovery Theorems}
+  TODO: Static Case
+\end{frame}
+
+\begin{frame}{LASSO Recovery Theorems}
+  TODO: VAR(p) case
+\end{frame}
+
+\begin{frame}{Structure of Granger Causality Graphs}
+  \begin{itemize}
+    \item{Topology of Granger causality graph is a special feature of time series}\pause
+    \item{TODO: Star shaped graph with a self-loop versus a full cycle with graph -- same number of edges, but qualitatively totally different.}
+  \end{itemize}
+\end{frame}
+% \item{Confounder: A node $k$ confounds $i, j$ if $k \in \anc{i} \cap \anc{j}$ if exists a
+%     path $\gcgpath{k}{i}$ not containing $j$, and a path
+%     $\gcgpath{k}{j}$ not containing $i$.}
+
+\section{Pairwise Causality and ``Causal Flow''}
+\begin{frame}{Pairwise Testing}
+  \begin{itemize}
+    \item{Statistical tests for the case $n = 2$ are simple and well established}\pause
+    \item{Can we recover all of $\gcg$ by only testing pairwise relations?}\pause
+    \item{Thresholding schemes suffer from confounding}\pause
+    \item{``Naive'' pairwise testing is so bad, few papers exist on the topic, or it is used as a simple baseline}\pause
+    \item{\fullcite{tam2013gene_pwgc}}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Pairwise Causality}
+  \begin{itemize}
+    \item{Recall $j \pwgc i$ if $x_j$ Granger causes $x_i$ w.r.t $(x_i, x_j)$}\pause
+  \end{itemize}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item{Intuition suggests that $j \in \anc{i} \implies j \pwgc i$}\pause
+      \end{itemize}
+
+      \includegraphics[width=0.75\linewidth]{../../figures/example1.pdf}\pause
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item{At least $j \gc i \implies j \pwgc i$}\pause
+      \end{itemize}
+      \includegraphics[width=0.75\linewidth]{../../figures/example2.pdf}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Necessary Conditions for Pairwise Causality}
+  First, when $i, j$ are completely separated:
+
+  \begin{proposition}
+    Consider distinct nodes $i, j$ in a Granger causality graph
+    $\gcg$.  If
+
+    \begin{enumerate}
+      \item{$j \not\in \anc{i}$ and $i \not\in \anc{j}$}\pause
+      \item{$\anc{i}\cap\anc{j} = \emptyset$}\pause
+    \end{enumerate}
+
+    then $\H_t^{(i)} \perp \H_t^{(j)}$: $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.
+    \pause  Moreover, this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^{(i)}} = 0$.\pause
+  \end{proposition}
+
+  Note that $i, j$ may still share descendants.
+\end{frame}
+
+\begin{frame}{Necessary Conditions for Pairwise Causality}
+  $\H_t^{(i)} \perp \H_t^{(j)}$ is a much stronger conclusion that $j \npwgc i$:
+  \begin{proposition}
+    Consider distinct nodes $i, j$ in a Granger causality graph $\gcg$.
+    If
+
+    \begin{enumerate}
+      \item{$j \not\in \anc{i}$}\pause
+      \item{$\anc{i}\cap\anc{j} = \emptyset$}\pause
+    \end{enumerate}
+
+    then $j \npwgc i$.
+  \end{proposition}\pause
+
+  \begin{itemize}
+    \item{What about the simple graph $k \rightarrow i \rightarrow j$?}\pause
+    \item{Surely $j \npwgc i$, even though $k \in \anc{i} \cap \anc{j}$?}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Necessary Conditions for Pairwise Causality}
+  \begin{definition}[Confounder]
+    A node $k$ is called a \textit{confounder} of nodes $i, j$ if
+    $k \in \anc{i} \cap \anc{j}$ and there exists a path
+    $\gcgpath{k}{i}$ not containing $j$, and a path $\gcgpath{k}{j}$
+    not containing $i$.  A simple example is furnished by the ``fork''
+    graph $i \leftarrow k \rightarrow j$.
+  \end{definition}\pause
+
+\begin{proposition}
+  \label{prop:ancestor_properties}
+  If in a Granger causality graph $\gcg$ where $j \pwgc i$ then
+  $j \in \anc{i}$ or $\exists k \in \anc{i} \cap\anc{j}$ which is a
+  confounder of $(i, j)$.
+\end{proposition}
+\end{frame}
+
+\begin{frame}{Sufficient Conditions for Pairwise Causality}
+  \begin{itemize}
+    \item{Unfortunately, there is no general converse (i.e. $j \in \pa{i} \centernot\implies j \pwgc i$)}\pause
+    \item{We seek special (graph-)\textit{topological} conditions when there is a converse}\pause
+  \end{itemize}
+
+  \begin{definition}[Strongly Causal]
+    \label{def:strongly_causal}
+    We will say that a Granger causality graph $\gcg$ is
+    \textit{strongly causal} if there is at most one directed path between
+    any two nodes.  Strongly Causal Graphs will be referred to as SCGs.
+  \end{definition}
+\end{frame}
+
+\begin{frame}{Strongly Causal Graph Examples}
+  \begin{columns}
+    \begin{column}{0.33\linewidth}
+      TODO: Simple example\pause
+    \end{column}
+    \begin{column}{0.33\linewidth}
+      \small{Slightly larger example}
+      \includegraphics[width=\linewidth]{../../figures/example_scg.pdf}\pause
+    \end{column}
+    \begin{column}{0.33\linewidth}
+      \small{Similar number of edges, but not strongly causal}
+      \includegraphics[width=\linewidth]{../../figures/example_dag.pdf}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{(Almost) Strongly Causal Graph Examples}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \small{E. Coli gene network \tiny{(\fullcite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty})}}
+      \includegraphics[width=\linewidth]{../../figures/ecoli_regulatory_network.pdf}\pause
+    \end{column}
+    \begin{column}{0.5\linewidth}
+      \small{Saccharomyces cerevisiae gene network \tiny{(\fullcite{learning_genome_scale_regulatory_networks})}}
+      \includegraphics[width=\linewidth]{../../figures/huge_gene_network.pdf}\pause
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Partial Converse}
+  \begin{itemize}
+    \item{In strongly causal (and acyclic) graphs, we have the appealing results:}
+  \end{itemize}
+
+  \begin{proposition}
+    \label{prop:pwgc_anc}
+    If $\gcg$ is a strongly causal DAG then $j \in \anc{i} \Rightarrow j \pwgc i$.
+  \end{proposition}\pause
+
+  \begin{corollary}
+    \label{cor:gc_implies_pwgc}
+    If $\gcg$ is a strongly causal DAG then $j \gc i \Rightarrow j \pwgc i$.
+  \end{corollary}\pause
+
+  \begin{itemize}
+    \item{Unfortunately, effects of confounding more nuanced}\pause
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Persistent Systems}
+  \begin{itemize}
+    \item{If $k \in \anc{i}\cap\anc{j}$ any of the following may occur:}\pause
+    \item{
+        $(i \npwgc j$, $j \npwgc i)$,
+        $(i \pwgc j$, $j \npwgc i)$,
+        $(i \npwgc j$, $j \pwgc i)$,
+        $(i \pwgc j$, $j \pwgc i)$}\pause
+    \item{Intuitively, $i$ may ``forget'' information from $k$ before the same information reaches $i$.}\pause
+  \end{itemize}
+
+  A heuristic ``definition'' (to avoid introducing more cumbersome notation):
+  \begin{definition}[Persistent]
+    We will say that the process $x(t)$ with Granger causality graph
+    $\gcg$ is \textit{persistent} if every node has a self-loop,
+    i.e. $\B_{ii}(z) \ne 0$.
+  \end{definition}
+    
 \end{frame}
 
 \section{Pairwise Testing Recovery Methods}
-\begin{frame}
-\end{frame}
-
-\section{LASSO Recovery Methods}
 \begin{frame}
 \end{frame}
 
