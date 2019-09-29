@@ -1,0 +1,151 @@
+%    DO NOT CHANGE THE SETTINGS BELOW
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[12pt]{article}
+\usepackage{epsfig}
+\usepackage{graphicx,float}
+\usepackage{url}
+\usepackage[hidelinks,colorlinks=true,bookmarks=true]{hyperref}
+%*******************************************
+\setlength{\textheight}{24cm}		
+\setlength{\textwidth}{17.5cm}		
+\setlength{\oddsidemargin}{-0.5cm}
+\setlength{\topmargin}{-1.25cm}
+%*******************************************
+ \pagestyle{empty} 
+
+\begin{document}
+\hspace{-0.70cm}\rule{17.5cm}{0.01 in} \\
+\vspace{-0.4cm}
+\begin{flushleft}
+\Large \textbf{\noindent
+Insert the Title of Your Talk Here}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\vspace{0.5cm}
+\normalsize
+ %%%%%%             NAMES OF AUTHORS         %%%%%%
+ %%%%%% NAME OF SPEAKER SHOULD BE UNDERLINED %%%%%%%%%
+\normalsize{
+ \underline{Ryan J. Kinnear}$^1$, Ravi R. Mazumdar$^1$
+} \\
+\vspace{5mm}
+\textit{\footnotesize
+ %%%%%% AFFILIATION OF AUTHORS %%%%%%
+$^1$ Department of Electrical and Computer Engineering, University of Waterloo, Waterloo, Ontario N2L 3G1, Canada\\
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+}
+\end{flushleft}
+
+We study Granger causality in the context of wide-sense stationary
+time series, where our focus is on the topological aspects of the
+underlying causality graph.  We establish sufficient conditions (in
+particular, we develop the notion of a ``strongly causal'' graph
+topology) under which the true causality graph can be recovered via
+pairwise causality testing alone, and provide examples from the gene
+regulatory network literature suggesting that our concept of a
+strongly causal graph may be applicable to this field.  We implement
+and detail finite-sample heuristics derived from our theory, and
+establish through simulation the efficiency gains (both statistical
+and computational) which can be obtained (in comparison to LASSO-type
+algorithms) when structural assumptions are met.
+
+In this paper we study the notion of Granger causality
+\cite{granger1969investigating} \cite{Granger1980329} as a means of
+uncovering an underlying causal structure in multivariate time series.
+Though the underlying causality graph cannot be observed directly,
+it's presence is inferred as a latent structure among observed
+time series data.  This notion is leveraged in a variety of
+applications e.g. in Neuroscience as a means of recovering
+interactions amongst brain regions \cite{bressler2011wiener},
+\cite{anna_paper2008}, \cite{david2008identifying}; in the study of
+the dependence and connectedness of financial institutions
+\cite{NBERw16223}; gene expression networks \cite{Fujita2007},
+\cite{methods_for_inferring_gene_regulatory_networks_from_time_series_expression_data},
+\cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery},
+\cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty};
+and power system design \cite{Misyrlis2016450}, \cite{yuan2014root}.
+
+The principal contributions of this paper are as follows: firstly, in
+section \ref{sec:theory} we study \textit{pairwise} Granger causality
+relations, providing novel theorems connecting the structure of the
+causality graph to the pairwise ``causality flow'' in the system, as
+well as an interpretation in terms of the graph topology of the
+sparsity pattern of matrices arising in the Wold decomposition,
+generalizing in some sense the notion of ``feedback-free'' processes
+studied by \cite{caines1975feedback} in close connection with
+Granger causality.  We establish sufficient conditions (sections
+\ref{sec:strongly_causal_graphs}, \ref{sec:persistent_systems}) under
+which a fully conditional Granger causality graph can be recovered
+from pairwise tests alone (sec \ref{sec:pairwise_algorithm}).  We
+report a summary of simulation results in \ref{sec:simulation}, with
+additional results reported in the supplementary material Section
+\ref{apx:simulation}.  Our simulation results establish that there is
+significant potential for improvement over existing methods, and that
+the graph-topological aspects of time series analysis are relevant for
+both theory and practice.  Concluding remarks on further open problems
+and extensions are provided in Section \ref{sec:conclusion}.  The
+proofs of each proposition and theorem are also relegated to the
+supplementary material, simple corollaries have proofs included in the
+main text.
+
+In a general Granger causality graph, there are natural
+\textit{necessary} conditions for a node $j$ to pairwise cause node
+$i$, namely that $j$ is an ancestor to $i$ or that there is a third
+confounding node $k$.  On the other hand, we will see simple examples
+for why \textit{sufficient} conditions are more nuanced: if $j$ causes
+$i$ conditionally on all other nodes in the graph, it need not be the
+case that $j$ causes $i$ when the two are observed in isolation.  We
+examine a special \textit{graph topological} assumption we term
+``strongly causal'' wherein a natural converse \textit{does} hold,
+satisfying an intuitive notion of ``causality flow'' through the
+graph.  We highlight examples from the literature on gene networks
+suggesting that assumptions of strongly causal graph structure may not
+be out of place in some application areas.
+
+As a consequence of the causality graph being strongly causal, we show
+that it is possible to recover the full conditional causality graph
+through pairwise testing alone -- that is, it isn't necessary to
+perform any conditional causality tests.
+
+% $\bullet$ Abstracts may contain equations: Equations are to be centered horizontally, with equation numbers aligned with the right margin. See equation (\ref{eq1})
+% \begin{equation}
+% e^{i\pi}+1=0.\label{eq1}
+% \end{equation}
+
+
+
+
+% $\bullet$ Abstracts must contain at least two  references. See   \cite{ASY,STE}.
+
+
+% $\bullet$ Abstracts may contain figures. For example, Figure \ref{fig1}.
+
+\begin{figure}[H]
+\centering
+\framebox[6cm]{\rule{0cm}{0.5cm} Abstracts may contain figures}
+%\includegraphics[width =0.48\linewidth]{image} 
+\caption{Figure one caption.}
+\label{fig1}
+\end{figure}
+ 
+ 
+ 
+ Please send your source file  and .pdf file to Alyssa Novelia (anovelia@uwaterloo.ca) or Isam Al-Darabsah (ialdarabsah@uwaterloo.ca)
+
+
+ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BIBLIOGRAPHY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{thebibliography}{00}
+\addcontentsline{toc}{chapter}{References}
+\setlength{\itemsep}{-1mm}
+\small
+\bibitem{ASY} K.T. Alligood, T.D. Sauer and J. A. Yorke. \textit{Chaos: An Introduction to Dynamical Systems}, New York, Springer-Verlag (1997).
+
+\bibitem{STE} L. Schimansky-Geier, A.V. Tolstopjatenko and W. Ebelin \textit{Noise induced transitions due to external additive noise}, Phys. Lett. A, \textbf{108}, 7, pp. 329-332 (1985).
+\end{thebibliography}
+\normalsize
+\end{document} 
