@@ -11,14 +11,21 @@
 \setlength{\oddsidemargin}{-0.5cm}
 \setlength{\topmargin}{-1.25cm}
 %*******************************************
- \pagestyle{empty} 
+\pagestyle{empty} 
 
+% \usepackage{graphicx}
+% \usepackage{caption}
+\usepackage{subcaption}
+\newtheorem{theorem}{Theorem}
+ 
+\def\gcg{\mathcal{G}}  % Granger-causality graph
+ 
 \begin{document}
 \hspace{-0.70cm}\rule{17.5cm}{0.01 in} \\
 \vspace{-0.4cm}
 \begin{flushleft}
-\Large \textbf{\noindent
-Insert the Title of Your Talk Here}
+  \Large \textbf{\noindent Graph Topological Aspects of Granger
+    Causality in Stationary Linear Dynamical Systems}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,104 +44,110 @@ $^1$ Department of Electrical and Computer Engineering, University of Waterloo, 
 }
 \end{flushleft}
 
-We study Granger causality in the context of wide-sense stationary
-time series, where our focus is on the topological aspects of the
-underlying causality graph.  We establish sufficient conditions (in
-particular, we develop the notion of a ``strongly causal'' graph
-topology) under which the true causality graph can be recovered via
-pairwise causality testing alone, and provide examples from the gene
-regulatory network literature suggesting that our concept of a
-strongly causal graph may be applicable to this field.  We implement
-and detail finite-sample heuristics derived from our theory, and
-establish through simulation the efficiency gains (both statistical
-and computational) which can be obtained (in comparison to LASSO-type
-algorithms) when structural assumptions are met.
+The concept of Granger causality, a notion introduced in 1969
+\cite{granger1969investigating} for the analysis of macroeconomic data
+(e.g. ``does lowering the interest rate cause an increase in
+employment?''), attempts to capture the intuition that a cause must
+proceed it's effect, and has spurred both theoretical and applied
+research.  The concept has been applied in diverse settings, for
+example: in finance, researchers have attempted to quantify the
+interdependence of financial institutions \cite{NBERw16223} and in the
+biological sciences, the concept is used to map out the promoting and
+regulating effects of certain genes upon others
+\cite{methods_for_inferring_gene_regulatory_networks_from_time_series_expression_data}.
 
-In this paper we study the notion of Granger causality
-\cite{granger1969investigating} \cite{Granger1980329} as a means of
-uncovering an underlying causal structure in multivariate time series.
-Though the underlying causality graph cannot be observed directly,
-it's presence is inferred as a latent structure among observed
-time series data.  This notion is leveraged in a variety of
-applications e.g. in Neuroscience as a means of recovering
-interactions amongst brain regions \cite{bressler2011wiener},
-\cite{anna_paper2008}, \cite{david2008identifying}; in the study of
-the dependence and connectedness of financial institutions
-\cite{NBERw16223}; gene expression networks \cite{Fujita2007},
-\cite{methods_for_inferring_gene_regulatory_networks_from_time_series_expression_data},
-\cite{grouped_graphical_granger_modelling_for_gene_expression_regulatory_networks_discovery},
-\cite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty};
-and power system design \cite{Misyrlis2016450}, \cite{yuan2014root}.
+A substantial portion of the work on this topic is devoted to
+generalizing the methods of Granger to nonlinear systems.  For
+example, linear Granger causality is a special case of the information
+theoretic notion of transfer entropy \cite{barnett2009granger}.
+However, like many attempts at quantifying causation, transfer entropy
+suffers from some difficulties of interpretation
+\cite{transfer_entropy_criticism}.  Although the criticisms raised by
+\cite{transfer_entropy_criticism} do not arise in the case of linear
+Granger causality, other pathologies are known.  Our work sheds light
+on some of the challenges that remain in the linear case, and in
+particular focuses on topological particularities of the underlying
+network of interactions.
 
-The principal contributions of this paper are as follows: firstly, in
-section \ref{sec:theory} we study \textit{pairwise} Granger causality
-relations, providing novel theorems connecting the structure of the
-causality graph to the pairwise ``causality flow'' in the system, as
-well as an interpretation in terms of the graph topology of the
-sparsity pattern of matrices arising in the Wold decomposition,
-generalizing in some sense the notion of ``feedback-free'' processes
-studied by \cite{caines1975feedback} in close connection with
-Granger causality.  We establish sufficient conditions (sections
-\ref{sec:strongly_causal_graphs}, \ref{sec:persistent_systems}) under
-which a fully conditional Granger causality graph can be recovered
-from pairwise tests alone (sec \ref{sec:pairwise_algorithm}).  We
-report a summary of simulation results in \ref{sec:simulation}, with
-additional results reported in the supplementary material Section
-\ref{apx:simulation}.  Our simulation results establish that there is
-significant potential for improvement over existing methods, and that
-the graph-topological aspects of time series analysis are relevant for
-both theory and practice.  Concluding remarks on further open problems
-and extensions are provided in Section \ref{sec:conclusion}.  The
-proofs of each proposition and theorem are also relegated to the
-supplementary material, simple corollaries have proofs included in the
-main text.
+In general, we are presented with a multitude of jointly wide sense
+stationary time series $x_1(t), \ldots, x_n(t)$ and seek to construct
+a (Granger-)causal graph $\gcg$ where there is an edge
+$(j, i) \in \gcg$ whenever $x_j$ Granger causes $x_i$ after
+conditioning on each $k \not\in \{i, j\}$.  Depending on the
+interpretation or on the application, the graph $\gcg$ captures the
+flows of ``information'' or ``energy'' throughout a network of
+interacting processes.  However, it may be the case that we observe
+$x_j$ and $x_i$ alone -- in such cases, simple examples establish that
+even if $x_j$ Granger causes $x_i$ conditioned on the rest of the
+observations, it need not be that $x_j$ Granger causes $x_i$ pairwise
+(i.e. without conditioning).
 
-In a general Granger causality graph, there are natural
-\textit{necessary} conditions for a node $j$ to pairwise cause node
-$i$, namely that $j$ is an ancestor to $i$ or that there is a third
-confounding node $k$.  On the other hand, we will see simple examples
-for why \textit{sufficient} conditions are more nuanced: if $j$ causes
-$i$ conditionally on all other nodes in the graph, it need not be the
-case that $j$ causes $i$ when the two are observed in isolation.  We
-examine a special \textit{graph topological} assumption we term
-``strongly causal'' wherein a natural converse \textit{does} hold,
-satisfying an intuitive notion of ``causality flow'' through the
-graph.  We highlight examples from the literature on gene networks
-suggesting that assumptions of strongly causal graph structure may not
-be out of place in some application areas.
+Pathologies of pairwise causation clash with our intuition that causal
+relations in $\gcg$ should be transitive, that is, that if there is
+some ``true'' (conditional) causation path
+$j \rightarrow a_0 \rightarrow \cdots \rightarrow a_r \rightarrow i$
+in $\gcg$ then it should hold that $x_j$ pairwise causes $x_i$.  While
+this does not hold in general, our work analyzes a particular type of
+graph topology, which we deem a ``strongly causal'' graph, wherein
+natural intuitions about causal flow \textit{do} hold.  Moreover, we
+prove that (with modest additional technical assumptions) that in such
+a graph the complete conditional causation graph $\gcg$ can be
+recovered by testing only pairwise interactions of nodes.  That is,
+the complete causal structure of $\gcg$ can be recovered through
+simple one way unconditional causality tests.
 
-As a consequence of the causality graph being strongly causal, we show
-that it is possible to recover the full conditional causality graph
-through pairwise testing alone -- that is, it isn't necessary to
-perform any conditional causality tests.
+The flavour of this work may be conveyed by stating one of our main
+conclusions, where the ideas behind $T_{ij}(z)$ are subtle and not
+expanded upon in this brief summary.
 
-% $\bullet$ Abstracts may contain equations: Equations are to be centered horizontally, with equation numbers aligned with the right margin. See equation (\ref{eq1})
-% \begin{equation}
-% e^{i\pi}+1=0.\label{eq1}
-% \end{equation}
+\begin{theorem}[Pairwise Recovery]
+  \label{thm:scg_recovery}
+  If the Granger causality graph $\gcg$ for the process $x(t)$ is
+  a strongly causal DAG and $T_{ij}(z)$ is a two-sided filter for every
+  $i, j \in [n]$, then $\gcg$ can be recovered from pairwise causality
+  tests alone.
+\end{theorem}
 
+% \begin{figure}[h]
+%   \centering
+%   \begin{subfigure}[b]{0.45\textwidth}
+%     \includegraphics[width=\linewidth]{../../figures/example_algorithm.pdf}
+%   \end{subfigure}
+%   \begin{subfigure}[b]{0.45\textwidth}
+%     \includegraphics[width=\linewidth]{../../figures/example_algorithm2.pdf}
+%   \end{subfigure}
+% \end{figure}
 
-
-
-% $\bullet$ Abstracts must contain at least two  references. See   \cite{ASY,STE}.
-
-
-% $\bullet$ Abstracts may contain figures. For example, Figure \ref{fig1}.
-
-\begin{figure}[H]
-\centering
-\framebox[6cm]{\rule{0cm}{0.5cm} Abstracts may contain figures}
-%\includegraphics[width =0.48\linewidth]{image} 
-\caption{Figure one caption.}
-\label{fig1}
+\begin{figure}[h]
+  \centering
+  \caption{Recovering Large Networks via Pairwise Causality Tests}
+  \label{fig:large_n_figure}
+  \includegraphics[width=0.7\linewidth]{../../figures/new_increasing_n_simulation.pdf}
 \end{figure}
- 
- 
- 
- Please send your source file  and .pdf file to Alyssa Novelia (anovelia@uwaterloo.ca) or Isam Al-Darabsah (ialdarabsah@uwaterloo.ca)
 
-
+Our concept of a strongly causal graph topology initially arose
+artificially as a technical condition to understand the intuition of
+causality flow in $\gcg$ and to establish Theorem
+\ref{thm:scg_recovery}.  However, examples from the gene regulatory
+network literature suggest that the dynamics of some natural
+interacting systems may have an underlying interaction graph which is
+in fact strongly causal, or at least nearly so.  Simulation evidence
+also suggests that our algorithm for graph recovery via pairwise
+testing can outperform the widely employed LASSO (and variations
+thereon) for systems which satisfy (or nearly satisfy) the strongly
+causal condition; in the process we make the incidental observation
+that, all else equal, the LASSO exhibits superior performance on the
+strongly causal topology than on a general directed acyclic graph,
+suggesting that topological aspects of the underlying causality graph
+may be of interest as an aspect unique to time series data in
+comparison to ordinary regression.  Finally, the results of Figure
+\ref{fig:large_n_figure} show that when topological assumptions are
+met, it is possible to accurately identify extremely large networks
+($n > 1000$, implying more than $10^6$ possible edges), and that the
+underlying graph topology is an important determination of estimation
+accuracy in addition to the simple size and sparsity of the network.
  
+ % Please send your source file  and .pdf file to Alyssa Novelia (anovelia@uwaterloo.ca) or Isam Al-Darabsah (ialdarabsah@uwaterloo.ca)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% BIBLIOGRAPHY
@@ -143,9 +156,30 @@ perform any conditional causality tests.
 \addcontentsline{toc}{chapter}{References}
 \setlength{\itemsep}{-1mm}
 \small
-\bibitem{ASY} K.T. Alligood, T.D. Sauer and J. A. Yorke. \textit{Chaos: An Introduction to Dynamical Systems}, New York, Springer-Verlag (1997).
+\bibitem{granger1969investigating} Granger,
+  C. W. J. (1969). \textit{Investigating causal relations by
+    econometric models and cross-spectral methods.} Econometrica 37
+  (3), 424–438.
 
-\bibitem{STE} L. Schimansky-Geier, A.V. Tolstopjatenko and W. Ebelin \textit{Noise induced transitions due to external additive noise}, Phys. Lett. A, \textbf{108}, 7, pp. 329-332 (1985).
+\bibitem{NBERw16223} Billio, M., M. Getmansky, A. W. Lo, and
+  L. Pelizzon (2010, July). \textit{Econometric measures of systemic
+    risk in the finance and insurance sectors.}  Working Paper 16223,
+  National Bureau of Economic Research.
+
+\bibitem{methods_for_inferring_gene_regulatory_networks_from_time_series_expression_data}
+  Nguyen, P. (2019). \textit{Methods for Inferring Gene Regulatory
+    Networks from Time Series Expression Data.}
+  Ph. D. thesis, Northwestern University
+
+\bibitem{barnett2009granger} Barnett, L., A. B. Barrett, and
+  A. K. Seth (2009). \textit{Granger causality and transfer entropy
+    are equivalent for gaussian variables.} Physical review letters
+  103(23), 238701.
+  
+\bibitem{transfer_entropy_criticism} Ryan G James, Nix Barnett, and
+  James P Crutchfield. \textit{Information flows? A critique of
+    transfer entropies}. In: Physical review letters 116.23 (2016),
+  p. 238701
 \end{thebibliography}
 \normalsize
 \end{document} 
