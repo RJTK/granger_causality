@@ -102,7 +102,7 @@
     \item{Do billiard collisions cause motion?}\pause
     \item{Does standing in the street cause cars to stop?}\pause
     \item{Does smoking cause cancer?}\pause
-    \item{Does government spending cause an increase in GDP?}\pause
+    \item{Does lowering interest rates cause lowering unemployment?}\pause
     \item{Granger causality attemps to address the last question's category.}
   \end{itemize}
 \end{frame}
@@ -129,7 +129,7 @@
   \begin{itemize}
     \item{Basic setup is an $n-$dimensional WSS process $x(t)$}\pause
     \item{Wold representation $x(t) = \sum_{\tau = 0}^\infty A(\tau)v(t - \tau)$}\pause
-    \item{$\text{VAR}(\infty)$ representation $x(t) = \sum_{\tau = 1}^\infty B(\tau)x(t - \tau) + v(t)$}\pause
+    \item{$\VAR(\infty)$ representation $x(t) = \sum_{\tau = 1}^\infty B(\tau)x(t - \tau) + v(t)$}\pause
     \item{Require $\E[v(t)v(t - \tau)] = \delta_{\tau}\Sigma_v$, with $\Sigma_v$ Diagonal}\pause
   \end{itemize}
 
@@ -164,8 +164,7 @@
   \begin{defn}
     For the WSS series $x(t)$ we say that component $x_j$
     \textit{Granger-Causes} component $x_i$ (with respect to $x$)
-    and write $x_j \gc x_i$ if given Hilbert spaces $\H_{t - 1}$,
-    $\H^{-j}_{t - 1}$ if
+    and write $x_j \gc x_i$ if
 
     \begin{equation*}
       \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{-j}_{t - 1}},
@@ -174,7 +173,7 @@
 
   \begin{defn}
     We say that $x_j$ pairwise Granger-causes $x_i$ and write
-    $x_j \pwgc x_i$ if $x_j$ Granger-causes $x_i$ with respect only to
+    $x_j \pwgc x_i$ if $x_j$ Granger-causes $x_i$ with respect to
     $(x_i, x_j)$.
   \end{defn}
 \end{frame}
@@ -190,13 +189,13 @@
 \end{frame}
 
 \begin{frame}{Simple Examples}
-  \begin{align*}
-    x_0(t) &= b_0 x_0(t - 1) + b_{0, 2} x_2(t - 150) + v_0(t)\\
-    x_1(t) &= b_1 x_1(t - 1) + b_{1, 2} x_2(t - 150) + v_1(t)\\
-    x_2(t) &= b_2 x_2(t - 1) + v_2(t)\\
-  \end{align*}
-
-  % TODO: Fix the whitespace consumed by this figure!
+  \begin{equation*}
+    \begin{aligned}
+      x_0(t) &= b_0 x_0(t - 1) + b_{0, 2} x_2(t - 150) + v_0(t)\\
+      x_1(t) &= b_1 x_1(t - 1) + b_{1, 2} x_2(t - 150) + v_1(t)\\
+      x_2(t) &= b_2 x_2(t - 1) + v_2(t)\\
+    \end{aligned}
+  \end{equation*}
 
   \centering
   \includegraphics[width=0.75\linewidth]{./figures/var2_example.pdf}
@@ -210,7 +209,7 @@
     \item{Cycles: paths with $i = j$}
     \item{Directed Acyclic Graph (DAG): A directed graph without any cycles}\pause
     \item{Parents: $j \in \pa{i}$ iff $(j, i) \in \gcge$}\pause
-    \item{Ancestors: $j \in \anc{i}$ iff $j \rightarrow i$ path in $\gcge$}\pause
+    \item{Ancestors: $j \in \anc{i}$ iff $j \rightarrow i$ path in $\gcge$}
   \end{itemize}
 \end{frame}
 
@@ -239,12 +238,50 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Granger Causality Graph}
+  Structural results that tie in $\gcg$.  Recall:
+  \begin{itemize}
+    \item{$\mathsf{MA}(\infty)$ representation $x(t) = \sum_{\tau = 0}^\infty A(\tau)v(t - \tau)$}\pause
+    \item{$\mathsf{VAR}(\infty)$ representation $x(t) = \sum_{\tau = 1}^\infty B(\tau)x(t - \tau) + v(t)$}\pause
+  \end{itemize}
+
+  \begin{proposition}
+  $x_i(t)$ can be represented in terms of it's parents in $\gcg$:
+
+  \begin{equation}
+    \label{eqn:parent_expansion}
+    x_i(t) = v_i(t) + \B_{ii}(z)x_i(t) + \sum_{k \in \pa{i}}\B_{ik}(z)x_k(t).
+  \end{equation}\pause
+
+  Or, through it's ancestors:
+
+  \begin{equation}
+    \label{eqn:ancestor_expansion}
+    x_i(t) = \A_{ii}(z)v_i(t) + \sum_{\substack{k \in \anc{i} \\ k \ne i}}\A_{ik}(z)v_k(t).
+  \end{equation}
+    
+  \end{proposition}
+\end{frame}
+
 \begin{frame}{Application Examples}
-  Analysis of connectedness of financial institutions
+  Analysis of connectedness of financial institutions: 2002 - 2004
 
-  TODO: Finance example
   \begin{columns}
+    \begin{column}{0.75\linewidth}
+      \includegraphics[width=\linewidth]{./figures/finance_connections2002.png}
+    \end{column}
+  \end{columns}
 
+  \footfullcite{NBERw16223}
+\end{frame}
+
+\begin{frame}{Application Examples}
+  Analysis of connectedness of financial institutions: 2006 - 2008
+
+  \begin{columns}
+    \begin{column}{0.75\linewidth}
+      \includegraphics[width=\linewidth]{./figures/finance_connections2006.png}
+    \end{column}
   \end{columns}
 
   \footfullcite{NBERw16223}
@@ -253,11 +290,25 @@
 \begin{frame}{Application Examples}
   Analysis of brain functional connectivity
   
-  TODO: Anna examples or something
+  \begin{columns}
+    \begin{column}{0.55\linewidth}
+      \includegraphics[width=\linewidth]{./figures/brain_photo.png}
+    \end{column}
+  \end{columns}
+
+  \footfullcite{anna_paper2008}
 \end{frame}
 
 \begin{frame}{Application Examples}
-  TODO: Gene expression networks
+  Analysis of Gene regulatory networks
+  
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \includegraphics[width=\linewidth]{../../figures/ecoli_regulatory_network.pdf}
+    \end{column}
+  \end{columns}
+
+  \footfullcite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}
 \end{frame}
 
 \section{Recovery Methods}
@@ -265,12 +316,12 @@
   \begin{itemize}
     \item{Small systems ($n = 2$ or $n \lessapprox 10$) with adequate data are amenable to least squares and hypothesis testing}\pause
     \item{Large systems ($n \gtrapprox 20$) or when data is limited are addressed via the LASSO (and variants)}\pause
-    \item{Standard linear regression case:
+    \item{Standard linear regression case $y = X\beta^\star + v$:
         \begin{equation*}
           \underset{\beta \in \R^n}{\text{minimize }} \frac{1}{2T}||y - X\beta||_2^2 + \lambda ||\beta||_1
         \end{equation*}
       }\pause
-    \item{$\VAR(p)$ models:
+    \item{$\VAR(p)$ models $x(t) = \sum_{\tau = 1}^p B^\star(\tau)x(t - \tau) + v(t)$:
         \begin{equation*}
           \underset{B(\tau) \in \R^{n \times n}}{\text{minimize }} \frac{1}{2T}||x(t) - \sum_{\tau = 1}^p B(\tau)x(t - \tau)||_2^2 + \lambda \sum_{\tau = 1}^p ||B(\tau)||_1
         \end{equation*}
@@ -278,19 +329,53 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{LASSO Recovery Theorems}
-  TODO: Static Case
+\begin{frame}{LASSO Recovery Theorems (Linear Regression)}
+  \begin{itemize}
+    \item{$y = X\beta^\star + v$; $\beta^\star \in \R^n, y \in \R^T$}\pause
+    \item{$\widehat{\beta} \in \underset{\beta \in \R^n}{\text{argmin }} \frac{1}{2T}||y - X\beta|| + \lambda ||\widehat{\beta}||_1$}\pause
+  \end{itemize}
+
+  \begin{theorem}[Wainwright 2006]
+    Suppose $\beta^\star$ has only $s$ non-zero terms:
+    $||\beta^\star||_0 = s$, and $v \sim \mathcal{N}(0, \sigma^2)$.
+    \pause Then, with high probability, (ignoring some important
+    technicalities) there is a constant $C$ s.t. \pause
+
+    \begin{equation*}
+      ||\widehat{\beta} - \beta^\star||_2 \le C \sigma \sqrt{\frac{s \mathsf{log } n}{T}}.
+    \end{equation*}
+  \end{theorem}
+
+  \begin{itemize}
+    \item{Roughly, $||\beta^\star - \widehat{\beta}||_2$ is $O\big(\frac{s}{T}\big)$.}
+  \end{itemize}
 \end{frame}
 
-\begin{frame}{LASSO Recovery Theorems}
-  TODO: VAR(p) case
+\begin{frame}{LASSO Recovery Theorems ($\VAR(p)$ case)}
+  \begin{itemize}
+    \item{$\frac{1}{2T}||x(t) - \sum_{\tau = 1}^p B(\tau)x(t - \tau)||_2^2 + \lambda \sum_{\tau = 1}^p ||B(\tau)||_1$}\pause
+  \end{itemize}
+  TODO
 \end{frame}
 
 \begin{frame}{Structure of Granger Causality Graphs}
-  \begin{itemize}
-    \item{Topology of Granger causality graph is a special feature of time series}\pause
-    \item{TODO: Star shaped graph with a self-loop versus a full cycle with graph -- same number of edges, but qualitatively totally different.}
-  \end{itemize}
+  \begin{columns}
+    \begin{column}{0.35\linewidth}
+      \includegraphics[width=\linewidth]{../../figures/example_rotation_shape.pdf}\pause
+    \end{column}
+    \begin{column}{0.35\linewidth}
+      \includegraphics[width=\linewidth]{../../figures/example_star_shaped.pdf}\pause
+    \end{column}
+  \end{columns}
+
+  \begin{columns}
+    \begin{column}{0.35\linewidth}
+      \includegraphics[width=\linewidth]{../../figures/example_loop_shaped.pdf}\pause
+    \end{column}
+    \begin{column}{0.35\linewidth}
+      \includegraphics[width=\linewidth]{../../figures/example_diamond_shaped.pdf}
+    \end{column}
+  \end{columns}
 \end{frame}
 % \item{Confounder: A node $k$ confounds $i, j$ if $k \in \anc{i} \cap \anc{j}$ if exists a
 %     path $\gcgpath{k}{i}$ not containing $j$, and a path
@@ -403,7 +488,8 @@
 \begin{frame}{Strongly Causal Graph Examples}
   \begin{columns}
     \begin{column}{0.33\linewidth}
-      TODO: Simple example\pause
+      \small{Simple Example}
+      \includegraphics[width=\linewidth]{../../figures/example_algorithm_step0.pdf}\pause
     \end{column}
     \begin{column}{0.33\linewidth}
       \small{Slightly larger example}
@@ -552,8 +638,6 @@
 \end{frame}
 
 \begin{frame}{Pairwise Recovery}
-  An Example (TODO: Intersperse Pauses)
-
   \begin{columns}
     \begin{column}{0.5\linewidth}
       \begin{figure}
@@ -563,11 +647,93 @@
 
     \begin{column}{0.5\linewidth}
       \begin{figure}
-        \includegraphics[width=\linewidth]{../../figures/example_algorithm2.pdf}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm_step0.pdf}
       \end{figure}
     \end{column}
   \end{columns}
 \end{frame}
+
+\begin{frame}{Pairwise Recovery}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm0_step1.pdf}
+      \end{figure}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm_step0.pdf}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Pairwise Recovery}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm0_step1.pdf}
+      \end{figure}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm_step1.pdf}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}{Pairwise Recovery}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm0_step1.pdf}
+      \end{figure}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm_step2.pdf}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Pairwise Recovery}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm0_step1.pdf}
+      \end{figure}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm_step3.pdf}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Pairwise Recovery}
+  \begin{columns}
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm0_step1.pdf}
+      \end{figure}
+    \end{column}
+
+    \begin{column}{0.5\linewidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{../../figures/example_algorithm_step4.pdf}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 
 \begin{frame}{Simulation}
   \begin{itemize}
