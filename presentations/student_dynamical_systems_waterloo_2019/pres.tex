@@ -76,7 +76,7 @@
   Department of Electrical and Computer Engineering
 }
 
-\date{McGill University, Oct 4 2019}
+\date{Fields-CQAM Student Workshop on Dynamical Systems and Related Fields, University of Waterloo, Oct 2019}
 
 \AtBeginSection[]
 {
@@ -99,25 +99,25 @@
 
 \section{Introduction}
 
-\begin{frame}{Causality}
-  \begin{itemize}
-    \item{Do billiard collisions cause motion?}\pause
-    \item{Does standing in the street cause cars to stop?}\pause
-    \item{Does smoking cause cancer?}\pause
-    \item{Does lowering interest rates cause lowering unemployment?}\pause
-    \item{Granger causality attemps to address the last question's category.}
-  \end{itemize}
-\end{frame}
+% \begin{frame}{Causality}
+%   \begin{itemize}
+%     \item{Do billiard collisions cause motion?}\pause
+%     \item{Does standing in the street cause cars to stop?}\pause
+%     \item{Does smoking cause cancer?}\pause
+%     \item{Does lowering interest rates cause lowering unemployment?}\pause
+%     \item{Granger causality attemps to address the last question's category.}
+%   \end{itemize}
+% \end{frame}
 
-\begin{frame}{Causality in Time Series}
-  \begin{itemize}
-    \item{Consider $x_t, y_t \overset{\text{i.i.d.}}{\sim} \text{BER}(1/2)$}\pause
-    \item{If $z_t = x_{t - 1}$ then since cause preceeds effect, intuitively $x$ causes $z$}\pause
-    \item{$z'_t = x_{t - 1} \oplus y_{t - 1}$ is more ambiguous.}\pause
-    \item{Issue raised by: \fullcite{transfer_entropy_criticism}}\pause
-    \item{This difficulty is absent for \textit{linear} systems -- the domain of Granger causality}
-  \end{itemize}
-\end{frame}
+% \begin{frame}{Causality in Time Series}
+%   \begin{itemize}
+%     \item{Consider $x_t, y_t \overset{\text{i.i.d.}}{\sim} \text{BER}(1/2)$}\pause
+%     \item{If $z_t = x_{t - 1}$ then since cause preceeds effect, intuitively $x$ causes $z$}\pause
+%     \item{$z'_t = x_{t - 1} \oplus y_{t - 1}$ is more ambiguous.}\pause
+%     \item{Issue raised by: \fullcite{transfer_entropy_criticism}}\pause
+%     \item{This difficulty is absent for \textit{linear} systems -- the domain of Granger causality}
+%   \end{itemize}
+% \end{frame}
 
 \begin{frame}{Causality in Linear Time Series}
   \begin{itemize}
@@ -128,7 +128,7 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Basic Setup}
+\begin{frame}{Granger Causality}
   \begin{itemize}
     \item{Basic setup is an $n-$dimensional WSS process $x(t)$}\pause
     \item{$\mathsf{MA}(\infty)$ (Wold) representation $x(t) = \sum_{\tau = 0}^\infty A(\tau)v(t - \tau)$}\pause
@@ -137,49 +137,21 @@
   \end{itemize}
 
   \begin{defn}
-    Linear Projection onto Hilbert space $\H \subseteq L_2(\Omega)$
-    \begin{equation*}
-      \linE{x}{\H} = \underset{u \in \H}{\text{argmin }} ||x - u||
-    \end{equation*}
-
-    Minimum Mean Squared Error
-    \begin{equation*}
-      \xi[x \ |\ \H] = \E (x - \linE{x}{\H})^2      
-    \end{equation*}
-  \end{defn}
-\end{frame}
-
-\begin{frame}{Basic Setup}
-  More notation
-
-  \begin{align*}
-    \H_t &= \cl \{\sum_{\tau = 0}^p a_\tau^\T x(t - \tau)\ |\ a_\tau \in \R^n, p \in \N\} \subseteq L_2(\Omega)\\
-    % H_t^x &= \{a x(t)\ |\ a \in \R\} \subseteq L_2(\Omega),
-  \end{align*}\pause
-
-  \begin{itemize}
-    \item{$\H_t^{i}$ Hilbert space spanned by $x_i(t)$ alone}
-    \item{$\H_t^{-i}$ Hilbert space spanned by $x(t)$ but \textit{excluding} $x_i(t)$}\pause
-    \item{$\B(z)x(t) = \sum_{\tau = 1}^\infty B(\tau)x(t - \tau)$}
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Granger Causality}
-  \begin{defn}
     For the WSS series $x(t)$ we say that component $x_j$
     \textit{Granger-Causes} component $x_i$ (with respect to $x$)
     and write $x_j \gc x_i$ if
 
     \begin{equation*}
-      \linEerr{x_i(t)}{\H_{t - 1}} < \linEerr{x_i(t)}{\H^{-j}_{t - 1}},
+      \exists \tau > 0 \text{ s.t. } B_{ij}(\tau) \ne 0.
     \end{equation*}
   \end{defn}\pause
 
-  \begin{defn}
-    We say that $x_j$ pairwise Granger-causes $x_i$ and write
-    $x_j \pwgc x_i$ if $x_j$ Granger-causes $x_i$ with respect to
-    $(x_i, x_j)$.
-  \end{defn}
+  % Need a VAR(2) definition of pairwise causality...
+  % \begin{defn}
+  %   We say that $x_j$ pairwise Granger-causes $x_i$ and write
+  %   $x_j \pwgc x_i$ if $x_j$ Granger-causes $x_i$ with respect to
+  %   $(x_i, x_j)$.
+  % \end{defn}
 \end{frame}
 
 \begin{frame}{Simple Examples}
@@ -267,43 +239,43 @@
   \end{proposition}
 \end{frame}
 
-\begin{frame}{Application Examples}
-  Analysis of connectedness of financial institutions: 2002 - 2004
+% \begin{frame}{Application Examples}
+%   Analysis of connectedness of financial institutions: 2002 - 2004
 
-  \begin{columns}
-    \begin{column}{0.75\linewidth}
-      \includegraphics[width=\linewidth]{../figures/finance_connections2002.png}
-    \end{column}
-  \end{columns}
+%   \begin{columns}
+%     \begin{column}{0.75\linewidth}
+%       \includegraphics[width=\linewidth]{../figures/finance_connections2002.png}
+%     \end{column}
+%   \end{columns}
 
-  \footfullcite{NBERw16223}
-\end{frame}
+%   \footfullcite{NBERw16223}
+% \end{frame}
 
-\begin{frame}{Application Examples}
-  Analysis of connectedness of financial institutions: 2006 - 2008
+% \begin{frame}{Application Examples}
+%   Analysis of connectedness of financial institutions: 2006 - 2008
 
-  \begin{columns}
-    \begin{column}{0.75\linewidth}
-      \includegraphics[width=\linewidth]{../figures/finance_connections2006.png}
-    \end{column}
-  \end{columns}
+%   \begin{columns}
+%     \begin{column}{0.75\linewidth}
+%       \includegraphics[width=\linewidth]{../figures/finance_connections2006.png}
+%     \end{column}
+%   \end{columns}
 
-  \footfullcite{NBERw16223}
-\end{frame}
+%   \footfullcite{NBERw16223}
+% \end{frame}
 
-\begin{frame}{Application Examples}
-  Analysis of brain functional connectivity
+% \begin{frame}{Application Examples}
+%   Analysis of brain functional connectivity
   
-  \begin{columns}
-    \begin{column}{0.55\linewidth}
-      \includegraphics[width=\linewidth]{../figures/brain_photo.png}
-    \end{column}
-  \end{columns}
+%   \begin{columns}
+%     \begin{column}{0.55\linewidth}
+%       \includegraphics[width=\linewidth]{../figures/brain_photo.png}
+%     \end{column}
+%   \end{columns}
 
-  \footfullcite{anna_paper2008}
-\end{frame}
+%   \footfullcite{anna_paper2008}
+% \end{frame}
 
-\begin{frame}{Application Examples}
+\begin{frame}{Application Example}
   Analysis of Gene regulatory networks
   
   \begin{columns}
@@ -315,104 +287,12 @@
   \footfullcite{discovering_graphical_Granger_causality_using_the_truncating_lasso_penalty}
 \end{frame}
 
-\section{Recovery Methods}
-\begin{frame}{LASSO Recovery Methods}
-  \begin{itemize}
-    \item{Small systems ($n = 2$ or $n \lessapprox 10$) with adequate data are amenable to least squares and hypothesis testing}\pause
-    \item{Large systems ($n \gtrapprox 20$) or when data is limited are addressed via the LASSO (and variants)}\pause
-    \item{Standard linear regression case $y = X\beta^\star + v$:
-        \begin{equation*}
-          \underset{\beta \in \R^n}{\text{minimize }} \frac{1}{2T}||y - X\beta||_2^2 + \lambda ||\beta||_1
-        \end{equation*}
-      }\pause
-    \item{$\VAR(p)$ models $x(t) = \sum_{\tau = 1}^p B^\star(\tau)x(t - \tau) + v(t)$:
-        \begin{equation*}
-          \underset{B(\tau) \in \R^{n \times n}}{\text{minimize }} \frac{1}{2T}||x(t) - \sum_{\tau = 1}^p B(\tau)x(t - \tau)||_2^2 + \lambda \sum_{\tau = 1}^p ||B(\tau)||_1
-        \end{equation*}
-      }
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{LASSO Recovery Theorems (Linear Regression)}
-  \begin{itemize}
-    \item{$y = X\beta^\star + v$; $\beta^\star \in \R^n, y \in \R^T$}\pause
-    \item{$\widehat{\beta} \in \underset{\beta \in \R^n}{\text{argmin }} \frac{1}{2T}||y - X\beta|| + \lambda ||\widehat{\beta}||_1$}\pause
-  \end{itemize}
-
-  \begin{theorem}[Wainwright 2006]
-    Suppose $\beta^\star$ has only $s$ non-zero terms:
-    $||\beta^\star||_0 = s$, and $v \sim \mathcal{N}(0, \sigma^2)$.
-    \pause Then, with high probability, (ignoring some important
-    technicalities) there is a constant $C$ s.t. \pause
-
-    \begin{equation*}
-      ||\widehat{\beta} - \beta^\star||_2 \le C \sigma \sqrt{\frac{s \mathsf{log } n}{T}}.
-    \end{equation*}
-  \end{theorem}
-
-  \begin{itemize}
-    \item{Roughly, $||\beta^\star - \widehat{\beta}||_2$ is $O\big(\sqrt{\frac{s}{T}}\big)$.}
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{LASSO Recovery Theorems ($\VAR(p)$ case)}
-  \begin{itemize}
-    \item{$\frac{1}{2T}||x(t) - \sum_{\tau = 1}^p B(\tau)x(t - \tau)||_2^2 + \lambda \sum_{\tau = 1}^p ||B(\tau)||_1$}\pause
-    \item{Similar results hold -- $\ell_2$ error is $O\big(\sqrt{\frac{s}{T}}\big)$}\pause
-  \end{itemize}
-  \fullcite{basu2015}
-\end{frame}
-
-\begin{frame}{LASSO Recovery Theorems ($\VAR(p)$ case)}
-  \begin{itemize}
-    \item{The constants hidden by $O\big(\cdot\big)$ depend on spectral properties of $x(t)$}\pause
-    % \item{$f_x(\omega) = \frac{1}{2\pi}\sum_{\tau = -\infty}^\infty R_x(\tau)e^{-\ii}\tau\omega}$}\pause
-    \item{$\B(\omega) = I_n - \sum_{\tau = 1}^\infty B(\tau)e^{-\ii\tau\omega}$}\pause
-    \item{$\mu_\text{max}(\B) = \underset{\omega \in [-\pi, \pi)}{\text{sup}} \sigma_{\text{max}}(\B(\omega))$}
-    \item{$\mu_\text{min}(\B) = \underset{\omega \in [-\pi, \pi)}{\text{inf}} \sigma_{\text{min}}(\B(\omega))$}\pause
-    \item{``small'' $\mu_{\text{max}}(\B)$ and ``large'' $\mu_{\text{min}}(\B)$ \textit{improve} recovery}\pause
-    \item{$\mu_\text{min}$ and $\mu_\text{max}$ seem to ``hide'' dependence on sparsity and structure of $\gcg$}\pause
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Structure of Granger Causality Graphs}
-  \begin{columns}
-    \begin{column}{0.35\linewidth}
-      \includegraphics[width=\linewidth]{../../figures/example_rotation_shape.pdf}\pause
-    \end{column}
-    \begin{column}{0.35\linewidth}
-      \includegraphics[width=\linewidth]{../../figures/example_star_shaped.pdf}\pause
-    \end{column}
-  \end{columns}
-
-  \begin{columns}
-    \begin{column}{0.35\linewidth}
-      \includegraphics[width=\linewidth]{../../figures/example_loop_shaped.pdf}\pause
-    \end{column}
-    \begin{column}{0.35\linewidth}
-      \includegraphics[width=\linewidth]{../../figures/example_diamond_shaped.pdf}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Structure and Spectral Properties}
-  \begin{itemize}
-    \item{We have ultimately been motivated by understanding how topological aspects of $\gcg$ effect recovery, by LASSO methods or otherwise.  Simple example:}\pause
-  \end{itemize}
-
-  \begin{proposition}
-    Consider a $\VAR(1)$ system where the in-degree and out-degree of $\gcg$ are bounded by $d_i$ and $d_o$ respectively.\pause  Further suppose that diagonals of $\B(z)$ (i.e. ``self-loops'') are $\rho(z) = \rho z^{-1}$ and off diagonals of $\B(z)$ (i.e. ``feed-forward edges'') are $\alpha(z) = \alpha z^{-1}$.\pause  Then:
-
-    \begin{align*}
-      \mu_\text{max}(\B) &\le \big[(1 + |\rho|) + \frac{1}{2}(d_i + d_o)|\alpha| \big]\\
-      \mu_\text{min}(\B) &\ge \big[(1 - |\rho|) - \frac{1}{2}(d_i + d_o)|\alpha| \big]\\
-    \end{align*}
-  \end{proposition}
-\end{frame}
-
 \section{Pairwise Causality and ``Causal Flow''}
-\begin{frame}{Pairwise Testing}
+\begin{frame}{Pairwise Granger Causality}
   \begin{itemize}
+    \item{Suppose we observe only $x_i, x_j$ (components of a latent $x$)}\pause
+    \item{Test \textit{pairwise} causality: $x_i \pwgc x_j$ (e.g. find
+        the best $2-$dimensional model and check for zeros)}\pause
     \item{Statistical tests for the case $n = 2$ are simple and well established}\pause
     \item{Can we recover all of $\gcg$ by only testing pairwise relations?}\pause
     \item{Thresholding schemes suffer from confounding}\pause
@@ -444,26 +324,10 @@
 \end{frame}
 
 \begin{frame}{Necessary Conditions for Pairwise Causality}
-  First, when $i, j$ are completely separated:
+  \begin{itemize}
+    \item{Interested in relationship between $x_j \gc x_i$ and $x_j \pwgc x_i$}\pause
+  \end{itemize}
 
-  \begin{proposition}
-    Consider distinct nodes $i, j$ in a Granger causality graph
-    $\gcg$.  If
-
-    \begin{enumerate}
-      \item{$j \not\in \anc{i}$ and $i \not\in \anc{j}$}\pause
-      \item{$\anc{i}\cap\anc{j} = \emptyset$}\pause
-    \end{enumerate}
-
-    then $\H_t^{(i)} \perp \H_t^{(j)}$: $\forall s, \tau \in \Z_+\ \E[x_i(t - s)x_j(t - \tau)] = 0$.
-    \pause  Moreover, this means that $j \npwgc i$ and $\linE{x_j(t)}{\H_t^{(i)}} = 0$.
-  \end{proposition}
-
-  Note that $i, j$ may still share descendants.
-\end{frame}
-
-\begin{frame}{Necessary Conditions for Pairwise Causality}
-  $\H_t^{(i)} \perp \H_t^{(j)}$ is a much stronger conclusion than $j \npwgc i$:
   \begin{proposition}
     Consider distinct nodes $i, j$ in a Granger causality graph $\gcg$.
     If
@@ -515,17 +379,13 @@
 
 \begin{frame}{Strongly Causal Graph Examples}
   \begin{columns}
-    \begin{column}{0.33\linewidth}
+    \begin{column}{0.5\linewidth}
       \small{Simple Example}
       \includegraphics[width=\linewidth]{../../figures/example_algorithm_step0.pdf}\pause
     \end{column}
-    \begin{column}{0.33\linewidth}
+    \begin{column}{0.5\linewidth}
       \small{Slightly larger example}
-      \includegraphics[width=\linewidth]{../../figures/example_scg.pdf}\pause
-    \end{column}
-    \begin{column}{0.33\linewidth}
-      \small{Similar number of edges, but not strongly causal}
-      \includegraphics[width=\linewidth]{../../figures/example_dag.pdf}
+      \includegraphics[width=\linewidth]{../../figures/example_scg.pdf}
     \end{column}
   \end{columns}
 \end{frame}
@@ -563,50 +423,51 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Persistent Systems}
-  \begin{itemize}
-    \item{If $k \in \anc{i}\cap\anc{j}$ any of the following may occur:}\pause
-    \item{
-        $(i \npwgc j$, $j \npwgc i)$,
-        $(i \pwgc j$, $j \npwgc i)$,
-        $(i \npwgc j$, $j \pwgc i)$,
-        $(i \pwgc j$, $j \pwgc i)$}\pause
-    \item{Intuitively, $i$ may ``forget'' information from $k$ before the same information reaches $i$.}\pause
-  \end{itemize}
+% \begin{frame}{Persistent Systems}
+%   \begin{itemize}
+%     \item{If $k \in \anc{i}\cap\anc{j}$ any of the following may occur:}\pause
+%     \item{
+%         $(i \npwgc j$, $j \npwgc i)$,
+%         $(i \pwgc j$, $j \npwgc i)$,
+%         $(i \npwgc j$, $j \pwgc i)$,
+%         $(i \pwgc j$, $j \pwgc i)$}\pause
+%     \item{Intuitively, $i$ may ``forget'' information from $k$ before the same information reaches $i$.}\pause
+%   \end{itemize}
 
-  \begin{definition}[Persistent]
-    We will say that the process $x(t)$ with Granger causality graph
-    $\gcg$ is \textit{persistent} if every node has a self-loop,
-    i.e. $\B_{ii}(z) \ne 0$.
-  \end{definition}
-\end{frame}
+%   \begin{definition}[Persistent]
+%     We will say that the process $x(t)$ with Granger causality graph
+%     $\gcg$ is \textit{persistent} if every node has a self-loop,
+%     i.e. $\B_{ii}(z) \ne 0$.
+%   \end{definition}
+% \end{frame}
 
-\begin{frame}{Persistent Systems}
-  Define $H_i(z)$ to be the filter s.t.:
+% \begin{frame}{Persistent Systems}
+%   Define $H_i(z)$ to be the filter s.t.:
   
-  \begin{equation*}
-    H_i(z)x_i(t) = \linE{x_i(t)}{\H_{t - 1}^{(i)}},
-  \end{equation*}\pause
+%   \begin{equation*}
+%     H_i(z)x_i(t) = \linE{x_i(t)}{\H_{t - 1}^{(i)}},
+%   \end{equation*}\pause
 
-  And then with $\sigma_k^2 = \E v_k(t)^2$
-  \begin{equation*}
-    \label{eqn:T_filter}
-    T_{ij}(z) = \sum_{k \in \anc{i} \cap \anc{j}}\sigma_k^2\A_{ik}(z^{-1})(1 - H_i(z^{-1}))(1 - H_j(z))\A_{jk}(z)
-  \end{equation*}\pause
+%   And then with $\sigma_k^2 = \E v_k(t)^2$
+%   \begin{equation*}
+%     \label{eqn:T_filter}
+%     T_{ij}(z) = \sum_{k \in \anc{i} \cap \anc{j}}\sigma_k^2\A_{ik}(z^{-1})(1 - H_i(z^{-1}))(1 - H_j(z))\A_{jk}(z)
+%   \end{equation*}\pause
 
-  \begin{proposition}
-    \label{prop:persistence_converse}
-    Fix $i, j \in [n]$ and suppose $\exists k \in \anc{i} \cap \anc{j}$
-    which confounds $i, j$.  Then, if $T_{ij}(z)$ is not causal we have
-    $j \pwgc i$, and if $T_{ij}(z)$ is not anti-causal we have
-    $i \pwgc j$.  Moreover, if $T_{ij}(z)$ is two-sided, then $j \pwgc i \iff i \pwgc j$.
-  \end{proposition}
-\end{frame}
+%   \begin{proposition}
+%     \label{prop:persistence_converse}
+%     Fix $i, j \in [n]$ and suppose $\exists k \in \anc{i} \cap \anc{j}$
+%     which confounds $i, j$.  Then, if $T_{ij}(z)$ is not causal we have
+%     $j \pwgc i$, and if $T_{ij}(z)$ is not anti-causal we have
+%     $i \pwgc j$.  Moreover, if $T_{ij}(z)$ is two-sided, then $j \pwgc i \iff i \pwgc j$.
+%   \end{proposition}
+% \end{frame}
 
 \section{Pairwise Testing Recovery Methods}
 \begin{frame}{Pairwise Recovery}
   \begin{itemize}
-    \item{Persistant systems where $T_{ij}(z)$ is not two-sided are highly pathological}\pause
+    \item{Additional weak assumptions on $x$ are necessary to avoid pathological cancellation}\pause
+    % \item{Persistant systems where $T_{ij}(z)$ is not two-sided are highly pathological}\pause
     \item{However, that the following requires an assumption on
         $T_{ij}(z)$ is an unfortunate blemish on the theory as it is
         not a topological requirement}\pause
@@ -761,7 +622,7 @@
   \end{columns}
 \end{frame}
 
-
+\section{Simulations}
 \begin{frame}{Simulation}
   \begin{itemize}
     \item{Construct random graphs and compare PWGC against LASSO method}\pause
