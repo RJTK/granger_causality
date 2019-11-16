@@ -1,0 +1,109 @@
+% \usepackage{fullpage}
+\usepackage{framed}
+
+% Figures
+\usepackage{graphicx}
+\usepackage{caption}
+% \usepackage{subcaption}
+\usepackage{wrapfig}
+\usepackage{svg}
+
+% Math packages, theorem definitions and numbering
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathrsfs} % Fancy scripted font
+\usepackage{bm}  % Bold math
+\usepackage{centernot}  % \centernot\implies looks better
+
+% Misc packages
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+% \usepackage{algorithm2e} %{algorithm} environment
+\usepackage{soul}  % \hl highlighting
+\usepackage{color}
+\usepackage{mathtools}  % For my \ceil function
+
+% Theorems (with italics)
+\theoremstyle{plain}  % Style definition removes italics
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\newtheorem{assumption}{Assumption}
+
+% keywords
+\providecommand{\keywords}[1]{\textbf{\textit{Keywords---}} #1}
+
+% General
+\def\defeq{\overset{\Delta}{=}}  % Equal with triangle
+\def\cl{\mathsf{cl\ }}  % Closure
+\newcommand{\sgn}[1]{\mathsf{sgn}(#1)}  % sign function
+
+% Calculus
+\def\d{\mathsf{d}}  % Differential operator
+
+% Functions
+\def\ln{\mathsf{ln\ }}  % Natural logarithm
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}  % Ceiling
+
+% Probability
+\def\H{\mathcal{H}}  % Hilbert space
+\def\E{\mathbb{E}}  % Expectation
+\def\Var{\text{Var}}  % Variance
+\def\P{\mathbb{P}}  % Probability Measure
+\def\F{\mathcal{F}}  % A sigma algebra
+\def\sX{\mathcal{X}}  % Another sigma algebra
+\def\KL{\mathbf{D}_{KL}}  % KL divergence
+\def\bF{\mathbf{F}}  % Whole F-meas space
+\def\GP{\mathcal{GP}}  % Gaussian process
+
+% Standard sets
+\def\Z{\mathbb{Z}}  % Set of integers
+\def\R{\mathbb{R}}  % Set of real numbers
+\def\C{\mathbb{C}}  % Set of complex numbers
+\def\N{\mathbb{N}}  % Set of natural numbers
+\def\ball{\mathbb{B}}  % Open ball
+\def\clball{\overline{\ball}}  % Closed ball
+
+% Linear algebra
+\def\rk{\mathsf{rk }}  % The rank
+\def\tr{\mathsf{tr }}  % The trace
+\def\T{\mathsf{T}}  % Transpose notation
+\def\c{\mathsf{c}}  % complement
+\def\dg{\mathsf{dg }}   %  Diagonal vector of a matrix
+\def\Dg{\mathsf{Dg }}   %  Diagonal matrix from a vector
+\def\ind{\mathbf{1}}  % Ones vector or indicator
+\def\matvec{\textbf{vec}}  % Vector operator
+\def\<{\langle}  % < Inner product
+\def\>{\rangle}  % > Inner product
+\newcommand{\inner}[2]{\langle #1, #2 \rangle}  % Inner product
+\newcommand{\innerT}[2]{#1^\T #2}  % Inner product for finite vectors
+
+% Convex analysis
+\def\conv{\mathsf{conv }}  % Convex hull
+\def\prox{\mathsf{prox }}  % Proximity operator
+
+% -----------------
+% The given symbol or text (\text{mytext}) in a circle
+% To be used always in math mode
+\newcommand{\circlesign}[1]{ 
+    \mathbin{
+        \mathchoice
+        {\buildcirclesign{\displaystyle}{#1}}
+        {\buildcirclesign{\textstyle}{#1}}
+        {\buildcirclesign{\scriptstyle}{#1}}
+        {\buildcirclesign{\scriptscriptstyle}{#1}}
+    } 
+}
+
+\newcommand\buildcirclesign[2]{%
+    \begin{tikzpicture}[baseline=(X.base), inner sep=0, outer sep=0]
+    \node[draw,circle] (X)  {\ensuremath{#1 #2}};
+    \end{tikzpicture}%
+}
+% -----------------
